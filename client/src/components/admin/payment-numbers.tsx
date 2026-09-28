@@ -53,50 +53,50 @@ export default function AdminPaymentNumbers() {
         paymentLink: form.paymentType === "link" ? form.paymentLink.trim() : "",
         country: manualCountry ? manualCountryInput.toUpperCase().trim() : form.country,
       };
-      if (!payload.country) throw new Error("Veuillez sélectionner ou saisir un pays");
+       if (!payload.country) throw new Error("Please select or enter a country");
       if (editTarget) {
         const res = await apiRequest("PUT", `/api/admin/payment-numbers/${editTarget.id}`, payload);
-         if (!res.ok) { const d = await res.json(); throw new Error(d.message || "La mise à jour du numéro de paiement a échoué"); }
+          if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Payment number update failed"); }
         return res.json();
       } else {
         const res = await apiRequest("POST", "/api/admin/payment-numbers", payload);
-         if (!res.ok) { const d = await res.json(); throw new Error(d.message || "L'ajout du numéro de paiement a échoué"); }
+          if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Payment number creation failed"); }
         return res.json();
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-numbers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/payment-numbers"] });
-      toast({ title: editTarget ? "Numéro mis à jour" : "Numéro ajouté" });
+       toast({ title: editTarget ? "Payment number updated" : "Payment number added" });
       closeForm();
     },
-     onError: (e: any) => toast({ title: editTarget ? "Mise à jour du numéro impossible" : "Ajout du numéro impossible", description: e.message, variant: "destructive" }),
+      onError: (e: any) => toast({ title: editTarget ? "Unable to update payment number" : "Unable to add payment number", description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("DELETE", `/api/admin/payment-numbers/${id}`, {});
-       if (!res.ok) { const d = await res.json(); throw new Error(d.message || "La suppression du numéro de paiement a échoué"); }
+        if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Payment number deletion failed"); }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-numbers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/payment-numbers"] });
-      toast({ title: "Numéro supprimé" });
+       toast({ title: "Payment number deleted" });
     },
-     onError: (e: any) => toast({ title: "Suppression du numéro impossible", description: e.message, variant: "destructive" }),
+      onError: (e: any) => toast({ title: "Unable to delete payment number", description: e.message, variant: "destructive" }),
   });
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
       const res = await apiRequest("PUT", `/api/admin/payment-numbers/${id}`, { isActive });
-       if (!res.ok) { const d = await res.json(); throw new Error(d.message || "La modification de l'état du numéro a échoué"); }
+        if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Unable to change payment number status"); }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-numbers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/payment-numbers"] });
     },
-     onError: (e: any) => toast({ title: "Modification de l'état du numéro impossible", description: e.message, variant: "destructive" }),
+      onError: (e: any) => toast({ title: "Unable to change payment number status", description: e.message, variant: "destructive" }),
   });
 
   const openAdd = () => {
@@ -166,11 +166,11 @@ export default function AdminPaymentNumbers() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">{numbers.length} numéro(s) configuré(s)</p>
+           <p className="text-sm text-muted-foreground">{numbers.length} configured payment number(s)</p>
         </div>
         <Button onClick={openAdd} data-testid="button-add-payment-number">
           <Plus className="w-4 h-4 mr-2" />
-          Ajouter un numéro
+           Add payment number
         </Button>
       </div>
 
@@ -179,8 +179,8 @@ export default function AdminPaymentNumbers() {
       ) : numbers.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Phone className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>Aucun numéro configuré</p>
-          <p className="text-xs mt-1">Ajoutez des numéros pour que les utilisateurs puissent déposer</p>
+           <p>No payment numbers configured</p>
+           <p className="text-xs mt-1">Add numbers so users can make deposits</p>
         </div>
       ) : (
         Object.entries(grouped).map(([country, nums]) => (
@@ -206,12 +206,12 @@ export default function AdminPaymentNumbers() {
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-foreground">{num.operatorName}</p>
                           <Badge variant={num.isActive ? "default" : "secondary"} className="text-xs">
-                            {num.isActive ? "Actif" : "Inactif"}
+                             {num.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </div>
                         {num.paymentLink ? (
                           <a href={num.paymentLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-                            <ExternalLink className="w-3.5 h-3.5" /> Lien de paiement
+                             <ExternalLink className="w-3.5 h-3.5" /> Payment link
                           </a>
                         ) : (
                           <p className="font-mono text-primary font-bold">{num.phone}</p>
@@ -229,7 +229,7 @@ export default function AdminPaymentNumbers() {
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button size="icon" variant="ghost" className="text-destructive"
-                          onClick={() => { if (confirm("Supprimer ce numéro ?")) deleteMutation.mutate(num.id); }}
+                          onClick={() => { if (confirm("Delete this number?")) deleteMutation.mutate(num.id); }}
                           disabled={deleteMutation.isPending}
                           data-testid={`button-delete-${num.id}`}>
                           <Trash2 className="w-4 h-4" />
@@ -247,11 +247,11 @@ export default function AdminPaymentNumbers() {
       <Dialog open={showForm} onOpenChange={closeForm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editTarget ? "Modifier le numéro" : "Ajouter un numéro de paiement"}</DialogTitle>
+             <DialogTitle>{editTarget ? "Edit payment number" : "Add payment number"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Pays</label>
+               <label className="text-sm font-medium">Country</label>
               {!manualCountry ? (
                 <div className="space-y-2 mt-1">
                   <select
@@ -268,13 +268,13 @@ export default function AdminPaymentNumbers() {
                     className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground"
                     data-testid="select-country"
                   >
-                    <option value="">-- Choisir un pays --</option>
+                     <option value="">-- Select a country --</option>
                     {countries.map(c => (
                       <option key={c.code} value={c.code}>
                         {COUNTRY_FLAGS[c.code] || "🌍"} {c.name} ({c.code})
                       </option>
                     ))}
-                    <option value="__manual__">✏️ Saisir manuellement...</option>
+                     <option value="__manual__">✏️ Enter manually...</option>
                   </select>
                 </div>
               ) : (
@@ -282,7 +282,7 @@ export default function AdminPaymentNumbers() {
                   <Input
                     value={manualCountryInput}
                     onChange={(e) => setManualCountryInput(e.target.value.toUpperCase())}
-                    placeholder="Code pays (ex: GA, SN...)"
+                     placeholder="Country code (e.g. PH)"
                     maxLength={3}
                     className="flex-1"
                     data-testid="input-manual-country"
@@ -292,13 +292,13 @@ export default function AdminPaymentNumbers() {
                     size="sm"
                     onClick={() => { setManualCountry(false); setManualCountryInput(""); setForm(f => ({ ...f, country: countries[0]?.code || "" })); }}
                   >
-                    Liste
+                     List
                   </Button>
                 </div>
               )}
             </div>
             <div>
-              <label className="text-sm font-medium">Opérateur</label>
+               <label className="text-sm font-medium">Operator</label>
               {operatorOptions.length > 0 && !customOperator ? (
                 <select
                   value={form.operatorName}
@@ -313,9 +313,9 @@ export default function AdminPaymentNumbers() {
                   className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground mt-1"
                   data-testid="select-operator"
                 >
-                  <option value="">-- Choisir un opérateur --</option>
+                   <option value="">-- Select an operator --</option>
                   {operatorOptions.map(operator => <option key={operator} value={operator}>{operator}</option>)}
-                  <option value="__custom__">✏️ Saisir un autre opérateur...</option>
+                   <option value="__custom__">✏️ Enter another operator...</option>
                 </select>
               ) : (
                 <div className="flex gap-2 mt-1">
@@ -323,29 +323,29 @@ export default function AdminPaymentNumbers() {
                     placeholder="Ex: Airtel Money, Moov Money" className="flex-1" data-testid="input-operator-name" />
                   {operatorOptions.length > 0 && (
                     <Button type="button" variant="outline" size="sm" onClick={() => { setCustomOperator(false); setForm(f => ({ ...f, operatorName: "" })); }}>
-                      Liste
+                       List
                     </Button>
                   )}
                 </div>
               )}
             </div>
             <div>
-              <label className="text-sm font-medium">Mode de paiement</label>
+             <label className="text-sm font-medium">Payment type</label>
               <select
                 value={form.paymentType}
                 onChange={(e) => setForm(f => ({ ...f, paymentType: e.target.value as "phone" | "link" }))}
                 className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground mt-1"
                 data-testid="select-payment-type"
               >
-                <option value="phone">Numéro Mobile Money</option>
-                <option value="link">Lien de paiement</option>
+                 <option value="phone">Mobile Money number</option>
+                 <option value="link">Payment link</option>
               </select>
             </div>
             <div>
               {form.paymentType === "phone" ? (
-              <label className="text-sm font-medium">Numéro de téléphone</label>
+                 <label className="text-sm font-medium">Phone number</label>
               ) : (
-                <label className="text-sm font-medium">Lien de paiement</label>
+                 <label className="text-sm font-medium">Payment link</label>
               )}
               {form.paymentType === "phone" ? (
                 <Input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
@@ -356,12 +356,12 @@ export default function AdminPaymentNumbers() {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium">Nom du propriétaire</label>
+               <label className="text-sm font-medium">Owner name</label>
               <Input value={form.ownerName} onChange={(e) => setForm(f => ({ ...f, ownerName: e.target.value }))}
                 placeholder="Ex: Jean Dupont" className="mt-1" data-testid="input-owner-name" />
             </div>
             <div>
-              <label className="text-sm font-medium">URL du logo <span className="text-muted-foreground font-normal">(optionnel)</span></label>
+               <label className="text-sm font-medium">Logo URL <span className="text-muted-foreground font-normal">(optional)</span></label>
               <Input value={form.logoUrl} onChange={(e) => setForm(f => ({ ...f, logoUrl: e.target.value }))}
                 placeholder="https://..." className="mt-1" data-testid="input-logo-url" />
               {form.logoUrl && (
@@ -370,17 +370,17 @@ export default function AdminPaymentNumbers() {
             </div>
             <div className="flex items-center gap-2">
               <input type="checkbox" id="isActive" checked={form.isActive} onChange={(e) => setForm(f => ({ ...f, isActive: e.target.checked }))} />
-              <label htmlFor="isActive" className="text-sm font-medium">Actif (visible aux utilisateurs)</label>
+               <label htmlFor="isActive" className="text-sm font-medium">Active (visible to users)</label>
             </div>
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={closeForm}>Annuler</Button>
+               <Button variant="outline" className="flex-1" onClick={closeForm}>Cancel</Button>
               <Button
                 className="flex-1"
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || !form.ownerName || !form.operatorName || (form.paymentType === "phone" ? !form.phone : !form.paymentLink) || (!manualCountry && !form.country) || (manualCountry && !manualCountryInput.trim())}
                 data-testid="button-save-payment-number"
               >
-                {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (editTarget ? "Modifier" : "Ajouter")}
+                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (editTarget ? "Edit" : "Add")}
               </Button>
             </div>
           </div>

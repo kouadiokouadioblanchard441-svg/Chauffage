@@ -22,7 +22,7 @@ interface TeamStats {
 }
 
 function formatNumber(value: number | undefined, loading: boolean) {
-  return loading ? "…" : value === undefined ? "—" : value.toLocaleString("fr-FR");
+  return loading ? "…" : value === undefined ? "—" : value.toLocaleString("en-PH");
 }
 
 export default function TeamPage() {
@@ -42,8 +42,8 @@ export default function TeamPage() {
   if (!user) return null;
 
   const referralLink = `https://ellvpscc.site/html/register?code=${encodeURIComponent(user.referralCode)}`;
-  const referralMessage = `Rejoins mon équipe sur ChargePoint ! Inscris-toi avec mon lien de parrainage :\n${referralLink}\nMon code d'invitation : ${user.referralCode}`;
-  const referralText = "Rejoins mon équipe sur ChargePoint ! Inscris-toi avec mon lien de parrainage.";
+  const referralMessage = `Join my ChargePoint team! Sign up with my referral link:\n${referralLink}\nMy invitation code: ${user.referralCode}`;
+  const referralText = "Join my ChargePoint team! Sign up with my referral link.";
   const shareLinks = [
     { name: "WhatsApp", icon: whatsappIcon, url: `https://wa.me/?text=${encodeURIComponent(referralMessage)}` },
     { name: "Telegram", icon: telegramIcon, url: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(`${referralText} Mon code d'invitation : ${user.referralCode}`)}` },
@@ -54,8 +54,8 @@ export default function TeamPage() {
     : undefined;
   const summary = [
     { label: "Nombre total de membres", value: totalMembers },
-    { label: "Dépôts totaux de l'équipe", value: stats?.totalDepositAmount },
-    { label: "Retraits totaux de l'équipe", value: stats?.totalWithdrawalAmount },
+    { label: "Total team deposits", value: stats?.totalDepositAmount },
+    { label: "Total team withdrawals", value: stats?.totalWithdrawalAmount },
     { label: "Nouvelles inscriptions aujourd'hui", value: stats?.todayNewMembers },
     { label: "Dépôts de l'équipe aujourd'hui", value: stats?.todayDepositAmount },
     { label: "Retraits de l'équipe aujourd'hui", value: stats?.todayWithdrawalAmount },
@@ -69,9 +69,9 @@ export default function TeamPage() {
   const copy = async (value: string, description: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      toast({ title: `${description} copié` });
+      toast({ title: `${description} copied` });
     } catch {
-      toast({ title: "Copie impossible", description: "Veuillez réessayer.", variant: "destructive" });
+      toast({ title: "Unable to copy", description: "Please try again.", variant: "destructive" });
     }
   };
 
@@ -79,19 +79,19 @@ export default function TeamPage() {
     <main className="team-page">
       <div className="team-page-inner">
         <header className="team-header">
-          <button type="button" className="team-back" onClick={() => navigate("/")} aria-label="Retour à l'accueil">
+          <button type="button" className="team-back" onClick={() => navigate("/")} aria-label="Back to home">
             <ChevronLeft aria-hidden="true" />
           </button>
-          <h1>Équipe</h1>
+           <h1>Team</h1>
           <span className="team-header-brand">ChargePoint</span>
         </header>
 
         <div className="team-content" aria-busy={isLoading || isFetching}>
           <section className="team-invite" aria-label="Invitation">
-            <h2>Mon invitation</h2>
+            <h2>My invitation</h2>
             <div className="team-invite-row">
               <div className="team-invite-text">
-                <p>Code d'invitation</p>
+                <p>Invitation code</p>
                 <strong data-testid="text-referral-code">{user.referralCode}</strong>
               </div>
               <button type="button" className="team-copy" onClick={() => copy(user.referralCode, "Code")} aria-label="Copier le code d'invitation" data-testid="button-copy-code">
@@ -100,7 +100,7 @@ export default function TeamPage() {
             </div>
             <div className="team-invite-row">
               <div className="team-invite-text">
-                <p>Lien d'invitation</p>
+                <p>Invitation link</p>
                 <strong className="team-invite-link" data-testid="text-referral-link">{referralLink}</strong>
               </div>
               <button type="button" className="team-copy" onClick={() => copy(referralLink, "Lien")} aria-label="Copier le lien d'invitation" data-testid="button-copy-link">
@@ -109,8 +109,8 @@ export default function TeamPage() {
             </div>
           </section>
 
-          <section className="team-summary" aria-label="Statistiques de l'équipe">
-            <h2>Mon équipe en chiffres</h2>
+          <section className="team-summary" aria-label="Team statistics">
+             <h2>My team by the numbers</h2>
             {summary.map(item => (
               <div className="team-summary-item" key={item.label}>
                 <strong>{formatNumber(item.value, isLoading)}</strong>
@@ -127,7 +127,7 @@ export default function TeamPage() {
             <div className="team-error" role="alert">
               <span>Impossible de charger les statistiques de l'équipe.</span>
               <button type="button" onClick={() => void refetch()} disabled={isFetching}>
-                {isFetching ? "Chargement…" : "Réessayer"}
+                {isFetching ? "Loading…" : "Retry"}
               </button>
             </div>
           )}
@@ -135,7 +135,7 @@ export default function TeamPage() {
           <section className="team-levels" aria-label="Niveaux d'équipe">
             {levels.map((level, index) => (
               <article className="team-level" key={level.name} data-testid={`vip-row-${index + 1}`}>
-                <h2>Équipe {level.name}</h2>
+                <h2>Team {level.name}</h2>
                 <div className="team-level-metrics">
                   <div>
                     <strong data-testid={`text-level${index + 1}-count`}>{formatNumber(level.count, isLoading)}</strong>
@@ -143,11 +143,11 @@ export default function TeamPage() {
                   </div>
                   <div>
                     <strong>{level.rate === undefined ? "—" : `${level.rate}%`}</strong>
-                    <span>Avantages d'équipe</span>
+                    <span>Team benefits</span>
                   </div>
                 </div>
                 <button type="button" className="team-level-open" onClick={() => navigate(`/team-details?level=${index + 1}`)}>
-                  Voir les membres de l'équipe {level.name} <ChevronRight aria-hidden="true" />
+                  View team {level.name} members <ChevronRight aria-hidden="true" />
                 </button>
               </article>
             ))}
@@ -156,7 +156,7 @@ export default function TeamPage() {
           <section className="team-share" aria-label="Partager mon invitation">
             <h2>Partager</h2>
             <div className="team-share-body">
-              <p>Invite tes proches à rejoindre ton équipe ChargePoint.</p>
+               <p>Invite people you know to join your ChargePoint team.</p>
               <div className="team-share-links">
                 {shareLinks.map(target => (
                   <a
@@ -184,7 +184,7 @@ export default function TeamPage() {
                   <span>Instagram</span>
                 </a>
               </div>
-              <p className="team-share-note">Sur Instagram, le message et le lien sont copiés : colle-les dans ta publication ou ton message.</p>
+              <p className="team-share-note">On Instagram, the message and link are copied: paste them into your post or message.</p>
             </div>
           </section>
         </div>

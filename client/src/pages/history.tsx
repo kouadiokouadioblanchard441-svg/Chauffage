@@ -94,13 +94,13 @@ const getStatusInfo = (status: string) => {
   switch (status) {
     case "completed":
     case "approved":
-      return { label: "Réussi", color: CARD_SUCCESS };
+      return { label: "Successful", color: CARD_SUCCESS };
     case "rejected":
-      return { label: "Paiement échoué", color: "#b42318" };
+      return { label: "Payment failed", color: "#b42318" };
     case "processing":
-      return { label: "En traitement", color: "#d97706" };
+      return { label: "Processing", color: "#d97706" };
     default:
-      return { label: "En attente...", color: "#d97706" };
+      return { label: "Pending...", color: "#d97706" };
   }
 };
 
@@ -108,16 +108,16 @@ const getBalanceTypeLabel = (transaction: Transaction) => {
   switch (transaction.type) {
     case "bonus":
       return transaction.description === "Bonus quotidien"
-        ? "Bonus quotidien"
+        ? "Daily bonus"
         : transaction.description;
     case "signup_bonus":
-      return "Bonus d'inscription";
+      return "Registration bonus";
     case "task_reward":
-      return "Récompense";
+      return "Reward";
     case "commission":
       return "Commission";
     case "deposit":
-      return "Dépôt";
+      return "Deposit";
     default:
       return transaction.description;
   }
@@ -145,9 +145,7 @@ export default function HistoryPage() {
 
   const isAdmin = !!(user as any)?.isAdmin;
   const countryInfo = user ? getCountryByCode(user.country) : null;
-  const currency = countryInfo?.currency === "XOF" || countryInfo?.currency === "XAF"
-    ? "FCFA"
-    : countryInfo?.currency || "FCFA";
+  const currency = "PHP";
 
   const { data: deposits = [], isLoading: depositsLoading } = useQuery<Deposit[]>({
     queryKey: ["/api/deposits/history"],
@@ -177,17 +175,17 @@ export default function HistoryPage() {
       const response = await fetch(`/api/deposits/${depositId}/verify`, { credentials: "include" });
       const data = await response.json();
       if (data.status === "approved") {
-        toast({ title: "Paiement confirmé", description: "Votre compte a été crédité" });
+         toast({ title: "Payment confirmed", description: "Your account has been credited." });
         refreshUser();
         queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
       } else if (data.status === "rejected") {
-        toast({ title: "Paiement échoué", description: "Le paiement a été refusé", variant: "destructive" });
+         toast({ title: "Payment failed", description: "The payment was declined.", variant: "destructive" });
         queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
       } else {
-        toast({ title: "En cours", description: "Le paiement est toujours en attente" });
+         toast({ title: "In progress", description: "The payment is still pending." });
       }
     } catch {
-      toast({ title: "Vérification du paiement impossible", description: "Impossible de vérifier le paiement", variant: "destructive" });
+      toast({ title: "Unable to verify payment", description: "Payment verification failed.", variant: "destructive" });
     } finally {
       setVerifyingId(null);
     }
@@ -469,7 +467,7 @@ export default function HistoryPage() {
             onClick={() => setActiveTab("deposits")}
             data-testid="tab-deposits"
           >
-            <span>Dépôt</span>
+            <span>Deposits</span>
             <ChevronRight className={`history-tab-arrow ${activeTab === "deposits" ? "right" : "left"}`} aria-hidden="true" />
           </button>
           <button
@@ -498,11 +496,11 @@ export default function HistoryPage() {
                       <div className="history-card-top">
                         <div>
                           <p className="history-amount">
-                            {isRegistration ? "—" : `+${amount.toLocaleString("fr-FR")} ${currency}`}
+                            {isRegistration ? "—" : `+${amount.toLocaleString("en-PH")} ${currency}`}
                           </p>
-                           <p className="history-card-label">{transaction.type === "deposit" ? "Dépôt" : transaction.description}</p>
+                           <p className="history-card-label">{transaction.type === "deposit" ? "Deposit" : transaction.description}</p>
                         </div>
-                           <Status label="Réussi" color={CARD_SUCCESS} />
+                           <Status label="Successful" color={CARD_SUCCESS} />
                       </div>
                       <div className="history-divider" />
                       <Row label="Type :" value={isRegistration ? "Inscription" : getBalanceTypeLabel(transaction)} />
@@ -513,8 +511,8 @@ export default function HistoryPage() {
               </div>
             ) : (
               <div className="history-empty">
-                <img src={nodataImg} alt="Aucune donnée" />
-                <span>Plus de données</span>
+                <img src={nodataImg} alt="No data" />
+                <span>No more data</span>
               </div>
             )
           ) : activeTab === "deposits" ? (
@@ -528,14 +526,14 @@ export default function HistoryPage() {
                     <article className="history-card" key={deposit.id} data-testid={`deposit-item-${deposit.id}`}>
                       <div className="history-card-top">
                         <div>
-                          <p className="history-amount">{currency} {amount.toLocaleString("fr-FR")}</p>
-                          <p className="history-card-label">Montant du dépôt</p>
+                          <p className="history-amount">{currency} {amount.toLocaleString("en-PH")}</p>
+                          <p className="history-card-label">Deposit amount</p>
                         </div>
                         <Status label={label} color={color} />
                       </div>
                       <div className="history-divider" />
-                      <Row label="Numéro :" value={reference} />
-                      <Row label="Heure du dépôt :" value={formatDateTime(deposit.createdAt)} />
+                      <Row label="Reference:" value={reference} />
+                      <Row label="Deposit time:" value={formatDateTime(deposit.createdAt)} />
                       {isPendingDeposit(deposit) && !deposit.sendavapayReference ? (
                         <button
                           className="history-verify"
@@ -544,7 +542,7 @@ export default function HistoryPage() {
                           data-testid={`button-verify-${deposit.id}`}
                         >
                           {verifyingId === deposit.id ? <Loader2 className="inline animate-spin" /> : <RefreshCw className="mr-1 inline h-3 w-3" />}
-                          Vérifier la transaction
+                          Verify transaction
                         </button>
                       ) : null}
                     </article>
@@ -567,13 +565,13 @@ export default function HistoryPage() {
                   <article className="history-card" key={withdrawal.id} data-testid={`withdrawal-item-${withdrawal.id}`}>
                     <div className="history-card-top">
                       <div>
-                        <p className="history-amount">{currency} {gross.toLocaleString("fr-FR")}</p>
-                        <p className="history-card-label">Montant du retrait</p>
+                        <p className="history-amount">{currency} {gross.toLocaleString("en-PH")}</p>
+                        <p className="history-card-label">Withdrawal amount</p>
                       </div>
                       <Status label={label} color={color} />
                     </div>
                     <div className="history-divider" />
-                    <Row label="Montant reçu :" value={`${currency} ${net.toLocaleString("fr-FR")}`} />
+                    <Row label="Amount received:" value={`${currency} ${net.toLocaleString("en-PH")}`} />
                     <Row label="Heure du retrait :" value={formatDateTime(withdrawal.createdAt)} />
                   </article>
                 );

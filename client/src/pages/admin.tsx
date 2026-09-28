@@ -35,16 +35,16 @@ export default function AdminPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="overflow-x-auto -mx-4 px-4">
             <TabsList className="w-max">
-              <TabsTrigger value="dashboard" data-testid="tab-dashboard">Tableau de bord</TabsTrigger>
-              <TabsTrigger value="deposits" data-testid="tab-deposits">Depots</TabsTrigger>
-              <TabsTrigger value="withdrawals" data-testid="tab-withdrawals">Retraits</TabsTrigger>
-              <TabsTrigger value="users" data-testid="tab-users">Utilisateurs</TabsTrigger>
-              <TabsTrigger value="products" data-testid="tab-products">Produits</TabsTrigger>
-              <TabsTrigger value="payment-numbers" data-testid="tab-payment-numbers">Numéros</TabsTrigger>
-              <TabsTrigger value="countries" data-testid="tab-countries">Pays</TabsTrigger>
-              <TabsTrigger value="giftcodes" data-testid="tab-giftcodes">Codes Cadeaux</TabsTrigger>
-              <TabsTrigger value="settings" data-testid="tab-settings">Parametres</TabsTrigger>
-              <TabsTrigger value="security" data-testid="tab-security">Sécurité</TabsTrigger>
+              <TabsTrigger value="dashboard" data-testid="tab-dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="deposits" data-testid="tab-deposits">Deposits</TabsTrigger>
+              <TabsTrigger value="withdrawals" data-testid="tab-withdrawals">Withdrawals</TabsTrigger>
+              <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
+              <TabsTrigger value="products" data-testid="tab-products">Products</TabsTrigger>
+              <TabsTrigger value="payment-numbers" data-testid="tab-payment-numbers">Payment Numbers</TabsTrigger>
+              <TabsTrigger value="countries" data-testid="tab-countries">Countries</TabsTrigger>
+              <TabsTrigger value="giftcodes" data-testid="tab-giftcodes">Gift Codes</TabsTrigger>
+              <TabsTrigger value="settings" data-testid="tab-settings">Settings</TabsTrigger>
+              <TabsTrigger value="security" data-testid="tab-security">Security</TabsTrigger>
             </TabsList>
           </div>
 

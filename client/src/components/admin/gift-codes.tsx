@@ -44,7 +44,7 @@ export default function AdminGiftCodes() {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Création du code cadeau impossible");
+         throw new Error(errorData.message || "Unable to create gift code");
       }
       return response.json();
     },
@@ -52,22 +52,22 @@ export default function AdminGiftCodes() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/gift-codes"] });
       setIsCreateOpen(false);
       setFormData({ code: "", amount: "", maxUses: "", expiresAt: "" });
-      toast({ title: "Succes", description: "Code cadeau cree avec succes" });
+       toast({ title: "Success", description: "Gift code created successfully" });
     },
     onError: (error: any) => {
-      toast({ title: "Création du code cadeau impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to create gift code", description: error.message, variant: "destructive" });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest("DELETE", `/api/admin/gift-codes/${id}`);
-      if (!response.ok) throw new Error("Suppression du code cadeau impossible");
+       if (!response.ok) throw new Error("Unable to delete gift code");
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/gift-codes"] });
-      toast({ title: "Succes", description: "Code cadeau supprime" });
+       toast({ title: "Success", description: "Gift code deleted" });
     },
     onError: (error: any) => {
       toast({ title: "Suppression du code cadeau impossible", description: error.message, variant: "destructive" });
@@ -77,14 +77,14 @@ export default function AdminGiftCodes() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.code || !formData.amount || !formData.maxUses || !formData.expiresAt) {
-      toast({ title: "Informations du code cadeau incomplètes", description: "Tous les champs sont requis", variant: "destructive" });
+       toast({ title: "Incomplete gift code information", description: "All fields are required", variant: "destructive" });
       return;
     }
     createMutation.mutate(formData);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("fr-FR", {
+     return new Date(dateString).toLocaleString("en-PH", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -106,17 +106,17 @@ export default function AdminGiftCodes() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold" data-testid="text-section-title">Codes Cadeaux</h2>
+         <h2 className="text-lg font-semibold" data-testid="text-section-title">Gift Codes</h2>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-gift-code">
               <Plus className="w-4 h-4 mr-2" />
-              Creer un code
+               Create a code
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nouveau Code Cadeau</DialogTitle>
+               <DialogTitle>New Gift Code</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -130,7 +130,7 @@ export default function AdminGiftCodes() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Montant (FCFA)</Label>
+               <Label htmlFor="amount">Amount (PHP)</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -141,7 +141,7 @@ export default function AdminGiftCodes() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="maxUses">Nombre d'utilisateurs max</Label>
+               <Label htmlFor="maxUses">Maximum uses</Label>
                 <Input
                   id="maxUses"
                   type="number"
@@ -152,7 +152,7 @@ export default function AdminGiftCodes() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="expiresAt">Date et heure d'expiration</Label>
+               <Label htmlFor="expiresAt">Expiration date and time</Label>
                 <Input
                   id="expiresAt"
                   type="datetime-local"
@@ -162,7 +162,7 @@ export default function AdminGiftCodes() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending} data-testid="button-submit">
-                {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Creer"}
+                 {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
               </Button>
             </form>
           </DialogContent>
@@ -173,7 +173,7 @@ export default function AdminGiftCodes() {
         <Card data-testid="card-empty-state">
           <CardContent className="py-12 text-center text-muted-foreground">
             <Gift className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p data-testid="text-empty-message">Aucun code cadeau</p>
+             <p data-testid="text-empty-message">No gift codes</p>
           </CardContent>
         </Card>
       ) : (
@@ -197,23 +197,23 @@ export default function AdminGiftCodes() {
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Montant</span>
-                  <span className="font-semibold" data-testid={`text-amount-${giftCode.id}`}>{parseFloat(giftCode.amount).toLocaleString()} FCFA</span>
+                   <span className="text-muted-foreground">Amount</span>
+                   <span className="font-semibold" data-testid={`text-amount-${giftCode.id}`}>{parseFloat(giftCode.amount).toLocaleString()} PHP</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Utilisations</span>
+                   <span className="text-muted-foreground">Uses</span>
                   <span className="font-semibold" data-testid={`text-uses-${giftCode.id}`}>{giftCode.currentUses} / {giftCode.maxUses}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Expire le</span>
+                   <span className="text-muted-foreground">Expires</span>
                   <span className={`font-semibold ${isExpired(giftCode.expiresAt) ? "text-red-500" : ""}`} data-testid={`text-expires-${giftCode.id}`}>
                     {formatDate(giftCode.expiresAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Statut</span>
+                   <span className="text-muted-foreground">Status</span>
                   <span className={`font-semibold ${isExpired(giftCode.expiresAt) || !giftCode.isActive ? "text-red-500" : "text-green-500"}`} data-testid={`text-status-${giftCode.id}`}>
-                    {isExpired(giftCode.expiresAt) ? "Expire" : giftCode.isActive ? "Actif" : "Inactif"}
+                     {isExpired(giftCode.expiresAt) ? "Expired" : giftCode.isActive ? "Active" : "Inactive"}
                   </span>
                 </div>
               </CardContent>

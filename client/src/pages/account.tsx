@@ -70,7 +70,7 @@ export default function AccountPage() {
       const res = await apiRequest("POST", "/api/admin/verify-pin", { pin });
       if (!res.ok) {
         const data = await res.json();
-         throw new Error(data.message || "Le code PIN administrateur est incorrect.");
+          throw new Error(data.message || "The administrator PIN is incorrect.");
       }
       return res.json();
     },
@@ -81,7 +81,7 @@ export default function AccountPage() {
     },
     onError: (error: Error) =>
       toast({
-        title: "Vérification du code PIN impossible",
+         title: "Unable to verify PIN",
         description: error.message,
         variant: "destructive",
       }),
@@ -90,27 +90,27 @@ export default function AccountPage() {
   if (!user) return null;
 
   const country = getCountryByCode(user.country, apiCountries);
-  const currency = country?.currency || "XOF";
+  const currency = "PHP";
   const balance = Number.parseFloat(user.balance || "0");
   const earnings = Number.parseFloat(user.totalEarnings || "0");
   const phonePrefix = country?.phonePrefix || "";
-  const formatAmount = (amount: number) => `${Math.round(amount).toLocaleString("fr-FR")} ${currency}`;
+  const formatAmount = (amount: number) => `${Math.round(amount).toLocaleString("en-PH")} ${currency}`;
 
   const quickActions = [
-    { label: "Retrait", image: withdrawalIcon, href: "/withdrawal" },
-    { label: "Historique", image: historyIcon, href: "/history" },
-    { label: "Pointage", image: checkinIcon, href: "/checkin" },
+    { label: "Withdraw", image: withdrawalIcon, href: "/withdrawal" },
+    { label: "History", image: historyIcon, href: "/history" },
+    { label: "Check-in", image: checkinIcon, href: "/checkin" },
   ];
 
   const serviceItems = [
-    { label: "À propos", image: aboutIcon, href: "/about" },
-    { label: "Réglementation", image: rulesIcon, href: "/rules" },
-    { label: "Historique", image: historyIcon, href: "/history" },
-    { label: "Service client", image: serviceIcon, href: "/service" },
-    { label: "Télécharger", image: downloadIcon, action: "download" as const },
-    { label: "Lier une carte\nbancaire", image: walletIcon, href: "/wallet" },
-    { label: "Changer le mot\nde passe", image: passwordIcon, href: "/change-password" },
-    { label: "Échanger un\ncadeau", image: giftIcon, href: "/gift-code", className: "cp-gift-icon" },
+    { label: "About", image: aboutIcon, href: "/about" },
+    { label: "Rules", image: rulesIcon, href: "/rules" },
+    { label: "History", image: historyIcon, href: "/history" },
+    { label: "Customer service", image: serviceIcon, href: "/service" },
+    { label: "Download", image: downloadIcon, action: "download" as const },
+    { label: "Link a\nwallet", image: walletIcon, href: "/wallet" },
+    { label: "Change\npassword", image: passwordIcon, href: "/change-password" },
+    { label: "Redeem a\ngift", image: giftIcon, href: "/gift-code", className: "cp-gift-icon" },
   ];
 
   const handleLogout = async () => {
@@ -134,8 +134,8 @@ export default function AccountPage() {
 
     if (isInstalled) {
       toast({
-        title: "ChargePoint est déjà installée",
-        description: "Vous pouvez ouvrir l’application depuis l’écran d’accueil de votre appareil.",
+          title: "ChargePoint is already installed",
+          description: "You can open the app from your device home screen.",
       });
       return;
     }
@@ -149,18 +149,18 @@ export default function AccountPage() {
         toast(
           outcome === "accepted"
             ? {
-                title: "Installation lancée",
-                description: "ChargePoint est en cours d’installation sur votre appareil.",
+                 title: "Installation started",
+                 description: "ChargePoint is being installed on your device.",
               }
             : {
-                title: "Installation annulée",
-                description: "Vous pourrez relancer l’installation depuis ce bouton.",
+                 title: "Installation cancelled",
+                 description: "You can restart the installation from this button.",
               },
         );
       } catch {
         toast({
-          title: "Installation indisponible",
-          description: "Ouvrez le menu de votre navigateur et choisissez « Installer l’application ».",
+           title: "Installation unavailable",
+           description: "Open your browser menu and choose “Install app”.",
           variant: "destructive",
         });
       }
@@ -171,10 +171,10 @@ export default function AccountPage() {
       /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     toast({
-      title: "Installer ChargePoint",
+       title: "Install ChargePoint",
       description: isIos
-        ? "Dans Safari, touchez Partager puis « Sur l’écran d’accueil »."
-        : "Dans le menu de votre navigateur, choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».",
+         ? "In Safari, tap Share, then “Add to Home Screen”."
+         : "In your browser menu, choose “Install app” or “Add to Home Screen”.",
     });
   };
 
@@ -463,16 +463,16 @@ export default function AccountPage() {
             </div>
             <button className="cp-logout-top" onClick={handleLogout} data-testid="button-logout">
               <img src={logoutIcon} alt="" />
-              <span>Déconnexion</span>
+               <span>Sign out</span>
             </button>
           </div>
 
-          <section className="cp-balance-card" aria-label="Solde du compte">
+             <section className="cp-balance-card" aria-label="Account balance">
             <div>
-              <span>Solde du compte</span>
-              <strong>{formatAmount(balance)}</strong>
+               <span>Account balance</span>
+               <strong>{formatAmount(balance)}</strong>
             </div>
-            <button type="button" onClick={() => navigate("/deposit")}>Recharger <span aria-hidden="true">›</span></button>
+             <button type="button" onClick={() => navigate("/deposit")}>Deposit <span aria-hidden="true">›</span></button>
           </section>
         </section>
 
@@ -488,9 +488,9 @@ export default function AccountPage() {
         <section className="cp-account-promo" aria-label="Solutions ChargePoint">
           <img src={chargepointPromo} alt="" />
           <div>
-            <strong>Solutions de recharge ChargePoint</strong>
-            <span>Des équipements pensés pour votre mobilité</span>
-            <button type="button" onClick={() => navigate("/my-products")}>Voir mes produits achetés</button>
+             <strong>ChargePoint charging solutions</strong>
+             <span>Equipment designed for your mobility</span>
+             <button type="button" onClick={() => navigate("/my-products")}>View my purchased products</button>
           </div>
         </section>
 
@@ -517,7 +517,7 @@ export default function AccountPage() {
           {user.isAdmin && (
             <button className="cp-admin-button" onClick={handleAdminClick} data-testid="button-admin">
               <Shield size={17} />
-              Panel administrateur
+               Admin panel
             </button>
           )}
         </section>
@@ -526,11 +526,11 @@ export default function AccountPage() {
       <Dialog open={showPinModal} onOpenChange={setShowPinModal}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-center">Code d'accès administrateur</DialogTitle>
+           <DialogTitle className="text-center">Administrator access code</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-center text-sm text-muted-foreground">
-              Entrez votre code PIN pour accéder au panel administrateur
+               Enter your PIN to access the admin panel
             </p>
             <Input
               type="password"
@@ -544,7 +544,7 @@ export default function AccountPage() {
             <Button
               onClick={() => {
                 if (adminPin.length < 4) {
-                  toast({ title: "Le code PIN doit contenir au moins 4 caractères", variant: "destructive" });
+                   toast({ title: "The PIN must contain at least 4 characters", variant: "destructive" });
                   return;
                 }
                 verifyPinMutation.mutate(adminPin);
@@ -554,7 +554,7 @@ export default function AccountPage() {
               data-testid="button-verify-pin"
             >
               {verifyPinMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirmer
+               Confirm
             </Button>
           </div>
         </DialogContent>

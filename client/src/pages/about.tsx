@@ -10,10 +10,10 @@ export default function AboutPage() {
         <Link href="/account">
           <button className="cp-about-back" data-testid="button-back">
             <ChevronLeft aria-hidden="true" />
-            <span>Retour</span>
+            <span>Back</span>
           </button>
         </Link>
-          <h1>À propos de nous</h1>
+          <h1>About us</h1>
         </header>
 
         <div className="cp-about-body">
@@ -25,7 +25,7 @@ export default function AboutPage() {
             Créée en 2024, ChargePoint s’adresse aux particuliers, aux professionnels et aux partenaires qui souhaitent accéder à une plateforme moderne, suivre leurs activités et découvrir des produits conçus pour générer une valeur progressive dans le temps.
           </p>
 
-          <h2>Notre histoire</h2>
+          <h2>Our story</h2>
           <p>
             ChargePoint est née d’une idée simple : les utilisateurs doivent pouvoir accéder à des services modernes depuis une seule plateforme, avec des informations compréhensibles et un accompagnement disponible à chaque étape. Dès sa création, la marque a été pensée autour d’une expérience mobile rapide, claire et adaptée aux besoins quotidiens.
           </p>
@@ -33,7 +33,7 @@ export default function AboutPage() {
             Notre développement repose sur l’écoute des utilisateurs, l’amélioration continue de nos outils et la volonté de construire une relation durable avec notre communauté. Chaque évolution de la plateforme vise à faciliter l’accès aux produits, le suivi des activités et la compréhension des services proposés.
           </p>
 
-          <h2>Notre mission</h2>
+          <h2>Our mission</h2>
           <p>
             La mission de ChargePoint est de rapprocher la technologie des utilisateurs. Nous voulons proposer un espace unique dans lequel chacun peut découvrir les solutions disponibles, consulter les informations importantes, suivre ses opérations et trouver rapidement de l’aide lorsqu’il en a besoin.
           </p>
@@ -41,7 +41,7 @@ export default function AboutPage() {
             Nous travaillons pour que la technologie ne soit pas une source de complexité. Les parcours sont conçus avec des étapes simples, des indications visibles et des informations présentées dans un langage accessible, quel que soit le niveau d’expérience numérique de l’utilisateur.
           </p>
 
-          <h2>Notre vision pour les investisseurs africains</h2>
+          <h2>Our vision for investors</h2>
           <p>
             ChargePoint souhaite contribuer à un accès plus simple aux opportunités numériques pour les investisseurs africains. Notre vision est de créer une plateforme pensée pour les réalités locales, avec des parcours adaptés au téléphone, des moyens de paiement accessibles et des informations compréhensibles avant chaque décision.
           </p>
@@ -65,7 +65,7 @@ export default function AboutPage() {
             Les gains affichés correspondent aux conditions du produit et ne doivent pas être interprétés comme une promesse de rendement automatique ou sans risque. Avant tout achat, chaque investisseur doit lire les informations disponibles, vérifier qu’il comprend le fonctionnement du produit et n’engager que des fonds qu’il peut se permettre d’utiliser.
           </p>
 
-          <h2>Ce que nous proposons</h2>
+          <h2>What we offer</h2>
           <ul>
             <li>Une plateforme mobile pensée pour être simple à utiliser au quotidien.</li>
             <li>Des solutions et produits liés à la recharge et aux équipements connectés.</li>
@@ -75,7 +75,7 @@ export default function AboutPage() {
             <li>Une communauté qui peut progresser grâce au partage d’informations et au parrainage.</li>
           </ul>
 
-          <h2>Nos objectifs</h2>
+          <h2>Our goals</h2>
           <p>
             Notre premier objectif est de rendre les services numériques plus accessibles en Afrique et dans les marchés où ChargePoint est disponible. Nous souhaitons développer des outils adaptés aux réalités locales, aux moyens de paiement utilisés par les communautés et aux habitudes des utilisateurs.
           </p>
@@ -86,7 +86,7 @@ export default function AboutPage() {
             À long terme, ChargePoint a pour ambition de devenir un espace de référence pour les solutions de recharge et les services numériques associés : une plateforme fiable, pratique et capable d’évoluer avec les besoins de ses utilisateurs.
           </p>
 
-          <h2>Nos engagements</h2>
+          <h2>Our commitments</h2>
           <ul>
             <li><strong>Clarté :</strong> présenter les conditions, les étapes et les informations essentielles de manière lisible.</li>
             <li><strong>Accessibilité :</strong> concevoir une expérience adaptée aux téléphones et aux connexions du quotidien.</li>
@@ -96,7 +96,7 @@ export default function AboutPage() {
             <li><strong>Innovation utile :</strong> privilégier les fonctionnalités qui apportent une réelle valeur plutôt que la complexité.</li>
           </ul>
 
-          <h2>Notre vision</h2>
+          <h2>Our vision</h2>
           <p>
             Nous imaginons un avenir dans lequel l’accès aux équipements, aux services de recharge et aux outils numériques ne dépend plus de parcours compliqués. ChargePoint veut contribuer à cette évolution en réunissant technologie, simplicité et accompagnement dans une même expérience.
           </p>

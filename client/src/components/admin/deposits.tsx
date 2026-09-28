@@ -108,7 +108,7 @@ export default function AdminDeposits() {
         <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 flex items-center gap-2">
           <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
           <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-            {pendingCount} dépôt{pendingCount > 1 ? "s" : ""} en attente de validation
+             {pendingCount} deposit{pendingCount > 1 ? "s" : ""} awaiting validation
           </p>
         </div>
       )}
@@ -136,7 +136,7 @@ export default function AdminDeposits() {
             className="whitespace-nowrap"
             data-testid={`button-filter-${status}`}
           >
-            {status === "all" ? "Tous" : status === "pending" ? `En attente${pendingCount > 0 ? ` (${pendingCount})` : ""}` : status === "approved" ? "Approuvés" : "Rejetés"}
+             {status === "all" ? "All" : status === "pending" ? `Pending${pendingCount > 0 ? ` (${pendingCount})` : ""}` : status === "approved" ? "Approved" : "Rejected"}
           </Button>
         ))}
       </div>
@@ -167,7 +167,7 @@ export default function AdminDeposits() {
                       <p className="text-sm text-muted-foreground">{deposit.user.phone} · {deposit.user.country}</p>
                     </div>
                     <Badge variant={deposit.status === "pending" || deposit.status === "processing" ? "secondary" : deposit.status === "approved" ? "default" : "destructive"}>
-                      {deposit.status === "pending" ? "En attente" : deposit.status === "processing" ? "Vérification en cours" : deposit.status === "approved" ? "Approuvé" : "Rejeté"}
+                         {deposit.status === "pending" ? "Pending" : deposit.status === "processing" ? "Verification in progress" : deposit.status === "approved" ? "Approved" : "Rejected"}
                     </Badge>
                   </div>
 
@@ -175,7 +175,7 @@ export default function AdminDeposits() {
                   <div className="grid grid-cols-2 gap-2 text-sm bg-secondary/50 rounded-xl p-3">
                     <div>
                       <p className="text-muted-foreground text-xs">Montant</p>
-                      <p className="font-bold text-lg text-primary">{deposit.amount.toLocaleString()} F</p>
+                       <p className="font-bold text-lg text-primary">{deposit.amount.toLocaleString()} PHP</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Opérateur</p>
@@ -188,9 +188,9 @@ export default function AdminDeposits() {
                     <div>
                       <p className="text-muted-foreground text-xs">Date</p>
                       <p className="font-medium text-xs">
-                        {new Date(deposit.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                         {new Date(deposit.createdAt).toLocaleDateString("en-PH", { day: "2-digit", month: "2-digit", year: "numeric" })}
                         {" "}
-                        {new Date(deposit.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                         {new Date(deposit.createdAt).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
 
@@ -307,7 +307,7 @@ export default function AdminDeposits() {
           })
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            Aucun dépôt trouvé
+             No deposits found
           </div>
         )}
       </div>

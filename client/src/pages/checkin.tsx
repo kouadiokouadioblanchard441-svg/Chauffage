@@ -39,7 +39,7 @@ export default function CheckinPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/daily-bonus-status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       const amount = Number(data?.amount || 0);
-      toast({ title: "Bonus reçu !", description: `${amount} FCFA ajoutés à votre solde` });
+      toast({ title: "Bonus received!", description: `${amount} PHP added to your balance` });
     },
     onError: (error: Error) => {
       toast({ title: "Récompense indisponible", description: error.message, variant: "destructive" });
@@ -49,10 +49,10 @@ export default function CheckinPage() {
   if (!user) return null;
 
   const country = getCountryByCode(user.country);
-  const currency = country?.currency || "XOF";
+  const currency = "PHP";
   const totalBonusClaimed = bonusStatus?.totalBonusClaimed || 0;
   const canClaim = Boolean(bonusStatus?.canClaim);
-  const formatAmount = (amount: number) => `${Math.round(amount).toLocaleString("fr-FR")}${currency}`;
+  const formatAmount = (amount: number) => `${Math.round(amount).toLocaleString("en-PH")} ${currency}`;
 
   return (
     <main className="checkin-reference min-h-full bg-[#f4f4f4] pb-20">

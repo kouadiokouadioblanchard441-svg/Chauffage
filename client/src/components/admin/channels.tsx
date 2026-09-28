@@ -18,8 +18,8 @@ import { Plus, Edit, Trash2, Loader2, Link } from "lucide-react";
 import type { PaymentChannel } from "@shared/schema";
 
 const channelSchema = z.object({
-  name: z.string().min(2, "Nom requis"),
-  redirectUrl: z.string().min(5, "URL requise"),
+  name: z.string().min(2, "Name is required"),
+  redirectUrl: z.string().min(5, "URL is required"),
   isApi: z.boolean().default(false),
 });
 
@@ -52,18 +52,18 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
       const response = await apiRequest("POST", "/api/admin/channels", data);
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Création du canal impossible");
+        throw new Error(result.message || "Unable to create channel");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/channels"] });
-      toast({ title: "Canal créé!" });
+      toast({ title: "Channel created!" });
       setShowForm(false);
       form.reset();
     },
     onError: (error: any) => {
-      toast({ title: "Création du canal impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Unable to create channel", description: error.message, variant: "destructive" });
     },
   });
 
@@ -72,17 +72,17 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
       const response = await apiRequest("PATCH", `/api/admin/channels/${id}`, data);
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Modification du canal impossible");
+        throw new Error(result.message || "Unable to update channel");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/channels"] });
-      toast({ title: "Canal mis à jour!" });
+      toast({ title: "Channel updated!" });
       setEditChannel(null);
     },
     onError: (error: any) => {
-      toast({ title: "Modification du canal impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Unable to update channel", description: error.message, variant: "destructive" });
     },
   });
 
@@ -91,16 +91,16 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
       const response = await apiRequest("DELETE", `/api/admin/channels/${id}`, {});
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Suppression du canal impossible");
+        throw new Error(result.message || "Unable to delete channel");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/channels"] });
-      toast({ title: "Canal supprimé!" });
+      toast({ title: "Channel deleted!" });
     },
     onError: (error: any) => {
-      toast({ title: "Suppression du canal impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Unable to delete channel", description: error.message, variant: "destructive" });
     },
   });
 
@@ -142,7 +142,7 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
     <div className="space-y-4">
       <Button onClick={() => { setShowForm(true); form.reset(); }} className="w-full">
         <Plus className="w-4 h-4 mr-2" />
-        Ajouter un canal
+           Add channel
       </Button>
 
       {isLoading ? (
@@ -182,14 +182,14 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
         ))
       ) : (
         <div className="text-center py-8 text-muted-foreground">
-          Aucun canal de paiement
+           No payment channels
         </div>
       )}
 
       <Dialog open={showForm || !!editChannel} onOpenChange={() => { setShowForm(false); setEditChannel(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editChannel ? "Modifier le canal" : "Nouveau canal"}</DialogTitle>
+           <DialogTitle>{editChannel ? "Edit channel" : "New channel"}</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -199,7 +199,7 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nom du canal</FormLabel>
+                     <FormLabel>Channel name</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="Ex: LeekPay" />
                     </FormControl>
@@ -213,7 +213,7 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
                 name="redirectUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL de redirection</FormLabel>
+                     <FormLabel>Redirect URL</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="https://..." />
                     </FormControl>
@@ -230,7 +230,7 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
                     <FormControl>
                       <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
-                    <FormLabel className="!mt-0">Paiement API automatique</FormLabel>
+                     <FormLabel className="!mt-0">Automatic API payment</FormLabel>
                   </FormItem>
                 )}
               />
@@ -239,9 +239,9 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
                 {(createMutation.isPending || updateMutation.isPending) ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : editChannel ? (
-                  "Enregistrer"
+                   "Save"
                 ) : (
-                  "Créer"
+                   "Create"
                 )}
               </Button>
             </form>

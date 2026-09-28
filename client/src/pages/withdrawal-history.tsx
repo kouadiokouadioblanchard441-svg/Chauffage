@@ -15,10 +15,10 @@ interface Withdrawal {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  approved: { label: "Succès",     bg: "bg-gray-900",         text: "text-white" },
-  pending:  { label: "En attente", bg: "bg-[#55c9e5]",          text: "text-white" },
-  processing: { label: "En traitement", bg: "bg-amber-500", text: "text-white" },
-  rejected: { label: "Rejeté",     bg: "bg-red-600",           text: "text-white" },
+  approved: { label: "Success",     bg: "bg-gray-900",         text: "text-white" },
+  pending:  { label: "Pending", bg: "bg-[#55c9e5]",          text: "text-white" },
+  processing: { label: "Processing", bg: "bg-amber-500", text: "text-white" },
+  rejected: { label: "Rejected",     bg: "bg-red-600",           text: "text-white" },
 };
 
 function formatDate(iso: string) {
@@ -30,7 +30,7 @@ function formatDate(iso: string) {
 export default function WithdrawalHistoryPage() {
   const { user } = useAuth();
   const countryInfo = user ? getCountryByCode(user.country) : null;
-  const currency = countryInfo?.currency || "FCFA";
+  const currency = "PHP";
 
   const { data: withdrawals = [], isLoading } = useQuery<Withdrawal[]>({
     queryKey: ["/api/withdrawals/history"],
@@ -46,7 +46,7 @@ export default function WithdrawalHistoryPage() {
           </button>
         </Link>
         <h1 className="flex-1 text-center text-base font-bold text-gray-900 pr-8">
-          Historique des retraits
+           Withdrawal history
         </h1>
       </header>
 
@@ -57,8 +57,8 @@ export default function WithdrawalHistoryPage() {
           ))
         ) : withdrawals.length === 0 ? (
           <div className="text-center py-10 flex flex-col items-center gap-3">
-            <img src={emptyIllustration} alt="Aucun retrait" className="w-40 h-40 object-contain opacity-90" />
-            <p className="text-gray-400 text-sm">Aucun retrait pour le moment</p>
+            <img src={emptyIllustration} alt="No withdrawals" className="w-40 h-40 object-contain opacity-90" />
+            <p className="text-gray-400 text-sm">No withdrawals yet</p>
           </div>
         ) : (
           withdrawals.map((w) => {
@@ -72,12 +72,12 @@ export default function WithdrawalHistoryPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 text-sm">Montant</span>
                     <span className="text-[#3174d1] font-bold text-base">
-                      {parseFloat(w.amount).toLocaleString()}
+                       {parseFloat(w.amount).toLocaleString("en-PH")} {currency}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-500 text-sm">État</span>
+                   <span className="text-gray-500 text-sm">Status</span>
                     <span className={`${cfg.bg} ${cfg.text} text-xs font-semibold px-4 py-1.5 rounded-full`}>
                       {cfg.label}
                     </span>

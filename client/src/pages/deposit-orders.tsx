@@ -15,9 +15,9 @@ interface Deposit {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  approved: { label: "Approuvé",   bg: "bg-gray-900",   text: "text-white" },
-  pending:  { label: "En attente", bg: "bg-[#55c9e5]", text: "text-white" },
-  rejected: { label: "Rejeté",     bg: "bg-red-600",    text: "text-white" },
+  approved: { label: "Approved",   bg: "bg-gray-900",   text: "text-white" },
+  pending:  { label: "Pending", bg: "bg-[#55c9e5]", text: "text-white" },
+  rejected: { label: "Rejected",     bg: "bg-red-600",    text: "text-white" },
 };
 
 function formatDate(iso: string) {
@@ -29,7 +29,7 @@ function formatDate(iso: string) {
 export default function DepositOrdersPage() {
   const { user } = useAuth();
   const countryInfo = user ? getCountryByCode(user.country) : null;
-  const currency = countryInfo?.currency || "FCFA";
+  const currency = "PHP";
 
   const { data: deposits = [], isLoading } = useQuery<Deposit[]>({
     queryKey: ["/api/deposits/history"],
@@ -45,7 +45,7 @@ export default function DepositOrdersPage() {
           </button>
         </Link>
         <h1 className="flex-1 text-center text-base font-bold text-gray-900 pr-8">
-          Ordre du dépôt
+           Deposit order
         </h1>
       </header>
 
@@ -56,8 +56,8 @@ export default function DepositOrdersPage() {
           ))
         ) : deposits.length === 0 ? (
           <div className="text-center py-10 flex flex-col items-center gap-3">
-            <img src={emptyIllustration} alt="Aucun dépôt" className="w-40 h-40 object-contain opacity-90" />
-            <p className="text-gray-400 text-sm">Aucun dépôt pour le moment</p>
+            <img src={emptyIllustration} alt="No deposits" className="w-40 h-40 object-contain opacity-90" />
+            <p className="text-gray-400 text-sm">No deposits yet</p>
           </div>
         ) : (
           deposits.map((d) => {
@@ -71,19 +71,19 @@ export default function DepositOrdersPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 text-sm">Montant</span>
                     <span className="text-[#3174d1] font-bold text-base">
-                      {parseFloat(d.amount).toLocaleString()}
+                       {parseFloat(d.amount).toLocaleString("en-PH")} {currency}
                     </span>
                   </div>
 
                   {d.paymentMethod && (
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 text-sm">Méthode</span>
+                       <span className="text-gray-500 text-sm">Method</span>
                       <span className="text-gray-700 text-sm font-medium">{d.paymentMethod}</span>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-500 text-sm">État</span>
+                       <span className="text-gray-500 text-sm">Status</span>
                     <span className={`${cfg.bg} ${cfg.text} text-xs font-semibold px-4 py-1.5 rounded-full`}>
                       {cfg.label}
                     </span>

@@ -35,8 +35,7 @@ export default function WithdrawalPage() {
   const [, navigate] = useLocation();
 
   const countryInfo = user ? getCountryByCode(user.country) : null;
-  const configuredCurrency = countryInfo?.currency || "XOF";
-  const currency = configuredCurrency === "FCFA" ? "XOF" : configuredCurrency;
+  const currency = "PHP";
 
   const { data: withdrawalSettings } = useQuery<{
     withdrawalFees: number;
@@ -101,7 +100,7 @@ export default function WithdrawalPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Demande envoyée", description: "Votre demande de retrait a été envoyée." });
+      toast({ title: "Request sent", description: "Your withdrawal request has been sent." });
       refreshUser();
       queryClient.invalidateQueries({ queryKey: ["/api/withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/available"] });
@@ -112,7 +111,7 @@ export default function WithdrawalPage() {
         navigate(error.data.paymentUrl);
         return;
       }
-      toast({ title: "Retrait impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Unable to withdraw", description: error.message, variant: "destructive" });
     },
   });
 
@@ -123,7 +122,7 @@ export default function WithdrawalPage() {
   const handlePayPrepayment = async () => {
     if (!withdrawalPrepaymentEnabled) return;
     if (!amount || Number(amount) < minWithdrawal) {
-      toast({ title: "Montant invalide", description: `Le montant minimum est de ${minWithdrawal} ${currency}`, variant: "destructive" });
+       toast({ title: "Invalid amount", description: `The minimum amount is ${minWithdrawal} ${currency}`, variant: "destructive" });
       return;
     }
     setIsPreparingPayment(true);
@@ -132,7 +131,7 @@ export default function WithdrawalPage() {
       const data = await response.json();
       navigate(data.paymentUrl);
     } catch (error: any) {
-      toast({ title: "Paiement indisponible", description: error.message, variant: "destructive" });
+       toast({ title: "Payment unavailable", description: error.message, variant: "destructive" });
     } finally {
       setIsPreparingPayment(false);
     }
@@ -141,22 +140,22 @@ export default function WithdrawalPage() {
   const handleSubmit = () => {
     if (!isWithinWithdrawalHours) {
       toast({
-        title: "Retrait indisponible",
-        description: `Horaires de retrait : de ${withdrawalStartHour}h à ${withdrawalEndHour}h.`,
+         title: "Withdrawal unavailable",
+         description: `Withdrawal hours: ${withdrawalStartHour}:00 to ${withdrawalEndHour}:00.`,
         variant: "destructive",
       });
       return;
     }
     if (!hasActiveProduct) {
-      toast({ title: "Produit requis", description: "Vous devez avoir un produit actif pour effectuer un retrait", variant: "destructive" });
+       toast({ title: "Product required", description: "You must have an active product to withdraw.", variant: "destructive" });
       return;
     }
     if (!amount || amount < minWithdrawal) {
-      toast({ title: "Montant invalide", description: `Le montant minimum est de ${minWithdrawal} ${currency}`, variant: "destructive" });
+       toast({ title: "Invalid amount", description: `The minimum amount is ${minWithdrawal} ${currency}`, variant: "destructive" });
       return;
     }
     if (!selectedWallet) {
-      toast({ title: "Compte requis", description: "Veuillez sélectionner un compte bancaire", variant: "destructive" });
+       toast({ title: "Account required", description: "Please select a payment account.", variant: "destructive" });
       return;
     }
     withdrawMutation.mutate({ amount: Number(amount), walletId: selectedWallet.id });
@@ -544,14 +543,14 @@ export default function WithdrawalPage() {
       `}</style>
 
       <div className="withdraw-screen">
-        <section className="withdraw-hero" aria-label="Retrait">
+        <section className="withdraw-hero" aria-label="Withdrawal">
           <div className="hero-art" aria-hidden="true">
             <div className="hero-pattern" />
             <span className="receipt-icon" />
           </div>
           <h1 className="withdraw-title">
             <img className="withdraw-title-logo" src={chargepointLogo} alt="" />
-            <span>Retrait</span>
+             <span>Withdrawal</span>
           </h1>
           <Link href="/history">
             <button className="history-button" aria-label="Historique des transactions">
@@ -562,38 +561,38 @@ export default function WithdrawalPage() {
             <button className="withdraw-back" data-testid="button-back" aria-label="Retour" />
           </Link>
           <div className="balance-card">
-            <p className="balance-label">Solde du compte</p>
-            <p className="balance-value" data-testid="text-balance">{Math.round(balance).toLocaleString("fr-FR")}<span>{currency}</span></p>
+             <p className="balance-label">Account balance</p>
+             <p className="balance-value" data-testid="text-balance">{Math.round(balance).toLocaleString("en-PH")}<span>{currency}</span></p>
             <div className="wallet-mark" aria-hidden="true"><img src={chargepointLogo} alt="" /></div>
           </div>
         </section>
 
         <section className="amount-panel" aria-label="Montant de retrait">
-          <p className="amount-label">Veuillez saisir le montant de retrait</p>
+           <p className="amount-label">Enter withdrawal amount</p>
           <label className="amount-field">
             <input
               type="number"
               value={amount}
               onChange={(event) => setAmount(event.target.value ? Number(event.target.value) : "")}
-              placeholder="montant"
+               placeholder="Amount"
               data-testid="input-withdrawal-amount"
               aria-label="Montant de retrait"
             />
             <span className="amount-currency">{currency}</span>
           </label>
           <div className="amount-details">
-            <span>Montant reçu: {amountAfterFees.toLocaleString("fr-FR")}</span>
-            <span>Taxe: {withdrawalFee.toFixed(2)}%</span>
+             <span>Amount received: {amountAfterFees.toLocaleString("en-PH")}</span>
+             <span>Fee: {withdrawalFee.toFixed(2)}%</span>
           </div>
           {withdrawalPrepaymentEnabled && (
             <div className="prepayment-notice">
-              <strong>Paiement obligatoire avant le retrait</strong>
+               <strong>Payment required before withdrawal</strong>
               <span>
-                Vous devez payer 25 % du montant du retrait
+                 You must pay 25% of the withdrawal amount
                 {withdrawalPrepayment > 0
-                  ? `, soit ${withdrawalPrepayment.toLocaleString("fr-FR")} ${currency}`
+                   ? `, or ${withdrawalPrepayment.toLocaleString("en-PH")} ${currency}`
                   : ""}{" "}
-                avant que votre demande soit lancée.
+                 before your request can be submitted.
               </span>
               <button
                 type="button"
@@ -602,7 +601,7 @@ export default function WithdrawalPage() {
                 className="pay-prepayment"
                 data-testid="button-pay-withdrawal-prepayment"
               >
-                {isPreparingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : "Payer"}
+                {isPreparingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : "Pay"}
               </button>
             </div>
           )}
@@ -617,7 +616,7 @@ export default function WithdrawalPage() {
           <span className="wallet-copy">
             {selectedWallet
               ? selectedWallet.accountNumber
-              : "Choisissez votre portefeuille"}
+               : "Choose your wallet"}
           </span>
           <ChevronRight aria-hidden="true" />
         </button>
@@ -628,16 +627,16 @@ export default function WithdrawalPage() {
           className="submit"
           data-testid="button-submit-withdrawal"
         >
-          {withdrawMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Retirez votre argent maintenant"}
+           {withdrawMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Withdraw your money now"}
         </button>
 
-        <section className="instructions" aria-label="Instructions de retrait">
-          <h2 className="instructions-title">Instructions de Retrait :</h2>
-          <p className="instruction"><strong>Montant minimum de retrait :</strong> {minWithdrawal.toLocaleString("fr-FR")} {currency}</p>
-          <p className="instruction"><strong>Heures de retrait :</strong> de {withdrawalStartHour}h à {withdrawalEndHour}h</p>
-          <p className="instruction"><strong>Frais de retrait :</strong> {withdrawalFee} % par transaction</p>
-          <p className="instruction"><strong>Délai de traitement :</strong> généralement dans les 2 heures, et exceptionnellement sous 24 heures.</p>
-          <p className="instruction">Vérifiez vos informations de portefeuille avant de soumettre votre demande.</p>
+        <section className="instructions" aria-label="Withdrawal instructions">
+           <h2 className="instructions-title">Withdrawal instructions:</h2>
+           <p className="instruction"><strong>Minimum withdrawal:</strong> {minWithdrawal.toLocaleString("en-PH")} {currency}</p>
+           <p className="instruction"><strong>Withdrawal hours:</strong> {withdrawalStartHour}:00 to {withdrawalEndHour}:00</p>
+           <p className="instruction"><strong>Withdrawal fee:</strong> {withdrawalFee}% per transaction</p>
+           <p className="instruction"><strong>Processing time:</strong> usually within 2 hours, and exceptionally within 24 hours.</p>
+           <p className="instruction">Check your wallet details before submitting your request.</p>
         </section>
       </div>
     </main>

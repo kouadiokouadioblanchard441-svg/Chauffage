@@ -27,56 +27,56 @@ export default function RulesModal({ open, onClose }: RulesModalProps) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Règles de la plateforme</DialogTitle>
+          <DialogTitle>Platform rules</DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="h-[60vh] pr-4">
           <div className="space-y-4 text-sm text-muted-foreground">
             <section>
-              <h4 className="font-medium text-foreground mb-2">1. Dépôts</h4>
+              <h4 className="font-medium text-foreground mb-2">1. Deposits</h4>
               <ul className="space-y-1">
-                <li>- Montant minimum : {parseInt(minDeposit).toLocaleString()} FCFA</li>
-                <li>- Les dépôts sont traités dans les plus brefs délais</li>
-                <li>- Assurez-vous que les informations de paiement sont correctes</li>
+                <li>- Minimum amount: {parseInt(minDeposit).toLocaleString("en-US")} PHP</li>
+                <li>- Deposits are processed as quickly as possible</li>
+                <li>- Make sure your payment information is correct</li>
               </ul>
             </section>
 
             <section>
-              <h4 className="font-medium text-foreground mb-2">2. Retraits</h4>
+              <h4 className="font-medium text-foreground mb-2">2. Withdrawals</h4>
               <ul className="space-y-1">
-                <li>- Montant minimum : {parseInt(minWithdrawal).toLocaleString()} FCFA</li>
-                <li>- Frais de retrait : {withdrawalFees}%</li>
-                <li>- Horaires : {withdrawalStartHour}h - {withdrawalEndHour}h</li>
-                <li>- Maximum {maxWithdrawalsPerDay} retrait(s) par jour</li>
-                <li>- Un produit actif est requis pour retirer</li>
-                <li>- Un portefeuille de retrait doit être enregistré</li>
+                <li>- Minimum amount: {parseInt(minWithdrawal).toLocaleString("en-US")} PHP</li>
+                <li>- Withdrawal fee: {withdrawalFees}%</li>
+                <li>- Hours: {withdrawalStartHour}:00 - {withdrawalEndHour}:00</li>
+                <li>- Maximum {maxWithdrawalsPerDay} withdrawal(s) per day</li>
+                <li>- An active product is required to withdraw</li>
+                <li>- A withdrawal wallet must be registered</li>
               </ul>
             </section>
 
             <section>
-              <h4 className="font-medium text-foreground mb-2">3. Produits</h4>
+              <h4 className="font-medium text-foreground mb-2">3. Products</h4>
               <ul className="space-y-1">
-                <li>- Montant minimum d'achat : 4 500 FCFA</li>
+                <li>- Minimum purchase amount: 4,500 PHP</li>
                 <li>- Cycle standard : 80 jours</li>
-                <li>- Gains journaliers automatiques</li>
-                <li>- Les gains sont crédités 24h après l'achat</li>
-                <li>- Produit gratuit : réclamez 50 FCFA/jour</li>
+                <li>- Automatic daily earnings</li>
+                <li>- Earnings are credited 24 hours after purchase</li>
+                <li>- Free product: claim 50 PHP/day</li>
               </ul>
             </section>
 
             <section>
-              <h4 className="font-medium text-foreground mb-2">4. Parrainage</h4>
+              <h4 className="font-medium text-foreground mb-2">4. Referrals</h4>
               <ul className="space-y-1">
-                <li>- Niveau 1 : {lv1}% de commission</li>
-                <li>- Niveau 2 : {lv2}% de commission</li>
-                <li>- Niveau 3 : {lv3}% de commission</li>
-                <li>- Commissions sur les achats de produits</li>
+                <li>- Level 1: {lv1}% commission</li>
+                <li>- Level 2: {lv2}% commission</li>
+                <li>- Level 3: {lv3}% commission</li>
+                <li>- Commissions on product purchases</li>
               </ul>
             </section>
 
             <section>
-              <h4 className="font-medium text-foreground mb-2">5. Bonus d'inscription</h4>
-              <p>Chaque nouveau membre reçoit {parseInt(signupBonus).toLocaleString()} FCFA de bonus à l'inscription.</p>
+              <h4 className="font-medium text-foreground mb-2">5. Signup bonus</h4>
+              <p>Each new member receives a {parseInt(signupBonus).toLocaleString("en-US")} PHP signup bonus.</p>
             </section>
           </div>
         </ScrollArea>

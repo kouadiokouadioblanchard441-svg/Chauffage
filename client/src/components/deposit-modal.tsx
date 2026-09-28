@@ -16,9 +16,9 @@ import { Loader2 } from "lucide-react";
 import type { PaymentChannel } from "@shared/schema";
 
 const depositSchema = z.object({
-  amount: z.string().min(1, "Montant requis"),
-  paymentMethod: z.string().min(2, "Moyen de paiement requis"),
-  paymentChannelId: z.string().min(1, "Canal de recharge requis"),
+  amount: z.string().min(1, "Amount is required"),
+  paymentMethod: z.string().min(2, "Payment method is required"),
+  paymentChannelId: z.string().min(1, "Deposit channel is required"),
 });
 
 type DepositForm = z.infer<typeof depositSchema>;
@@ -60,7 +60,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
       });
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Impossible d'enregistrer la demande de dépôt");
+        throw new Error(result.message || "Unable to submit the deposit request");
       }
       return response.json();
     },
@@ -70,11 +70,11 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
       if (data.redirectUrl) {
         window.open(data.redirectUrl, "_blank");
       }
-      toast({ title: "Demande envoyée!", description: "Votre dépôt est en attente de validation." });
+      toast({ title: "Request sent!", description: "Your deposit is awaiting approval." });
       handleClose();
     },
     onError: (error: any) => {
-      toast({ title: "Dépôt non enregistré", description: error.message, variant: "destructive" });
+      toast({ title: "Deposit not registered", description: error.message, variant: "destructive" });
     },
   });
 
@@ -97,7 +97,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
       setSelectedAmount(amount);
       setStep("details");
     } else {
-      toast({ title: "Montant invalide", description: "Le montant minimum est de 2000 FCFA", variant: "destructive" });
+       toast({ title: "Invalid amount", description: "The minimum amount is 2,000 PHP", variant: "destructive" });
     }
   };
 
@@ -112,7 +112,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {step === "amount" ? "Recharger" : "Informations de paiement"}
+             {step === "amount" ? "Deposit" : "Payment information"}
           </DialogTitle>
         </DialogHeader>
 
@@ -138,13 +138,13 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
             <div className="flex gap-2">
               <Input
                 type="number"
-                placeholder="Montant personnalisé"
+               placeholder="Custom amount"
                 value={form.watch("amount")}
                 onChange={(e) => form.setValue("amount", e.target.value)}
                 data-testid="input-custom-amount"
               />
               <Button onClick={handleCustomAmount} data-testid="button-custom-amount">
-                Continuer
+                 Continue
               </Button>
             </div>
           </div>
@@ -152,7 +152,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
           <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => depositMutation.mutate(data))} className="space-y-4">
               <div className="bg-secondary rounded-lg p-3 text-center">
-                <p className="text-sm text-muted-foreground">Montant</p>
+                 <p className="text-sm text-muted-foreground">Amount</p>
                 <p className="text-2xl font-bold text-primary">
                   {formatCurrency(selectedAmount || 0, user.country)}
                 </p>
@@ -163,11 +163,11 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
                 name="paymentChannelId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Canal de recharge</FormLabel>
+                    <FormLabel>Deposit channel</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-channel">
-                          <SelectValue placeholder="Choisir un canal" />
+                           <SelectValue placeholder="Choose a channel" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -188,7 +188,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
                 name="paymentMethod"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Moyen de paiement</FormLabel>
+                   <FormLabel>Payment method</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-payment-method">
@@ -210,13 +210,13 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
 
               <div className="flex gap-2">
                 <Button type="button" variant="outline" onClick={() => setStep("amount")} className="flex-1">
-                  Retour
+                     Back
                 </Button>
                 <Button type="submit" className="flex-1" disabled={depositMutation.isPending} data-testid="button-submit-deposit">
                   {depositMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    "Procéder au paiement"
+                     "Proceed to payment"
                   )}
                 </Button>
               </div>

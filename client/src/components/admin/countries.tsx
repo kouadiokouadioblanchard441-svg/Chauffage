@@ -24,7 +24,7 @@ interface CountryForm {
 const emptyForm: CountryForm = {
   code: "",
   name: "",
-  currency: "XOF",
+  currency: "PHP",
   phonePrefix: "",
   operators: "",
   isActive: true,
@@ -62,13 +62,13 @@ export default function AdminCountries() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/countries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/countries"] });
-      toast({ title: editingId ? "Pays mis à jour!" : "Pays ajouté!" });
+      toast({ title: editingId ? "Country updated!" : "Country added!" });
       setDialogOpen(false);
       setForm(emptyForm);
       setEditingId(null);
     },
     onError: (e: any) => {
-      toast({ title: editingId ? "Modification du pays impossible" : "Ajout du pays impossible", description: e.message, variant: "destructive" });
+      toast({ title: editingId ? "Unable to update country" : "Unable to add country", description: e.message, variant: "destructive" });
     },
   });
 
@@ -81,11 +81,11 @@ export default function AdminCountries() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/countries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/countries"] });
-      toast({ title: "Pays supprimé!" });
+      toast({ title: "Country deleted!" });
       setDeleteId(null);
     },
     onError: (e: any) => {
-      toast({ title: "Suppression du pays impossible", description: e.message, variant: "destructive" });
+      toast({ title: "Unable to delete country", description: e.message, variant: "destructive" });
     },
   });
 
@@ -132,15 +132,15 @@ export default function AdminCountries() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Globe className="w-5 h-5" />
-          Gestion des Pays ({countriesList?.length ?? 0})
+          Country Management ({countriesList?.length ?? 0})
         </h2>
         <Button onClick={openAdd} size="sm" data-testid="button-add-country">
           <Plus className="w-4 h-4 mr-1" />
-          Ajouter un pays
+          Add country
         </Button>
       </div>
 
-      {isLoading && <p className="text-muted-foreground text-sm">Chargement...</p>}
+      {isLoading && <p className="text-muted-foreground text-sm">Loading...</p>}
 
       <div className="grid gap-3">
         {countriesList?.map((c) => {
@@ -186,7 +186,7 @@ export default function AdminCountries() {
           );
         })}
         {countriesList?.length === 0 && (
-          <p className="text-muted-foreground text-sm text-center py-8">Aucun pays configuré</p>
+          <p className="text-muted-foreground text-sm text-center py-8">No countries configured</p>
         )}
       </div>
 
@@ -194,12 +194,12 @@ export default function AdminCountries() {
       <Dialog open={dialogOpen} onOpenChange={(v) => { if (!v) { setDialogOpen(false); setEditingId(null); setForm(emptyForm); }}}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingId ? "Modifier le pays" : "Ajouter un pays"}</DialogTitle>
+            <DialogTitle>{editingId ? "Edit country" : "Add country"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Code pays (ex: TD)</Label>
+                <Label>Country code (e.g. PH)</Label>
                 <Input
                   value={form.code}
                   onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })}
@@ -211,11 +211,11 @@ export default function AdminCountries() {
                 />
               </div>
               <div>
-                <Label>Devise (ex: XAF)</Label>
+                <Label>Currency (e.g. PHP)</Label>
                 <Input
                   value={form.currency}
                   onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-                  placeholder="XAF"
+                  placeholder="PHP"
                   maxLength={5}
                   required
                   data-testid="input-country-currency"
@@ -223,17 +223,17 @@ export default function AdminCountries() {
               </div>
             </div>
             <div>
-              <Label>Nom du pays</Label>
+              <Label>Country name</Label>
               <Input
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
-                placeholder="Tchad"
+                placeholder="Philippines"
                 required
                 data-testid="input-country-name"
               />
             </div>
             <div>
-              <Label>Indicatif téléphonique (sans +)</Label>
+              <Label>Phone prefix (without +)</Label>
               <Input
                 value={form.phonePrefix}
                 onChange={e => setForm({ ...form, phonePrefix: e.target.value })}
@@ -243,14 +243,14 @@ export default function AdminCountries() {
               />
             </div>
             <div>
-              <Label>Opérateurs (séparés par virgule)</Label>
+              <Label>Operators (comma-separated)</Label>
               <Input
                 value={form.operators}
                 onChange={e => setForm({ ...form, operators: e.target.value })}
                 placeholder="Airtel Money, Moov Money"
                 data-testid="input-country-operators"
               />
-              <p className="text-xs text-muted-foreground mt-1">Exemple: Airtel Money, Moov Money</p>
+              <p className="text-xs text-muted-foreground mt-1">Example: GCash, Maya</p>
             </div>
             <div className="flex items-center gap-2">
               <Switch
@@ -258,14 +258,14 @@ export default function AdminCountries() {
                 onCheckedChange={v => setForm({ ...form, isActive: v })}
                 id="country-active"
               />
-              <Label htmlFor="country-active">Pays actif</Label>
+              <Label htmlFor="country-active">Active country</Label>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setEditingId(null); setForm(emptyForm); }}>
-                Annuler
+                Cancel
               </Button>
               <Button type="submit" disabled={saveMutation.isPending} data-testid="button-save-country">
-                {saveMutation.isPending ? "Enregistrement..." : "Enregistrer"}
+                {saveMutation.isPending ? "Saving..." : "Save"}
               </Button>
             </DialogFooter>
           </form>
@@ -276,13 +276,13 @@ export default function AdminCountries() {
       <Dialog open={deleteId !== null} onOpenChange={(v) => !v && setDeleteId(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Supprimer ce pays ?</DialogTitle>
+            <DialogTitle>Delete this country?</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">Cette action est irréversible.</p>
+          <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" onClick={() => deleteId && deleteMutation.mutate(deleteId)} disabled={deleteMutation.isPending}>
-              Supprimer
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

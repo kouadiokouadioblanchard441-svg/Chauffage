@@ -12,13 +12,13 @@ import { ChevronDown, Code2, Eye, EyeOff, Globe2, Loader2, LockKeyhole } from "l
 import registerIllustration from "@/assets/auth-chargepoint-combined.png";
 
 const registerSchema = z.object({
-  phone: z.string().min(8, "Numéro de téléphone invalide"),
-  country: z.string().min(2, "Sélectionnez un pays"),
-  password: z.string().min(6, "Au moins 6 caractères"),
-  confirmPassword: z.string().min(1, "Confirmez le mot de passe"),
+  phone: z.string().min(8, "Invalid phone number"),
+  country: z.string().min(2, "Select a country"),
+  password: z.string().min(6, "At least 6 characters"),
+  confirmPassword: z.string().min(1, "Confirm your password"),
   invitationCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Les mots de passe ne correspondent pas",
+  message: "Passwords do not match",
   path: ["confirmPassword"],
 });
 
@@ -89,10 +89,10 @@ export default function RegisterPage() {
         password: data.password,
         invitationCode: data.invitationCode,
       });
-      toast({ title: "Inscription réussie !", description: "Bienvenue sur ChargePoint !" });
+       toast({ title: "Registration successful!", description: "Welcome to ChargePoint!" });
       navigate("/");
     } catch (error: any) {
-      toast({ title: "Inscription impossible", description: error.message || "Vérifiez vos informations et réessayez.", variant: "destructive" });
+      toast({ title: "Unable to register", description: error.message || "Check your information and try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -146,27 +146,27 @@ export default function RegisterPage() {
         <section className="auth-panel">
           <h1 className="auth-title">ChargePoint</h1>
           <div className="auth-illustration-frame" onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()}>
-            <img className="auth-illustration" src={registerIllustration} alt="Borne domestique et station de recharge ChargePoint" draggable={false} />
+             <img className="auth-illustration" src={registerIllustration} alt="ChargePoint home charger and charging station" draggable={false} />
           </div>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <input type="hidden" {...form.register("country")} />
 
             <div className="auth-fields">
                <div className={`auth-field${form.formState.errors.phone || form.formState.errors.country ? " has-error" : ""}`}>
-                 <button type="button" className="auth-prefix" onClick={() => setCountryModalOpen(true)} data-testid="button-select-country" aria-label={`Choisir le pays${countryData ? `, ${countryData.name}, indicatif +${displayedPrefix}` : ""}`} aria-haspopup="dialog" aria-expanded={countryModalOpen} aria-describedby={form.formState.errors.country ? "register-country-error" : undefined}>
+                 <button type="button" className="auth-prefix" onClick={() => setCountryModalOpen(true)} data-testid="button-select-country" aria-label={`Choose country${countryData ? `, ${countryData.name}, calling code +${displayedPrefix}` : ""}`} aria-haspopup="dialog" aria-expanded={countryModalOpen} aria-describedby={form.formState.errors.country ? "register-country-error" : undefined}>
                    <Globe2 aria-hidden="true" />
                   <span>+{displayedPrefix}</span>
                    <ChevronDown className="auth-country-arrow" aria-hidden="true" />
                 </button>
-                 <input {...form.register("phone")} type="tel" inputMode="tel" autoComplete="username" placeholder="Numéro de téléphone" aria-label="Numéro de téléphone" aria-invalid={!!form.formState.errors.phone} aria-describedby={form.formState.errors.phone ? "register-phone-error" : undefined} data-testid="input-phone" />
+                  <input {...form.register("phone")} type="tel" inputMode="tel" autoComplete="username" placeholder="Phone number" aria-label="Phone number" aria-invalid={!!form.formState.errors.phone} aria-describedby={form.formState.errors.phone ? "register-phone-error" : undefined} data-testid="input-phone" />
               </div>
                {form.formState.errors.country && <p id="register-country-error" role="alert" className="auth-error">{form.formState.errors.country.message}</p>}
                {form.formState.errors.phone && <p id="register-phone-error" role="alert" className="auth-error">{form.formState.errors.phone.message}</p>}
 
                <div className={`auth-field${form.formState.errors.password ? " has-error" : ""}`}>
                 <LockKeyhole className="auth-field-icon" aria-hidden="true" />
-                 <input {...form.register("password")} type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder="Mot de passe" aria-label="Mot de passe" aria-invalid={!!form.formState.errors.password} aria-describedby={form.formState.errors.password ? "register-password-error" : undefined} data-testid="input-password" />
-                 <button type="button" className="auth-visibility" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} aria-pressed={showPassword}>
+                  <input {...form.register("password")} type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder="Password" aria-label="Password" aria-invalid={!!form.formState.errors.password} aria-describedby={form.formState.errors.password ? "register-password-error" : undefined} data-testid="input-password" />
+                  <button type="button" className="auth-visibility" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}>
                    {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                  </button>
               </div>
@@ -174,8 +174,8 @@ export default function RegisterPage() {
 
                <div className={`auth-field${form.formState.errors.confirmPassword ? " has-error" : ""}`}>
                 <LockKeyhole className="auth-field-icon" aria-hidden="true" />
-                 <input {...form.register("confirmPassword")} type={showConfirmation ? "text" : "password"} autoComplete="new-password" placeholder="Confirmer le mot de passe" aria-label="Confirmer le mot de passe" aria-invalid={!!form.formState.errors.confirmPassword} aria-describedby={form.formState.errors.confirmPassword ? "register-confirm-error" : undefined} data-testid="input-confirm-password" />
-                 <button type="button" className="auth-visibility" onClick={() => setShowConfirmation((value) => !value)} aria-label={showConfirmation ? "Masquer la confirmation" : "Afficher la confirmation"} aria-pressed={showConfirmation}>
+                  <input {...form.register("confirmPassword")} type={showConfirmation ? "text" : "password"} autoComplete="new-password" placeholder="Confirm password" aria-label="Confirm password" aria-invalid={!!form.formState.errors.confirmPassword} aria-describedby={form.formState.errors.confirmPassword ? "register-confirm-error" : undefined} data-testid="input-confirm-password" />
+                  <button type="button" className="auth-visibility" onClick={() => setShowConfirmation((value) => !value)} aria-label={showConfirmation ? "Hide confirmation" : "Show confirmation"} aria-pressed={showConfirmation}>
                    {showConfirmation ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                  </button>
               </div>
@@ -183,13 +183,13 @@ export default function RegisterPage() {
 
               <div className="auth-field">
                 <Code2 className="auth-field-icon" aria-hidden="true" />
-                 <input {...form.register("invitationCode")} placeholder="Code d'invitation" aria-label="Code d'invitation" data-testid="input-invitation-code" />
+                  <input {...form.register("invitationCode")} placeholder="Invitation code" aria-label="Invitation code" data-testid="input-invitation-code" />
               </div>
             </div>
 
-            <button type="button" className="auth-switch" onClick={() => navigate("/login")} data-testid="link-login">Aller à la connexion &gt;</button>
+             <button type="button" className="auth-switch" onClick={() => navigate("/login")} data-testid="link-login">Go to sign in &gt;</button>
             <button type="submit" disabled={isLoading} className="auth-submit" data-testid="button-register">
-              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "S'inscrire"}
+               {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Register"}
             </button>
           </form>
         </section>

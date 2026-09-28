@@ -15,28 +15,28 @@ export default function AboutModal({ open, onClose }: AboutModalProps) {
             <div className="w-12 h-12 rounded-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden">
               <img src={tonLogo} alt="Stone by ton" className="w-10 h-10 object-contain" />
             </div>
-            À propos de Stone by ton
+             About Stone by ton
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 text-sm text-muted-foreground">
           <p>
-            Stone by ton est une entreprise française fondée en 2013, spécialisée dans la vente en ligne et physique de pierre naturelle, de travertin, de carrelage et de parements muraux.
+             Stone by ton is a French company founded in 2013, specializing in the online and physical sale of natural stone, travertine, tiles, and wall cladding.
           </p>
           <p>
-            Basée à Six-Fours-les-Plages dans le Var, la marque propose une large gamme de revêtements pour les sols et les murs intérieurs ou extérieurs.
+             Based in Six-Fours-les-Plages in Var, the brand offers a wide range of coverings for indoor and outdoor floors and walls.
           </p>
           <div className="bg-secondary rounded-lg p-4 space-y-2">
-            <h4 className="font-medium text-foreground">Nos avantages :</h4>
+             <h4 className="font-medium text-foreground">Our advantages:</h4>
             <ul className="space-y-1">
-              <li>- Revenus quotidiens automatiques</li>
-              <li>- Produits robotiques de qualité</li>
-              <li>- Système de parrainage attractif</li>
-              <li>- Support client disponible</li>
+               <li>- Automatic daily earnings</li>
+               <li>- Quality robotic products</li>
+               <li>- Attractive referral system</li>
+               <li>- Customer support available</li>
             </ul>
           </div>
           <p className="text-xs">
-            Version 1.0.0 - Tous droits réservés
+             Version 1.0.0 - All rights reserved
           </p>
         </div>
       </DialogContent>

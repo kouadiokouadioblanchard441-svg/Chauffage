@@ -81,8 +81,8 @@ export function CountrySelector({ open, onClose, onSelect, selectedCountryCode }
         onClick={(event) => event.stopPropagation()}
       >
         <div className="country-picker-header">
-          <h2 id="country-picker-heading">Choisir un pays</h2>
-          <button ref={closeButtonRef} type="button" className="country-picker-close" onClick={closePicker} aria-label="Fermer">
+          <h2 id="country-picker-heading">Choose a country</h2>
+          <button ref={closeButtonRef} type="button" className="country-picker-close" onClick={closePicker} aria-label="Close">
             <X aria-hidden="true" />
           </button>
         </div>
@@ -93,15 +93,15 @@ export function CountrySelector({ open, onClose, onSelect, selectedCountryCode }
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Rechercher un pays"
-            aria-label="Rechercher un pays"
+            placeholder="Search for a country"
+            aria-label="Search for a country"
           />
         </div>
         <div className="country-picker-list">
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Chargement des pays...</span>
+              <span>Loading countries...</span>
             </div>
           ) : countries.map((country) => {
             const selected = country.code === selectedCountryCode;
@@ -122,10 +122,10 @@ export function CountrySelector({ open, onClose, onSelect, selectedCountryCode }
           })}
           {!isLoading && isError && (
             <p className="country-picker-empty" role="status">
-              Liste locale temporaire : le serveur des pays ne répond pas.
+              Temporary local list: the country server is unavailable.
             </p>
           )}
-          {!isLoading && countries.length === 0 && <p className="country-picker-empty">{search ? "Aucun résultat" : "Aucun pays disponible"}</p>}
+          {!isLoading && countries.length === 0 && <p className="country-picker-empty">{search ? "No results" : "No countries available"}</p>}
         </div>
       </section>
     </div>

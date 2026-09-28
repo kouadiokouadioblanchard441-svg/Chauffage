@@ -72,7 +72,7 @@ export default function TasksPage() {
   if (!user) return null;
 
   const countryInfo = getCountryByCode(user.country);
-  const currency = countryInfo?.currency || "FCFA";
+  const currency = "PHP";
   const totalTaskRewards = tasks?.filter(t => t.isCompleted).reduce((sum, t) => sum + t.reward, 0) || 0;
   const completedCount = tasks?.filter(t => t.isCompleted).length || 0;
   const claimableCount = tasks?.filter(t => t.canClaim && !t.isCompleted).length || 0;
@@ -115,10 +115,10 @@ export default function TasksPage() {
         {/* Hero text — positioned above the stats card overlap zone (bottom 60px) */}
         <div className="absolute left-4 right-4" style={{ bottom: "60px" }}>
           <h1 className="text-white font-bold text-xl leading-tight" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-            Programme de Parrainage
+             Referral Program
           </h1>
           <p className="text-white text-xs mt-1" style={{ opacity: 0.92, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
-            Invitez des amis et gagnez des récompenses
+             Invite friends and earn rewards
           </p>
         </div>
       </div>
@@ -130,15 +130,15 @@ export default function TasksPage() {
             <p className="text-[#FF4500] text-xl font-bold" data-testid="text-total-rewards">
               {totalTaskRewards.toLocaleString()}
             </p>
-            <p className="text-gray-500 text-[11px] mt-0.5">{currency} gagnés</p>
+             <p className="text-gray-500 text-[11px] mt-0.5">{currency} earned</p>
           </div>
           <div className="flex-1 text-center border-r border-gray-100">
             <p className="text-[#FF4500] text-xl font-bold">{completedCount}</p>
-            <p className="text-gray-500 text-[11px] mt-0.5">Terminées</p>
+             <p className="text-gray-500 text-[11px] mt-0.5">Completed</p>
           </div>
           <div className="flex-1 text-center">
             <p className="text-[#FF4500] text-xl font-bold">{claimableCount}</p>
-            <p className="text-gray-500 text-[11px] mt-0.5">À réclamer</p>
+             <p className="text-gray-500 text-[11px] mt-0.5">Claimable</p>
           </div>
         </div>
       </div>
@@ -148,7 +148,7 @@ export default function TasksPage() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-[#FF4500]" />
-            <h2 className="text-gray-800 font-bold text-sm">Paliers de parrainage</h2>
+             <h2 className="text-gray-800 font-bold text-sm">Referral levels</h2>
           </div>
           {claimableCount > 0 && (
             <button
@@ -162,7 +162,7 @@ export default function TasksPage() {
               className="text-xs text-[#FF4500] font-semibold bg-red-50 px-3 py-1.5 rounded-full"
               data-testid="button-claim-rewards"
             >
-              Tout réclamer ({claimableCount})
+               Claim all ({claimableCount})
             </button>
           )}
         </div>
@@ -209,9 +209,9 @@ export default function TasksPage() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-gray-700 text-xs leading-snug mb-0.5">
-                        Inviter{" "}
+                         Invite{" "}
                         <span className="font-bold text-gray-900">{task.requiredInvites}</span>{" "}
-                        personnes à recharger
+                         people to deposit
                       </p>
                       <p className="text-[#FF4500] font-bold text-base">
                         {task.reward.toLocaleString()} {currency}
@@ -221,7 +221,7 @@ export default function TasksPage() {
                       <div className="mt-1.5">
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-gray-400 text-[10px]">
-                            {task.currentInvites} / {task.requiredInvites} invitations
+                             {task.currentInvites} / {task.requiredInvites} invitations
                           </span>
                           <span className="text-gray-400 text-[10px]">{Math.round(progress)}%</span>
                         </div>
@@ -240,7 +240,7 @@ export default function TasksPage() {
                     <div className="flex-shrink-0">
                       {task.isCompleted ? (
                         <span className="bg-green-100 text-green-700 text-[10px] font-semibold px-2.5 py-1.5 rounded-full block text-center">
-                          ✓ Fait
+                           ✓ Done
                         </span>
                       ) : task.canClaim ? (
                         <button
@@ -252,12 +252,12 @@ export default function TasksPage() {
                           {claimMutation.isPending ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
                           ) : (
-                            "Réclamer"
+                             "Claim"
                           )}
                         </button>
                       ) : (
                         <span className="bg-gray-100 text-gray-400 text-[10px] font-semibold px-2.5 py-1.5 rounded-full block text-center">
-                          En cours
+                           In progress
                         </span>
                       )}
                     </div>
@@ -269,7 +269,7 @@ export default function TasksPage() {
         ) : (
           <div className="text-center py-10 flex flex-col items-center gap-2">
             <img src={emptyIllustration} alt="Vide" className="w-40 h-40 object-contain opacity-90" />
-            <p className="text-gray-500">Aucune tâche disponible</p>
+             <p className="text-gray-500">No tasks available</p>
           </div>
         )}
       </div>

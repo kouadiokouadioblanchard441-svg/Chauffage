@@ -26,7 +26,7 @@ export default function ChangePasswordPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Succès", description: "Mot de passe modifié avec succès" });
+      toast({ title: "Success", description: "Password changed successfully" });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -39,15 +39,15 @@ export default function ChangePasswordPage() {
 
   const handleSubmit = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast({ title: "Champs requis", description: "Veuillez remplir tous les champs", variant: "destructive" });
+      toast({ title: "Required fields", description: "Please complete all fields", variant: "destructive" });
       return;
     }
     if (newPassword.length < 6) {
-      toast({ title: "Mot de passe trop court", description: "Minimum 6 caractères requis", variant: "destructive" });
+      toast({ title: "Password too short", description: "At least 6 characters are required", variant: "destructive" });
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ title: "Confirmation du mot de passe impossible", description: "Les nouveaux mots de passe ne correspondent pas", variant: "destructive" });
+      toast({ title: "Password confirmation failed", description: "The new passwords do not match", variant: "destructive" });
       return;
     }
     changePasswordMutation.mutate({ currentPassword, newPassword });
@@ -63,9 +63,9 @@ export default function ChangePasswordPage() {
             data-testid="button-back"
           >
             <ChevronLeft aria-hidden="true" />
-            <span>Retour</span>
+            <span>Back</span>
           </button>
-          <h1>Changer le mot de passe</h1>
+          <h1>Change password</h1>
         </header>
 
         <form
@@ -76,7 +76,7 @@ export default function ChangePasswordPage() {
           }}
         >
           <div className="cp-password-group">
-            <label htmlFor="current-password">Ancien mot de passe</label>
+            <label htmlFor="current-password">Current password</label>
             <div className="cp-password-field">
               <input
                 id="current-password"
@@ -97,7 +97,7 @@ export default function ChangePasswordPage() {
           </div>
 
           <div className="cp-password-group">
-            <label htmlFor="new-password">Nouveau mot de passe</label>
+            <label htmlFor="new-password">New password</label>
             <div className="cp-password-field">
               <input
                 id="new-password"
@@ -118,7 +118,7 @@ export default function ChangePasswordPage() {
           </div>
 
           <div className="cp-password-group">
-            <label htmlFor="confirm-password">Confirmer le mot de passe</label>
+            <label htmlFor="confirm-password">Confirm password</label>
             <div className="cp-password-field">
               <input
                 id="confirm-password"
@@ -147,10 +147,10 @@ export default function ChangePasswordPage() {
             {changePasswordMutation.isPending ? (
               <span className="cp-password-loading">
                 <Loader2 aria-hidden="true" />
-                Modification...
+                Saving...
               </span>
             ) : (
-              "Confirmer"
+              "Confirm"
             )}
           </button>
         </form>

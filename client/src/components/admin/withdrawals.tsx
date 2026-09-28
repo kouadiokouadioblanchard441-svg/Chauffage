@@ -50,16 +50,16 @@ export default function AdminWithdrawals() {
         credentials: "include",
       });
       const data = await res.json();
-       if (!res.ok) throw new Error(data.message || `Le traitement du retrait a échoué (code ${res.status})`);
+        if (!res.ok) throw new Error(data.message || `Withdrawal processing failed (code ${res.status})`);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Retrait traité !" });
+       toast({ title: "Withdrawal processed!" });
     },
     onError: (error: any) => {
-       toast({ title: "Traitement du retrait impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to process withdrawal", description: error.message, variant: "destructive" });
     },
     onSettled: () => setProcessingId(null),
   });
@@ -72,16 +72,16 @@ export default function AdminWithdrawals() {
         credentials: "include",
       });
       const data = await res.json();
-       if (!res.ok) throw new Error(data.message || `L'envoi du retrait à InPay a échoué (code ${res.status})`);
+        if (!res.ok) throw new Error(data.message || `Sending withdrawal to InPay failed (code ${res.status})`);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Retrait envoyé à InPay" });
+       toast({ title: "Withdrawal sent to InPay" });
     },
     onError: (error: any) => {
-       toast({ title: "Envoi du retrait à InPay impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to send withdrawal to InPay", description: error.message, variant: "destructive" });
     },
     onSettled: () => setProcessingId(null),
   });
@@ -100,7 +100,7 @@ export default function AdminWithdrawals() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher par numero ou nom..."
+             placeholder="Search by number or name..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="pl-10"
@@ -117,14 +117,14 @@ export default function AdminWithdrawals() {
             onClick={() => setStatusFilter(status)}
           >
             {status === "all"
-              ? "Tous"
-              : status === "pending"
-                ? "En attente"
-                : status === "processing"
-                  ? "En traitement"
-                  : status === "approved"
-                    ? "Approuvés"
-                    : "Rejetés"}
+               ? "All"
+               : status === "pending"
+                 ? "Pending"
+                 : status === "processing"
+                   ? "Processing"
+                   : status === "approved"
+                     ? "Approved"
+                     : "Rejected"}
           </Button>
         ))}
       </div>
@@ -162,19 +162,19 @@ export default function AdminWithdrawals() {
 
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Montant demandé</p>
-                    <p className="font-medium text-foreground">{withdrawal.amount.toLocaleString()} F</p>
+                       <p className="text-muted-foreground">Requested amount</p>
+                     <p className="font-medium text-foreground">{withdrawal.amount.toLocaleString()} PHP</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Montant net</p>
-                    <p className="font-medium text-primary">{withdrawal.netAmount.toLocaleString()} F</p>
+                     <p className="text-muted-foreground">Net amount</p>
+                     <p className="font-medium text-primary">{withdrawal.netAmount.toLocaleString()} PHP</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Frais</p>
-                    <p className="font-medium text-destructive">{withdrawal.fees.toLocaleString()} F</p>
+                     <p className="text-muted-foreground">Fees</p>
+                     <p className="font-medium text-destructive">{withdrawal.fees.toLocaleString()} PHP</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Moyen</p>
+                     <p className="text-muted-foreground">Method</p>
                     <p className="font-medium text-foreground">{withdrawal.paymentMethod}</p>
                   </div>
                   <div className="col-span-2">
@@ -184,11 +184,11 @@ export default function AdminWithdrawals() {
                   <div className="col-span-2">
                     <p className="text-muted-foreground">Date et heure</p>
                     <p className="font-medium text-foreground">
-                      {new Date(withdrawal.createdAt).toLocaleDateString("fr-FR", {
+                       {new Date(withdrawal.createdAt).toLocaleDateString("en-PH", {
                         day: "2-digit",
                         month: "2-digit",
                         year: "numeric"
-                      })} à {new Date(withdrawal.createdAt).toLocaleTimeString("fr-FR", {
+                       })} at {new Date(withdrawal.createdAt).toLocaleTimeString("en-PH", {
                         hour: "2-digit",
                         minute: "2-digit"
                       })}
@@ -247,7 +247,7 @@ export default function AdminWithdrawals() {
           ))
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            Aucun retrait trouvé
+             No withdrawals found
           </div>
         )}
       </div>

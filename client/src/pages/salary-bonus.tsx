@@ -15,7 +15,7 @@ export default function SalaryBonusPage() {
   if (!user) return null;
 
   const country = getCountryByCode(user.country);
-  const currency = country?.currency || "FCFA";
+  const currency = "PHP";
   const level1Count = teamStats?.level1Count || 0;
   const totalCommission = parseFloat(teamStats?.totalCommission || "0");
   const totalPeople = (teamStats?.level1Count || 0) + (teamStats?.level2Count || 0) + (teamStats?.level3Count || 0);
@@ -42,7 +42,7 @@ export default function SalaryBonusPage() {
           <ChevronLeft className="w-5 h-5 text-gray-700" />
         </button>
         <p className="flex-1 text-center text-gray-900 font-extrabold text-lg pr-9">
-          Centre des tâches
+           Task center
         </p>
       </div>
 
@@ -55,12 +55,12 @@ export default function SalaryBonusPage() {
         >
           <div className="flex-1 text-center">
             <p className="text-white font-extrabold text-2xl">{currency} {totalCommission.toFixed(0)}</p>
-            <p className="text-white/70 text-xs mt-1">Total des récompenses</p>
+            <p className="text-white/70 text-xs mt-1">Total rewards</p>
           </div>
           <div className="w-px h-12 bg-white/30" />
           <div className="flex-1 text-center">
             <p className="text-white font-extrabold text-2xl">{totalPeople}</p>
-            <p className="text-white/70 text-xs mt-1">Total de personnes</p>
+            <p className="text-white/70 text-xs mt-1">Total people</p>
           </div>
         </div>
 
@@ -88,7 +88,7 @@ export default function SalaryBonusPage() {
               {/* Content */}
               <div className="flex-1 px-4 py-4">
                 <p className="text-gray-700 text-xs text-center leading-snug mb-3">
-                  Invitez <span className="font-bold text-gray-900">{required}</span> investisseurs de niveau 1 pour obtenir :{" "}
+                   Invite <span className="font-bold text-gray-900">{required}</span> level-one members to earn:{" "}
                   <span className="font-bold" style={{ color: "var(--ton-green)" }}>{currency} {reward.toLocaleString()}</span>
                 </p>
 
@@ -96,15 +96,15 @@ export default function SalaryBonusPage() {
                 <div className="flex justify-around mb-3">
                   <div className="text-center">
                     <p className="text-gray-900 font-extrabold text-base">{current}</p>
-                    <p className="text-gray-400 text-xs">Actuel</p>
+                     <p className="text-gray-400 text-xs">Current</p>
                   </div>
                   <div className="text-center">
                     <p className="text-gray-900 font-extrabold text-base">{required}</p>
-                    <p className="text-gray-400 text-xs">Objectif</p>
+                     <p className="text-gray-400 text-xs">Target</p>
                   </div>
                   <div className="text-center">
                     <p className="text-gray-900 font-extrabold text-base">{progress}/{required}</p>
-                    <p className="text-gray-400 text-xs">Progression</p>
+                     <p className="text-gray-400 text-xs">Progress</p>
                   </div>
                 </div>
 
@@ -128,7 +128,7 @@ export default function SalaryBonusPage() {
                   }
                   data-testid={`button-level-${lv}`}
                 >
-                  {reached ? "Réclamer" : "En cours"}
+                   {reached ? "Claim" : "In progress"}
                 </button>
               </div>
             </div>

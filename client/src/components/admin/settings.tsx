@@ -18,7 +18,7 @@ type AdminCountry = { code: string; name: string; isActive: boolean };
 type DepositMethodId = "manual" | "soleaspay" | "ashtech" | "sendavapay" | "westpay" | "inpay" | "clapay";
 
 const DEPOSIT_METHOD_OPTIONS: Array<{ value: DepositMethodId; label: string }> = [
-  { value: "manual", label: "Paiement manuel" },
+  { value: "manual", label: "Manual payment" },
   { value: "soleaspay", label: "SoleaPay" },
   { value: "ashtech", label: "AshtechPay" },
   { value: "sendavapay", label: "SendavaPay" },
@@ -87,17 +87,17 @@ const NETWORKS = [
   { value: "youtube", label: "YouTube" },
 ];
 const settingsSchema = z.object({
-  supportLink: z.string().min(5, "Lien requis"),
-  supportType: z.string().min(1, "Réseau requis"),
-  supportLabel: z.string().min(1, "Label requis"),
+  supportLink: z.string().min(5, "Link is required"),
+  supportType: z.string().min(1, "Network is required"),
+  supportLabel: z.string().min(1, "Label is required"),
   support2Link: z.string().min(5, "Lien requis"),
-  support2Type: z.string().min(1, "Réseau requis"),
+  support2Type: z.string().min(1, "Network is required"),
   support2Label: z.string().min(1, "Label requis"),
   channelLink: z.string().min(5, "Lien requis"),
-  channelType: z.string().min(1, "Réseau requis"),
+  channelType: z.string().min(1, "Network is required"),
   channelLabel: z.string().min(1, "Label requis"),
   groupLink: z.string().min(5, "Lien requis"),
-  groupType: z.string().min(1, "Réseau requis"),
+  groupType: z.string().min(1, "Network is required"),
   groupLabel: z.string().min(1, "Label requis"),
   popupButtonLabel: z.string().min(1, "Label requis"),
   supportEnabled: z.boolean(),
@@ -153,20 +153,20 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
 
   const form = useForm<SettingsForm>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: {
+       defaultValues: {
       supportLink: "https://t.me/sybotx",
       supportType: "telegram",
-      supportLabel: "Service client",
+       supportLabel: "Customer support",
       support2Link: "https://t.me/sybotx",
       support2Type: "telegram",
       support2Label: "Service client 2",
       channelLink: "https://t.me/sybotx",
       channelType: "telegram",
-      channelLabel: "Chaîne officielle",
+       channelLabel: "Official channel",
       groupLink: "https://t.me/sybotx",
       groupType: "telegram",
-      groupLabel: "Groupe de discussion",
-      popupButtonLabel: "Cliquez ici pour rejoindre le groupe Telegram",
+       groupLabel: "Discussion group",
+       popupButtonLabel: "Click here to join the Telegram group",
       supportEnabled: true,
       support2Enabled: true,
       channelEnabled: true,
@@ -202,17 +202,17 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
       form.reset({
         supportLink: settings.supportLink || "https://t.me/sybotx",
         supportType: settings.supportType || "telegram",
-        supportLabel: settings.supportLabel || "Service client",
+         supportLabel: settings.supportLabel || "Customer support",
         support2Link: settings.support2Link || "https://t.me/sybotx",
         support2Type: settings.support2Type || "telegram",
         support2Label: settings.support2Label || "Service client 2",
         channelLink: settings.channelLink || "https://t.me/sybotx",
         channelType: settings.channelType || "telegram",
-        channelLabel: settings.channelLabel || "Chaîne officielle",
+         channelLabel: settings.channelLabel || "Official channel",
         groupLink: settings.groupLink || "https://t.me/sybotx",
         groupType: settings.groupType || "telegram",
-        groupLabel: settings.groupLabel || "Groupe de discussion",
-        popupButtonLabel: settings.popupButtonLabel || "Cliquez ici pour rejoindre le groupe Telegram",
+         groupLabel: settings.groupLabel || "Discussion group",
+         popupButtonLabel: settings.popupButtonLabel || "Click here to join the Telegram group",
         supportEnabled: settings.supportEnabled !== "false",
         support2Enabled: settings.support2Enabled !== "false",
         channelEnabled: settings.channelEnabled !== "false",
@@ -267,7 +267,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
       const response = await apiRequest("POST", "/api/admin/settings", serialized);
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "L'enregistrement des paramètres a échoué");
+        throw new Error(result.message || "Saving settings failed");
       }
       return response.json();
     },
@@ -276,10 +276,10 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/settings/links"] });
       queryClient.invalidateQueries({ queryKey: ["/api/settings/withdrawal"] });
-      toast({ title: "Paramètres enregistrés !" });
+       toast({ title: "Settings saved!" });
     },
     onError: (error: any) => {
-      toast({ title: "Enregistrement des paramètres impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to save settings", description: error.message, variant: "destructive" });
     },
   });
 
@@ -309,11 +309,11 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Méthodes de dépôt par pays</CardTitle>
+           <CardTitle className="text-base">Deposit methods by country</CardTitle>
             <p className="text-sm text-gray-500">
-              Cochez les moyens autorisés pour chaque pays. Si plusieurs sont cochés, le client choisira son moyen au moment du dépôt.
-              Les interrupteurs de fournisseur plus bas sont des commandes globales d’activation ; ils ne remplacent pas cette configuration par pays.
-              Les URL, identifiants, clés et secrets des fournisseurs restent dans les variables d’environnement Plesk.
+               Select the allowed methods for each country. If multiple methods are selected, the customer will choose one when depositing.
+               The provider switches below are global activation controls; they do not replace this country-level configuration.
+               Provider URLs, credentials, keys, and secrets remain in the Plesk environment variables.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -327,7 +327,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
                     <div className="mb-2 flex items-center gap-2">
                       <span className="font-semibold text-gray-800">{country.name} ({code})</span>
                       {!country.isActive && (
-                        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Inactif</span>
+                         <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Inactive</span>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -360,12 +360,12 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           </CardContent>
         </Card>
 
-        {/* ── Liens & Réseaux sociaux ── */}
+        {/* ── Links & Social Networks ── */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Link className="w-5 h-5 text-primary" />
-              Liens & Réseaux sociaux
+               Links & Social Networks
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -373,10 +373,10 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             {/* Support 1 */}
             <div className="space-y-2 border rounded-xl p-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Lien 1 — Service client</p>
+               <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Link 1 — Customer support</p>
                 <FormField control={form.control} name="supportEnabled" render={({ field }) => (
                   <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                     <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
@@ -386,17 +386,17 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               <div className="grid grid-cols-2 gap-2">
                 <FormField control={form.control} name="supportLabel" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Libellé affiché</FormLabel>
+                    <FormLabel>Display label</FormLabel>
                     <FormControl><Input {...field} placeholder="Service client" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="supportType" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Réseau social</FormLabel>
+                    <FormLabel>Social network</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Réseau..." /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Network..." /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {NETWORKS.map(n => <SelectItem key={n.value} value={n.value}>{n.label}</SelectItem>)}
@@ -418,10 +418,10 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             {/* Support 2 */}
             <div className="space-y-2 border rounded-xl p-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Lien 2 — Service client</p>
+               <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Link 2 — Customer support</p>
                 <FormField control={form.control} name="support2Enabled" render={({ field }) => (
                   <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                    <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
@@ -431,17 +431,17 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               <div className="grid grid-cols-2 gap-2">
                 <FormField control={form.control} name="support2Label" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Libellé affiché</FormLabel>
+                    <FormLabel>Display label</FormLabel>
                     <FormControl><Input {...field} placeholder="Service client 2" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="support2Type" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Réseau social</FormLabel>
+                    <FormLabel>Social network</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Réseau..." /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Network..." /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {NETWORKS.map(n => <SelectItem key={n.value} value={n.value}>{n.label}</SelectItem>)}
@@ -463,7 +463,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             {/* Channel */}
             <div className="space-y-2 border rounded-xl p-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Lien 3 — Chaîne officielle</p>
+               <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Link 3 — Official channel</p>
                 <FormField control={form.control} name="channelEnabled" render={({ field }) => (
                   <FormItem className="flex items-center gap-2 space-y-0">
                     <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
@@ -508,7 +508,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             {/* Group */}
             <div className="space-y-2 border rounded-xl p-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Lien 4 — Groupe de discussion</p>
+               <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Link 4 — Discussion group</p>
                 <FormField control={form.control} name="groupEnabled" render={({ field }) => (
                   <FormItem className="flex items-center gap-2 space-y-0">
                     <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
@@ -554,10 +554,10 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             <div className="border border-red-500 rounded-lg p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
-                <p className="text-sm font-semibold text-red-600">Bouton du popup sur le tableau de bord</p>
+               <p className="text-sm font-semibold text-red-600">Dashboard popup button</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Ce bouton apparaît dans la fenêtre d'avertissement qui s'ouvre automatiquement sur l'accueil.
+                 This button appears in the warning window that opens automatically on the home page.
               </p>
               <FormField control={form.control} name="popupButtonLabel" render={({ field }) => (
                 <FormItem>
@@ -584,15 +584,15 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Clock className="w-5 h-5 text-primary" />
-              Retraits & Bonus
+               Withdrawals & Bonuses
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField control={form.control} name="signupBonus" render={({ field }) => (
               <FormItem>
-                <FormLabel>Bonus d'inscription (FCFA)</FormLabel>
+                 <FormLabel>Signup bonus (PHP)</FormLabel>
                 <FormControl><Input {...field} type="number" min="0" /></FormControl>
-                <FormDescription>Montant offert à chaque nouvel utilisateur à l'inscription.</FormDescription>
+                 <FormDescription>Amount given to each new user upon signup.</FormDescription>
                 <FormMessage />
               </FormItem>
             )} />
@@ -600,14 +600,14 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="minDeposit" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Dépôt minimum (FCFA)</FormLabel>
+                  <FormLabel>Minimum deposit (PHP)</FormLabel>
                   <FormControl><Input {...field} type="number" min="0" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="minWithdrawal" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Retrait minimum (FCFA)</FormLabel>
+                  <FormLabel>Minimum withdrawal (PHP)</FormLabel>
                   <FormControl><Input {...field} type="number" min="0" /></FormControl>
                   <FormMessage />
                 </FormItem>

@@ -70,8 +70,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-destructive mb-2">Compte suspendu</h1>
-          <p className="text-muted-foreground">Votre compte a été suspendu. Contactez le support.</p>
+          <h1 className="text-2xl font-bold text-destructive mb-2">Account suspended</h1>
+          <p className="text-muted-foreground">Your account has been suspended. Contact support.</p>
         </div>
       </div>
     );

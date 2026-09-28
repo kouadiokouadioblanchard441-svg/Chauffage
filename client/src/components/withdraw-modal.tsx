@@ -16,7 +16,7 @@ import type { WithdrawalWallet } from "@shared/schema";
 import { useLocation } from "wouter";
 
 const withdrawSchema = z.object({
-  amount: z.string().min(1, "Montant requis"),
+  amount: z.string().min(1, "Amount is required"),
 });
 
 type WithdrawForm = z.infer<typeof withdrawSchema>;
@@ -63,14 +63,14 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
       });
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Impossible d'enregistrer la demande de retrait");
+        throw new Error(result.message || "Unable to submit the withdrawal request");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/withdrawals"] });
       refreshUser();
-      toast({ title: "Demande envoyée!", description: "Votre retrait est en attente de validation." });
+      toast({ title: "Request sent!", description: "Your withdrawal is awaiting approval." });
       handleClose();
     },
     onError: (error: any) => {
@@ -78,7 +78,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
         navigate(error.data.paymentUrl);
         return;
       }
-      toast({ title: "Retrait impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Withdrawal unavailable", description: error.message, variant: "destructive" });
     },
   });
 
@@ -114,7 +114,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const handlePayPrepayment = async () => {
     if (!withdrawalPrepaymentEnabled) return;
     if (amount < minWithdrawal) {
-      toast({ title: "Montant invalide", description: `Le montant minimum est de ${formatCurrency(minWithdrawal, user.country)}`, variant: "destructive" });
+      toast({ title: "Invalid amount", description: `The minimum amount is ${formatCurrency(minWithdrawal, user.country)}`, variant: "destructive" });
       return;
     }
     setIsPreparingPayment(true);
@@ -123,7 +123,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
       const data = await response.json();
       navigate(data.paymentUrl);
     } catch (error: any) {
-      toast({ title: "Paiement indisponible", description: error.message, variant: "destructive" });
+      toast({ title: "Payment unavailable", description: error.message, variant: "destructive" });
     } finally {
       setIsPreparingPayment(false);
     }
@@ -235,13 +235,13 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
       <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="withdraw-modal-content max-w-md">
         <DialogHeader className="withdraw-modal-header">
-          <DialogTitle className="withdraw-modal-heading">Retrait</DialogTitle>
+          <DialogTitle className="withdraw-modal-heading">Withdrawal</DialogTitle>
           <DialogDescription className="withdraw-modal-subtitle">
             Minimum: {formatCurrency(minWithdrawal, user.country)} | Frais: {fees}%
           </DialogDescription>
           <div className="withdraw-modal-balance">
             <div>
-              <div className="withdraw-modal-balance-label">Solde du compte</div>
+              <div className="withdraw-modal-balance-label">Account balance</div>
               <div className="withdraw-modal-balance-value">{formatCurrency(balance, user.country)}</div>
             </div>
             <span className="withdraw-modal-wallet" aria-hidden="true" />
@@ -254,13 +254,13 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-destructive">Retrait non disponible</p>
+                <p className="font-medium text-destructive">Withdrawal unavailable</p>
                 <ul className="mt-2 space-y-1 text-muted-foreground">
-                  {!user.hasDeposited && <li>- Effectuez un dépôt</li>}
-                  {!user.hasActiveProduct && <li>- Achetez un produit</li>}
-                  {!defaultWallet && <li>- Enregistrez un portefeuille de retrait</li>}
-                  {user.isWithdrawalBlocked && <li>- Votre retrait est bloqué</li>}
-                  {user.mustInviteToWithdraw && <li>- Invitez quelqu'un qui investit</li>}
+                  {!user.hasDeposited && <li>- Make a deposit</li>}
+                  {!user.hasActiveProduct && <li>- Purchase a product</li>}
+                  {!defaultWallet && <li>- Register a withdrawal wallet</li>}
+                  {user.isWithdrawalBlocked && <li>- Your withdrawal is blocked</li>}
+                  {user.mustInviteToWithdraw && <li>- Invite someone who invests</li>}
                 </ul>
               </div>
             </div>
@@ -270,10 +270,10 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 flex items-start gap-3">
               <Clock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-foreground">Hors des heures de retrait</p>
+                <p className="font-medium text-foreground">Outside withdrawal hours</p>
                 <p className="text-muted-foreground mt-1">
-                  Les retraits sont disponibles de {actualStartHour}h à {actualEndHour}h
-                  {isCameroonOrBenin && " (Cameroun et Bénin)"}
+                  Withdrawals are available from {actualStartHour}:00 to {actualEndHour}:00
+                  {isCameroonOrBenin && " (Cameroon and Benin)"}
                 </p>
               </div>
             </div>
@@ -284,14 +284,14 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
               <div className="bg-secondary rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <Wallet className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">Portefeuille de retrait</span>
+                  <span className="text-sm text-muted-foreground">Withdrawal wallet</span>
                 </div>
                 <p className="font-medium text-foreground">{defaultWallet?.accountName}</p>
                 <p className="text-sm text-muted-foreground">{defaultWallet?.accountNumber} - {defaultWallet?.paymentMethod}</p>
               </div>
 
               <div className="bg-secondary rounded-lg p-3 text-center">
-                <p className="text-sm text-muted-foreground">Solde disponible</p>
+                <p className="text-sm text-muted-foreground">Available balance</p>
                 <p className="text-xl font-bold text-foreground">{formatCurrency(balance, user.country)}</p>
               </div>
 
@@ -300,13 +300,13 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Montant à retirer</FormLabel>
+                    <FormLabel>Withdrawal amount</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="number"
                         min={minWithdrawal}
-                        placeholder={`Minimum ${minWithdrawal.toLocaleString("fr-FR")}`}
+                        placeholder={`Minimum ${minWithdrawal.toLocaleString("en-US")} PHP`}
                         data-testid="input-withdraw-amount"
                       />
                     </FormControl>
@@ -318,7 +318,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
               {amount >= minWithdrawal && (
                 <div className="bg-muted rounded-lg p-3 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Montant</span>
+                    <span className="text-muted-foreground">Amount</span>
                     <span className="text-foreground">{formatCurrency(amount, user.country)}</span>
                   </div>
                   <div className="flex justify-between">
@@ -326,7 +326,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                     <span className="text-destructive">-{formatCurrency(feeAmount, user.country)}</span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
-                    <span className="font-medium text-foreground">Net à recevoir</span>
+                    <span className="font-medium text-foreground">Net received</span>
                     <span className="font-bold text-primary">{formatCurrency(netAmount, user.country)}</span>
                   </div>
                 </div>
@@ -334,10 +334,9 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
 
               {withdrawalPrepaymentEnabled && (
                 <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
-                  <p className="font-semibold">Paiement obligatoire avant le retrait</p>
+                  <p className="font-semibold">Payment required before withdrawal</p>
                   <p>
-                    Payez 25 % du montant du retrait, soit{" "}
-                    {formatCurrency(withdrawalPrepayment, user.country)}, avant de demander le retrait.
+                    Pay 25% of the withdrawal amount, {formatCurrency(withdrawalPrepayment, user.country)}, before requesting the withdrawal.
                   </p>
                   <Button
                     type="button"
@@ -346,7 +345,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                     onClick={handlePayPrepayment}
                     disabled={isPreparingPayment || amount < minWithdrawal}
                   >
-                    {isPreparingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : "Payer"}
+                    {isPreparingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pay"}
                   </Button>
                 </div>
               )}
@@ -360,7 +359,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                 {withdrawMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  "Demander le retrait"
+                  "Request withdrawal"
                 )}
               </Button>
             </form>

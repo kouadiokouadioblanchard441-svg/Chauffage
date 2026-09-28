@@ -17,7 +17,7 @@ interface Withdrawal {
 export default function DepositHistoryPage() {
   const { user } = useAuth();
   const countryInfo = user ? getCountryByCode(user.country) : null;
-  const currency = countryInfo?.currency || "FCFA";
+  const currency = "PHP";
 
   const { data: withdrawals = [], isLoading } = useQuery<Withdrawal[]>({
     queryKey: ["/api/withdrawals/history"],
@@ -39,11 +39,11 @@ export default function DepositHistoryPage() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "approved":
-        return "Approuve";
+        return "Approved";
       case "pending":
-        return "En attente";
+        return "Pending";
       case "rejected":
-        return "Rejete";
+        return "Rejected";
       default:
         return status;
     }
@@ -57,7 +57,7 @@ export default function DepositHistoryPage() {
             <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
         </Link>
-        <h1 className="flex-1 text-center text-lg font-semibold text-gray-800 pr-8">Historique des retraits</h1>
+        <h1 className="flex-1 text-center text-lg font-semibold text-gray-800 pr-8">Withdrawal history</h1>
       </header>
 
       <div className="p-4 space-y-4">
@@ -69,8 +69,8 @@ export default function DepositHistoryPage() {
           </div>
         ) : withdrawals.length === 0 ? (
           <div className="text-center py-10 flex flex-col items-center gap-3">
-            <img src={emptyIllustration} alt="Aucun retrait" className="w-40 h-40 object-contain opacity-90" />
-            <p className="text-gray-500">Aucun retrait effectue</p>
+            <img src={emptyIllustration} alt="No withdrawals" className="w-40 h-40 object-contain opacity-90" />
+            <p className="text-gray-500">No withdrawals yet</p>
           </div>
         ) : (
           withdrawals.map((withdrawal) => {
@@ -87,7 +87,7 @@ export default function DepositHistoryPage() {
                       {parseFloat(withdrawal.amount).toLocaleString()} {currency}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {date.toLocaleDateString('fr-FR')} a {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                       {date.toLocaleDateString('en-PH')} at {date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(withdrawal.status)}`}>

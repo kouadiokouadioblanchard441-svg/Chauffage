@@ -49,7 +49,7 @@ export default function TeamDetailsPage() {
   });
   const { data: countries } = useQuery<ApiCountry[]>({ queryKey: ["/api/countries"] });
 
-  const currency = getCountryByCode(user?.country || "", countries)?.currency || "FCFA";
+  const currency = "PHP";
   const levels = [
     { num: 1 as const, name: "A", members: team?.level1 || [], totalInvested: team?.totalLevel1Invested || 0 },
     { num: 2 as const, name: "B", members: team?.level2 || [], totalInvested: team?.totalLevel2Invested || 0 },
@@ -59,17 +59,17 @@ export default function TeamDetailsPage() {
   const demoInvested = selected.members.reduce((total, member) => total + (member.demoPreview?.totalInvested || 0), 0);
   const hasDemoMembers = selected.members.some(member => member.isDemo);
   const message = activeLevel === 1
-    ? "Bonjour ! Je suis votre parrain sur ChargePoint. Je voulais m'assurer que tout se passe bien pour vous. Si vous avez des questions sur l'inscription, les produits ou l'utilisation de l'application, dites-moi ce qui n'est pas clair. Je prendrai le temps de vous expliquer et de vous accompagner étape par étape. N'hésitez pas à m'écrire ici !"
-    : "Bonjour ! Je fais partie de votre équipe de parrainage sur ChargePoint. Je voulais m'assurer que tout se passe bien pour vous. Si vous avez des questions sur l'inscription, les produits ou l'utilisation de l'application, dites-moi ce qui n'est pas clair. Je prendrai le temps de vous expliquer et de vous accompagner étape par étape. N'hésitez pas à m'écrire ici !";
+    ? "Hello! I am your ChargePoint sponsor. I wanted to make sure everything is going well. If you have questions about registration, products, or using the app, tell me what is unclear. I will explain and guide you step by step. Feel free to message me here!"
+    : "Hello! I am part of your ChargePoint referral team. I wanted to make sure everything is going well. If you have questions about registration, products, or using the app, tell me what is unclear. I will explain and guide you step by step. Feel free to message me here!";
 
   return (
     <main className="team-details-page">
       <div className="team-details-shell">
         <header className="team-details-header">
-          <button type="button" onClick={() => navigate("/team")} aria-label="Retour à l'équipe" data-testid="button-back-team">
+          <button type="button" onClick={() => navigate("/team")} aria-label="Back to team" data-testid="button-back-team">
             <ChevronLeft aria-hidden="true" />
           </button>
-          <h1 data-testid="text-page-title">Détails de l'équipe</h1>
+           <h1 data-testid="text-page-title">Team details</h1>
           <span>ChargePoint</span>
         </header>
 
@@ -84,33 +84,33 @@ export default function TeamDetailsPage() {
                 aria-current={activeLevel === level.num ? "true" : undefined}
                 data-testid={`tab-level-${level.num}`}
               >
-                Équipe {level.name}
+                Team {level.name}
               </button>
             ))}
           </nav>
 
           {hasDemoMembers && (
             <p className="team-details-demo-notice">
-              Aperçu Démo : les achats, niveaux VIP et bonus ci-dessous sont des exemples fictifs. Ils ne modifient ni votre solde ni vos opérations réelles.
+               Demo preview: the purchases, VIP levels, and bonuses below are fictional examples. They do not affect your balance or real transactions.
             </p>
           )}
 
           <section className="team-details-stats" aria-label={`Résumé de l'équipe ${selected.name}`}>
             <div>
-              <span>Membres de l'équipe</span>
+               <span>Team members</span>
               <strong data-testid="text-member-count">{isLoading ? "…" : selected.members.length}</strong>
             </div>
             <div>
-              <span>Achats de l'équipe</span>
-              <strong data-testid="text-total-invested">{isLoading ? "…" : `${(Number(selected.totalInvested) + demoInvested).toLocaleString("fr-FR")} ${currency}`}</strong>
-              {demoInvested > 0 && <small>dont {demoInvested.toLocaleString("fr-FR")} {currency} fictifs</small>}
+               <span>Team purchases</span>
+              <strong data-testid="text-total-invested">{isLoading ? "…" : `${(Number(selected.totalInvested) + demoInvested).toLocaleString("en-PH")} ${currency}`}</strong>
+              {demoInvested > 0 && <small>including {demoInvested.toLocaleString("en-PH")} {currency} fictional</small>}
             </div>
           </section>
 
           <section className="team-details-members" aria-label={`Filleuls de l'équipe ${selected.name}`}>
-            <h2>Filleuls · Équipe {selected.name}</h2>
+             <h2>Referrals · Team {selected.name}</h2>
             <p className="team-details-explanation">
-              Le revenu total correspond aux bonus de parrainage reçus pour chaque filleul.
+               Total earnings represent referral bonuses received for each member.
             </p>
             <div className="team-details-columns" aria-hidden="true">
               <span>Utilisateur</span><span>Revenu total</span><span>VIP</span><span>Contact</span>
@@ -122,17 +122,17 @@ export default function TeamDetailsPage() {
               </div>
             ) : isError ? (
               <div className="team-details-empty" role="alert">
-                <strong>Impossible de charger les membres de l'équipe.</strong>
-                <span>Vérifiez votre connexion puis réessayez.</span>
+                <strong>Unable to load team members.</strong>
+                <span>Check your connection and try again.</span>
                 <button type="button" className="team-details-retry" onClick={() => void refetch()} disabled={isFetching}>
-                  {isFetching ? "Chargement…" : "Réessayer"}
+                  {isFetching ? "Loading…" : "Retry"}
                 </button>
               </div>
             ) : selected.members.length === 0 ? (
               <div className="team-details-empty">
                 <UsersRound aria-hidden="true" />
-                <strong>Aucun membre dans l'équipe {selected.name}</strong>
-                <span>Invitez des proches pour développer votre équipe.</span>
+                <strong>No members in team {selected.name}</strong>
+                <span>Invite people you know to grow your team.</span>
               </div>
             ) : selected.members.map(member => {
               const phone = member.maskedPhone;
@@ -146,7 +146,7 @@ export default function TeamDetailsPage() {
                     {member.isDemo && <small className="team-details-demo">Démo</small>}
                   </strong>
                   <span className="team-details-revenue" data-testid={`text-member-revenue-${member.id}`}>
-                    {Number(member.demoPreview?.totalReferralRevenue ?? member.totalReferralRevenue).toLocaleString("fr-FR")}
+                    {Number(member.demoPreview?.totalReferralRevenue ?? member.totalReferralRevenue).toLocaleString("en-PH")}
                     <small>{currency}</small>
                   </span>
                   <span className="team-details-vip" data-testid={`text-member-vip-${member.id}`}>

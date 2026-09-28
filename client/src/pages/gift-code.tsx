@@ -21,23 +21,23 @@ export default function GiftCodePage() {
       const response = await apiRequest("POST", "/api/gift-codes/claim", { code: giftCode });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || "Le code cadeau n'a pas pu être validé.");
+        throw new Error(data.message || "The gift code could not be validated.");
       }
       return response.json();
     },
     onSuccess: (data) => {
       refreshUser();
       setCode("");
-      toast({ title: "Félicitations !", description: data.message });
+       toast({ title: "Congratulations!", description: data.message });
     },
     onError: (error: any) => {
-      toast({ title: "Validation du code cadeau impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to validate gift code", description: error.message, variant: "destructive" });
     },
   });
 
   const handleSubmit = () => {
     if (!code.trim()) {
-      toast({ title: "Code cadeau requis", description: "Veuillez saisir un code cadeau.", variant: "destructive" });
+       toast({ title: "Gift code required", description: "Please enter a gift code.", variant: "destructive" });
       return;
     }
     claimMutation.mutate(code.trim());
@@ -79,30 +79,30 @@ export default function GiftCodePage() {
       <div className="gift-screen">
         <header className="gift-title">
           <Link href="/account" aria-label="Retour">‹</Link>
-          <h1>Échanger un cadeau</h1>
+           <h1>Redeem a gift</h1>
         </header>
         <div className="gift-banner">
           <img className="gift-hero" src={chargepointPromo} alt="Plateforme ChargePoint et borne de recharge" data-testid="img-gift-banner" />
         </div>
-        <p className="gift-description">Vous pouvez obtenir un code cadeau dans le groupe</p>
+         <p className="gift-description">You can get a gift code in the group</p>
         <a className="gift-telegram" href={settings?.groupLink || "https://t.me/sybotx"} target="_blank" rel="noreferrer">
           <img src={telegramIcon} alt="" />
-          <strong>Groupe officiel</strong>
+           <strong>Official group</strong>
           <ChevronRight aria-hidden="true" />
         </a>
         <form className="gift-form" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-          <label className="gift-label" htmlFor="gift-code-input"><span>* </span>Code cadeau</label>
+           <label className="gift-label" htmlFor="gift-code-input"><span>* </span>Gift code</label>
           <input
             id="gift-code-input"
             className="gift-input"
             type="text"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="Veuillez saisir le code cadeau"
+             placeholder="Enter the gift code"
             data-testid="input-gift-code"
           />
           <button className="gift-submit" type="submit" disabled={claimMutation.isPending} data-testid="button-submit-code">
-            {claimMutation.isPending ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : "Confirmer"}
+             {claimMutation.isPending ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : "Confirm"}
           </button>
         </form>
       </div>

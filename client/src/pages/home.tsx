@@ -35,10 +35,10 @@ interface Withdrawal {
 }
 
 const quickActions = [
-  { label: "Dépôt", href: "/deposit", icon: depositIcon },
-  { label: "Retrait", href: "/withdrawal", icon: withdrawalIcon },
-  { label: "Aide", href: "/service", icon: supportIcon },
-  { label: "Pointage", href: "/checkin", icon: checkinIcon },
+  { label: "Deposit", href: "/deposit", icon: depositIcon },
+  { label: "Withdrawal", href: "/withdrawal", icon: withdrawalIcon },
+  { label: "Support", href: "/service", icon: supportIcon },
+  { label: "Check-in", href: "/checkin", icon: checkinIcon },
 ] as const;
 
 const bannerSlides = [
@@ -94,14 +94,13 @@ export default function HomePage() {
 
   if (!user) return null;
   const country = getCountryByCode(user.country);
-  const currency = country?.currency || "XOF";
+  const currency = "PHP";
   const balance = Number.parseFloat(user.balance || "0");
   const totalEarnings = Number.parseFloat(user.totalEarnings || "0");
   const groupLink = settings?.groupLink || "";
   const popupButtonLabel = settings?.popupButtonLabel || settings?.groupLabel || "Rejoindre le groupe Telegram Officiel";
-  const formatMoney = (amount: number) => `${Math.round(amount).toLocaleString("fr-FR")} ${currency}`;
-  const popupCurrency = currency === "FCFA" ? "XOF" : currency;
-  const formatPopupMoney = (amount: number) => `${Math.round(amount).toLocaleString("fr-FR")} ${popupCurrency}`;
+  const formatMoney = (amount: number) => `${Math.round(amount).toLocaleString("en-PH")} ${currency}`;
+  const formatPopupMoney = (amount: number) => `${Math.round(amount).toLocaleString("en-PH")} ${currency}`;
   const parseIntegerSetting = (key: string, fallback: number) => {
     const value = Number.parseInt(settings?.[key] || "", 10);
     return Number.isFinite(value) ? value : fallback;
@@ -118,17 +117,17 @@ export default function HomePage() {
   const maxWithdrawalsPerDay = parseIntegerSetting("maxWithdrawalsPerDay", 1);
   const withdrawalPrepaymentEnabled = settings?.withdrawalPrepaymentEnabled === "true";
   const popupRules = [
-    `Montant minimum du dépôt : ${formatPopupMoney(minimumDeposit)}.`,
-    `Montant minimum du retrait : ${formatPopupMoney(minimumWithdrawal)}.`,
-    `Frais de retrait : ${withdrawalFee.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} % du montant demandé. Le montant net estimé après frais est affiché avant validation.`,
-    `Limite quotidienne de retrait : ${maxWithdrawalsPerDay} demande${maxWithdrawalsPerDay === 1 ? "" : "s"} par jour.`,
-    `Horaires de retrait : de ${withdrawalStartHour} h à ${withdrawalEndHour} h.`,
-    "Délai de traitement : généralement sous 2 heures et, exceptionnellement, jusqu’à 24 heures.",
+    `Minimum deposit: ${formatPopupMoney(minimumDeposit)}.`,
+    `Minimum withdrawal: ${formatPopupMoney(minimumWithdrawal)}.`,
+    `Withdrawal fee: ${withdrawalFee.toLocaleString("en-PH", { maximumFractionDigits: 2 })}% of the requested amount. The estimated net amount after fees is shown before confirmation.`,
+    `Daily withdrawal limit: ${maxWithdrawalsPerDay} request${maxWithdrawalsPerDay === 1 ? "" : "s"} per day.`,
+    `Withdrawal hours: ${withdrawalStartHour}:00 to ${withdrawalEndHour}:00.`,
+    "Processing time: usually within 2 hours and, exceptionally, up to 24 hours.",
     ...(withdrawalPrepaymentEnabled
-      ? ["Prépaiement : 25 % du montant demandé, avant traitement."]
+      ? ["Prepayment: 25% of the requested amount before processing."]
       : []),
-    `Bonus de pointage quotidien : de ${formatPopupMoney(20)} à ${formatPopupMoney(50)}, disponible une fois toutes les 24 heures.`,
-    "Avant de confirmer une demande, vérifiez les coordonnées du portefeuille et le montant net affiché.",
+    `Daily check-in bonus: ${formatPopupMoney(20)} to ${formatPopupMoney(50)}, available once every 24 hours.`,
+    "Before confirming a request, check your wallet details and the displayed net amount.",
   ];
   const withdrawnTotal = withdrawals?.filter((item) => item.status === "approved")
     .reduce((sum, item) => sum + (Number.parseFloat(item.amount) || 0), 0);
@@ -193,27 +192,27 @@ export default function HomePage() {
             <span className="sr-only" id="cp-notice-messages">{announcementLibrary.join(". ")}</span>
           </button>
 
-          <section className="cp-overview" aria-labelledby="overview-title">
+           <section className="cp-overview" aria-labelledby="overview-title">
             <header className="cp-section-heading">
-              <h2 id="overview-title">Aperçu</h2>
+               <h2 id="overview-title">Overview</h2>
             </header>
             <div className="cp-metrics">
               <button className="cp-balance" type="button" onClick={() => navigate("/wallet")} aria-label={`Voir le portefeuille, solde ${formatMoney(balance)}`}>
                 <div className="cp-balance-image"><img src={ct4000} alt="" /></div>
                 <strong data-testid="text-balance">{formatMoney(balance)}</strong>
-                <span className="cp-card-note">Solde</span>
+                 <span className="cp-card-note">Balance</span>
               </button>
               <div className="cp-stack">
                 <article className="cp-stat cp-stat-orange">
                   <img className="cp-stat-image cp-stat-image-chargeflex" src={chargeflexOverview} alt="" />
                   <strong data-testid="text-total-earnings">{formatMoney(totalEarnings)}</strong>
-                  <span>Cumul</span>
+                   <span>Total earnings</span>
                 </article>
                 <article className="cp-stat cp-stat-ink">
                   <img className="cp-stat-image cp-stat-image-cpf50" src={cpf50Overview} alt="" />
                   <strong>{withdrawnTotal === undefined ? "—" : formatMoney(withdrawnTotal)}</strong>
-                  <span>Retrait</span>
-                  {withdrawnTotal === undefined && <small>Historique indisponible</small>}
+                   <span>Withdrawn</span>
+                   {withdrawnTotal === undefined && <small>History unavailable</small>}
                 </article>
               </div>
             </div>
@@ -221,7 +220,7 @@ export default function HomePage() {
 
           <section className="cp-partners" aria-labelledby="partners-title">
             <header className="cp-partners-heading">
-              <h2 id="partners-title">Nos partenaires</h2>
+               <h2 id="partners-title">Our partners</h2>
             </header>
             <div className="cp-partners-grid">
               {partners.map(({ name, logo, className }) => (
@@ -246,9 +245,9 @@ export default function HomePage() {
             <img src={chargePointLogo} alt="" />
           </div>
           <div className="cp-dialog-copy">
-            <DialogTitle className="cp-dialog-title">Message de bienvenue ChargePoint</DialogTitle>
+             <DialogTitle className="cp-dialog-title">Welcome to ChargePoint</DialogTitle>
             <DialogDescription className="cp-dialog-message">
-              Bienvenue sur ChargePoint. Avant toute opération, veuillez consulter les principales conditions applicables aux dépôts, aux retraits et aux bonus.
+               Welcome to ChargePoint. Before any transaction, please review the main terms for deposits, withdrawals, and bonuses.
             </DialogDescription>
             <ol className="cp-dialog-list">
               {popupRules.map((rule) => <li key={rule}>{rule}</li>)}
@@ -262,7 +261,7 @@ export default function HomePage() {
                 <ChevronRight size={19} aria-hidden="true" />
               </a>
             )}
-            <button className="cp-dialog-close" type="button" onClick={() => setWelcomePopupOpen(false)}>D’ACCORD</button>
+             <button className="cp-dialog-close" type="button" onClick={() => setWelcomePopupOpen(false)}>OK</button>
           </div>
         </DialogContent>
       </Dialog>

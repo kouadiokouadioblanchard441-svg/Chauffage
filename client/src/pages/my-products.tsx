@@ -29,12 +29,12 @@ export default function MyProductsPage() {
   if (!user) return null;
 
   const country = getCountryByCode(user.country);
-  const currency = country?.currency === "FCFA" ? "XOF" : country?.currency || "XOF";
+  const currency = "PHP";
   const allUserProducts = userProducts || [];
   const activeUserProducts = allUserProducts.filter(up => up.status === "active");
   const activeProductCount = activeUserProducts.length;
   const totalUserEarnings = Math.round(Number(user.totalEarnings || 0));
-  const formatStatAmount = (amount: number) => `${amount.toLocaleString("fr-FR")} ${currency}`;
+  const formatStatAmount = (amount: number) => `${amount.toLocaleString("en-PH")} ${currency}`;
 
   // Format date as "20 Jul 2026, 15:00"
   const formatPurchaseDate = (dateStr: string) => {
@@ -346,11 +346,11 @@ export default function MyProductsPage() {
                       <div className="product-picture"><img src={up.product?.imageUrl || PRODUCT_IMAGES[index % PRODUCT_IMAGES.length]} alt={up.product?.name || "Produit"} /></div>
                       <div className="product-details">
                         <p className="product-name">{up.product?.name || "Produit"}</p>
-                        <p className="product-price">{Number(up.product?.price || 0).toLocaleString("fr-FR")} {currency}</p>
-                        <p className="product-line">Jours d'exécution :<strong>{daysCompleted} / {cycleDays}</strong></p>
-                        <p className="product-line">Revenu généré :<strong>{earnedSoFar.toLocaleString("fr-FR")} {currency}</strong></p>
-                        <p className="product-line">Revenu total :<strong>{Number(up.product?.totalReturn || 0).toLocaleString("fr-FR")} {currency}</strong></p>
-                        <p className="product-line">Date :<strong>{formatPurchaseDate(up.purchasedAt)}</strong></p>
+                        <p className="product-price">{Number(up.product?.price || 0).toLocaleString("en-PH")} {currency}</p>
+                        <p className="product-line">Days completed:<strong>{daysCompleted} / {cycleDays}</strong></p>
+                        <p className="product-line">Earnings generated:<strong>{earnedSoFar.toLocaleString("en-PH")} {currency}</strong></p>
+                        <p className="product-line">Total return:<strong>{Number(up.product?.totalReturn || 0).toLocaleString("en-PH")} {currency}</strong></p>
+                        <p className="product-line">Date:<strong>{formatPurchaseDate(up.purchasedAt)}</strong></p>
                       </div>
                     </div>
                   );

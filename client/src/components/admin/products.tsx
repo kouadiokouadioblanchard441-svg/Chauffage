@@ -17,10 +17,10 @@ import { Edit, Loader2, TrendingUp, Plus, Trash2 } from "lucide-react";
 import type { Product } from "@shared/schema";
 
 const productSchema = z.object({
-  name: z.string().min(2, "Nom requis"),
-  price: z.string().regex(/^\d+$/, "Entrez un prix entier"),
-  dailyEarnings: z.string().regex(/^\d+$/, "Entrez un montant entier"),
-  cycleDays: z.string().regex(/^[1-9]\d*$/, "La durée doit être supérieure à zéro"),
+  name: z.string().min(2, "Name is required"),
+  price: z.string().regex(/^\d+$/, "Enter a whole-number price"),
+  dailyEarnings: z.string().regex(/^\d+$/, "Enter a whole-number amount"),
+  cycleDays: z.string().regex(/^[1-9]\d*$/, "Duration must be greater than zero"),
   imageUrl: z.string().optional(),
   sortOrder: z.string().regex(/^\d+$/, "Entrez un ordre entier"),
   isFree: z.boolean(),
@@ -69,7 +69,7 @@ export default function AdminProducts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "Produit créé!" });
+       toast({ title: "Product created!" });
       setShowCreateForm(false);
       createForm.reset();
     },
@@ -90,7 +90,7 @@ export default function AdminProducts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "Produit mis à jour!" });
+       toast({ title: "Product updated!" });
       setSelectedProduct(null);
     },
     onError: (error: any) => {
@@ -128,7 +128,7 @@ export default function AdminProducts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "Produit supprimé" });
+       toast({ title: "Product deleted" });
     },
     onError: (error: any) => {
       toast({ title: "Suppression du produit impossible", description: error.message, variant: "destructive" });
@@ -178,7 +178,7 @@ export default function AdminProducts() {
     <form onSubmit={form.handleSubmit(submitLabel === "Créer" ? handleCreate : handleUpdate)} className="space-y-4">
       <FormField control={form.control} name="name" render={({ field }) => (
         <FormItem>
-          <FormLabel>Nom du produit</FormLabel>
+           <FormLabel>Product name</FormLabel>
           <FormControl><Input {...field} placeholder="Ex: VIP 3" /></FormControl>
           <FormMessage />
         </FormItem>
@@ -186,14 +186,14 @@ export default function AdminProducts() {
       <div className="grid grid-cols-2 gap-4">
         <FormField control={form.control} name="price" render={({ field }) => (
           <FormItem>
-            <FormLabel>Prix (F)</FormLabel>
+             <FormLabel>Price (PHP)</FormLabel>
           <FormControl><Input {...field} type="number" min="0" step="1" placeholder="Ex: 15000" /></FormControl>
             <FormMessage />
           </FormItem>
         )} />
         <FormField control={form.control} name="dailyEarnings" render={({ field }) => (
           <FormItem>
-            <FormLabel>Gains/jour (F)</FormLabel>
+             <FormLabel>Daily earnings (PHP)</FormLabel>
           <FormControl><Input {...field} type="number" min="0" step="1" placeholder="Ex: 300" /></FormControl>
             <FormMessage />
           </FormItem>
@@ -201,7 +201,7 @@ export default function AdminProducts() {
       </div>
       <FormField control={form.control} name="cycleDays" render={({ field }) => (
         <FormItem>
-          <FormLabel>Durée (jours)</FormLabel>
+         <FormLabel>Duration (days)</FormLabel>
           <FormControl><Input {...field} type="number" min="1" step="1" /></FormControl>
           <FormMessage />
         </FormItem>
@@ -209,14 +209,14 @@ export default function AdminProducts() {
       <div className="grid grid-cols-2 gap-4">
         <FormField control={form.control} name="sortOrder" render={({ field }) => (
           <FormItem>
-            <FormLabel>Ordre d’affichage</FormLabel>
+             <FormLabel>Display order</FormLabel>
             <FormControl><Input {...field} type="number" min="0" step="1" /></FormControl>
             <FormMessage />
           </FormItem>
         )} />
         <FormField control={form.control} name="isFree" render={({ field }) => (
           <FormItem className="flex items-center justify-between rounded-lg border p-3">
-            <FormLabel>Produit gratuit</FormLabel>
+             <FormLabel>Free product</FormLabel>
             <FormControl>
               <Switch
                 checked={field.value}
@@ -233,22 +233,22 @@ export default function AdminProducts() {
       </div>
       <FormField control={form.control} name="isActive" render={({ field }) => (
         <FormItem className="flex items-center justify-between rounded-lg border p-3">
-          <FormLabel>Visible dans le catalogue</FormLabel>
+         <FormLabel>Visible in catalog</FormLabel>
           <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
         </FormItem>
       )} />
       <FormField control={form.control} name="imageUrl" render={({ field }) => (
         <FormItem>
-          <FormLabel>URL de l'image <span className="text-muted-foreground font-normal">(optionnel)</span></FormLabel>
+           <FormLabel>Image URL <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
           <FormControl><Input {...field} placeholder="https://..." /></FormControl>
           <FormMessage />
         </FormItem>
       )} />
       {form.watch("price") && form.watch("dailyEarnings") && form.watch("cycleDays") && (
         <div className="bg-primary/10 rounded-lg p-3 text-sm">
-          <p className="text-muted-foreground">Retour total estimé :</p>
+           <p className="text-muted-foreground">Estimated total return:</p>
           <p className="font-bold text-primary text-lg">
-            {(parseInt(form.watch("dailyEarnings") || "0") * parseInt(form.watch("cycleDays") || "0")).toLocaleString()} F
+             {(parseInt(form.watch("dailyEarnings") || "0") * parseInt(form.watch("cycleDays") || "0")).toLocaleString()} PHP
           </p>
         </div>
       )}
@@ -292,7 +292,7 @@ export default function AdminProducts() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {product.price.toLocaleString()} F — {product.dailyEarnings.toLocaleString()} F/jour
+                       {product.price.toLocaleString()} PHP — {product.dailyEarnings.toLocaleString()} PHP/day
                     </p>
                   </div>
                 </div>
@@ -325,15 +325,15 @@ export default function AdminProducts() {
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div>
                   <p className="text-muted-foreground">Prix</p>
-                  <p className="font-medium text-foreground">{product.price.toLocaleString()} F</p>
+                   <p className="font-medium text-foreground">{product.price.toLocaleString()} PHP</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Gains/jour</p>
-                  <p className="font-medium text-foreground">{product.dailyEarnings.toLocaleString()} F</p>
+                   <p className="font-medium text-foreground">{product.dailyEarnings.toLocaleString()} PHP</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Total ({product.cycleDays}j)</p>
-                  <p className="font-medium text-primary">{product.totalReturn.toLocaleString()} F</p>
+                   <p className="text-muted-foreground">Total ({product.cycleDays} days)</p>
+                   <p className="font-medium text-primary">{product.totalReturn.toLocaleString()} PHP</p>
                 </div>
               </div>
             </CardContent>
@@ -341,7 +341,7 @@ export default function AdminProducts() {
         ))
       ) : (
         <div className="text-center py-8 text-muted-foreground">
-          Aucun produit
+           No products
         </div>
       )}
 
@@ -364,7 +364,7 @@ export default function AdminProducts() {
             <DialogTitle>Modifier — {selectedProduct?.name}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3">
-            Les changements de prix, de gains ou de durée peuvent aussi modifier les investissements déjà en cours.
+             Changes to price, earnings, or duration may also affect existing investments.
           </p>
           <Form {...editForm}>
             <ProductFormFields form={editForm} isPending={updateMutation.isPending} submitLabel="Enregistrer" />

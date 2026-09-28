@@ -17,28 +17,28 @@ export default function AdminBlockedIps() {
   const addMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/admin/blocked-ips", { ip: ip.trim() });
-      if (!response.ok) throw new Error((await response.json()).message || "Impossible de bloquer cette IP");
+       if (!response.ok) throw new Error((await response.json()).message || "Unable to block this IP");
       return response.json();
     },
     onSuccess: () => {
       setIp("");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/blocked-ips"] });
-      toast({ title: "IP bloquée" });
+       toast({ title: "IP blocked" });
     },
-    onError: (error: Error) => toast({ title: "Blocage de l'adresse IP impossible", description: error.message, variant: "destructive" }),
+     onError: (error: Error) => toast({ title: "Unable to block IP address", description: error.message, variant: "destructive" }),
   });
 
   const unblockMutation = useMutation({
     mutationFn: async (value: string) => {
       const response = await apiRequest("DELETE", `/api/admin/blocked-ips/${encodeURIComponent(value)}`);
-      if (!response.ok) throw new Error((await response.json()).message || "Impossible de débloquer cette IP");
+       if (!response.ok) throw new Error((await response.json()).message || "Unable to unblock this IP");
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/blocked-ips"] });
-      toast({ title: "IP débloquée" });
+       toast({ title: "IP unblocked" });
     },
-    onError: (error: Error) => toast({ title: "Déblocage de l'adresse IP impossible", description: error.message, variant: "destructive" }),
+     onError: (error: Error) => toast({ title: "Unable to unblock IP address", description: error.message, variant: "destructive" }),
   });
 
   return (
@@ -46,7 +46,7 @@ export default function AdminBlockedIps() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Ban className="h-5 w-5 text-destructive" />
-          Blocage des adresses IP
+           IP address blocking
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -60,16 +60,16 @@ export default function AdminBlockedIps() {
           <Input value={ip} onChange={(event) => setIp(event.target.value)} placeholder="Ex. 192.168.1.10" />
           <Button type="submit" disabled={!ip.trim() || addMutation.isPending}>
             {addMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            <span className="ml-1">Bloquer</span>
+             <span className="ml-1">Block</span>
           </Button>
         </form>
         <p className="text-xs text-muted-foreground">
-          Une adresse bloquée ne pourra plus accéder à l’application. Vérifie ton adresse avant de la bloquer.
+           A blocked address can no longer access the application. Verify the address before blocking it.
         </p>
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />
         ) : blockedIps.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucune adresse IP bloquée.</p>
+           <p className="text-sm text-muted-foreground">No blocked IP addresses.</p>
         ) : (
           <div className="space-y-2">
             {blockedIps.map((value) => (
@@ -83,7 +83,7 @@ export default function AdminBlockedIps() {
                   disabled={unblockMutation.isPending}
                 >
                   <Trash2 className="mr-1 h-4 w-4" />
-                  Débloquer
+                   Unblock
                 </Button>
               </div>
             ))}

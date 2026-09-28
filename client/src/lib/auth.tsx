@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await apiRequest("POST", "/api/auth/login", { phone, country, password });
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.message || "Vérifiez votre numéro et votre mot de passe, puis réessayez.");
+       throw new Error(data.message || "Check your phone number and password, then try again.");
     }
     setUser(data.user);
   };
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await apiRequest("POST", "/api/auth/register", data);
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.message || "Vérifiez les informations saisies et réessayez.");
+       throw new Error(result.message || "Check the information you entered and try again.");
     }
     setUser(result.user);
   };

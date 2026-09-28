@@ -19,7 +19,7 @@ export default function ServiceModal({ open, onClose, supportLink, channelLink, 
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-center">Service client</DialogTitle>
+          <DialogTitle className="text-center">Customer service</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3">
@@ -33,8 +33,8 @@ export default function ServiceModal({ open, onClose, supportLink, channelLink, 
               <Headphones className="w-5 h-5 text-orange-500" />
             </div>
             <div className="text-left">
-              <p className="font-medium text-foreground">Service client</p>
-              <p className="text-xs text-muted-foreground">Assistance en direct</p>
+               <p className="font-medium text-foreground">Customer service</p>
+               <p className="text-xs text-muted-foreground">Live assistance</p>
             </div>
           </Button>
 
@@ -48,8 +48,8 @@ export default function ServiceModal({ open, onClose, supportLink, channelLink, 
               <MessageCircle className="w-5 h-5 text-primary" />
             </div>
             <div className="text-left">
-              <p className="font-medium text-foreground">Chaîne officielle</p>
-              <p className="text-xs text-muted-foreground">Annonces et actualités</p>
+               <p className="font-medium text-foreground">Official channel</p>
+               <p className="text-xs text-muted-foreground">Announcements and news</p>
             </div>
           </Button>
 
@@ -63,8 +63,8 @@ export default function ServiceModal({ open, onClose, supportLink, channelLink, 
               <Users className="w-5 h-5 text-green-500" />
             </div>
             <div className="text-left">
-              <p className="font-medium text-foreground">Groupe de discussion</p>
-              <p className="text-xs text-muted-foreground">Échangez avec la communauté</p>
+               <p className="font-medium text-foreground">Discussion group</p>
+               <p className="text-xs text-muted-foreground">Connect with the community</p>
             </div>
           </Button>
         </div>

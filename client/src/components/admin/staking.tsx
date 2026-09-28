@@ -18,7 +18,7 @@ const emptyForm = { name: "", description: "", price: "", returnAmount: "", lock
 
 function formatDate(d: Date | string | null | undefined) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(d).toLocaleDateString("en-PH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export default function AdminStaking() {
@@ -125,11 +125,11 @@ export default function AdminStaking() {
         <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger value="products">
             <Package className="w-4 h-4 mr-2" />
-            Produits Staking ({products.length})
+             Staking Products ({products.length})
           </TabsTrigger>
           <TabsTrigger value="stakings">
             <Users className="w-4 h-4 mr-2" />
-            Achats ({stakings.length})
+             Purchases ({stakings.length})
           </TabsTrigger>
         </TabsList>
 
@@ -137,7 +137,7 @@ export default function AdminStaking() {
         <TabsContent value="products" className="space-y-4 mt-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Nb. à créer :</span>
+               <span className="text-sm text-muted-foreground">Number to create:</span>
               <Input type="number" min={1} max={20} value={bulkCount} onChange={e => setBulkCount(parseInt(e.target.value) || 1)}
                 className="w-16 h-8 text-center" data-testid="input-bulk-count" />
             </div>
@@ -152,7 +152,7 @@ export default function AdminStaking() {
           ) : products.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Lock className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>Aucun produit staking créé</p>
+               <p>No staking products created</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -166,28 +166,28 @@ export default function AdminStaking() {
                           <div className="flex items-center gap-2 flex-wrap mb-1">
                             <p className="font-bold text-foreground">{sp.name}</p>
                             <Badge variant={!sp.isActive ? "secondary" : scheduled ? "outline" : "default"} className={scheduled ? "border-orange-400 text-orange-600" : ""}>
-                              {!sp.isActive ? "Inactif" : scheduled ? "Planifié" : "Actif"}
+                               {!sp.isActive ? "Inactive" : scheduled ? "Scheduled" : "Active"}
                             </Badge>
                           </div>
                           {sp.description && <p className="text-xs text-muted-foreground mb-2">{sp.description}</p>}
                           <div className="grid grid-cols-3 gap-2 text-sm">
                             <div className="bg-secondary/50 rounded-lg p-2 text-center">
-                              <p className="text-muted-foreground text-xs">Prix</p>
-                              <p className="font-bold text-primary">{sp.price.toLocaleString()} F</p>
+                               <p className="text-muted-foreground text-xs">Price</p>
+                               <p className="font-bold text-primary">{sp.price.toLocaleString()} PHP</p>
                             </div>
                             <div className="bg-secondary/50 rounded-lg p-2 text-center">
-                              <p className="text-muted-foreground text-xs">Retour</p>
-                              <p className="font-bold text-green-600">{sp.returnAmount.toLocaleString()} F</p>
+                               <p className="text-muted-foreground text-xs">Return</p>
+                               <p className="font-bold text-green-600">{sp.returnAmount.toLocaleString()} PHP</p>
                             </div>
                             <div className="bg-secondary/50 rounded-lg p-2 text-center">
-                              <p className="text-muted-foreground text-xs">Durée</p>
+                               <p className="text-muted-foreground text-xs">Duration</p>
                               <p className="font-bold">{sp.lockDays}j</p>
                             </div>
                           </div>
                           {sp.launchDate && (
                             <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                               <Calendar className="w-3 h-3" />
-                              Lancement : {formatDate(sp.launchDate)}
+                               Launch: {formatDate(sp.launchDate)}
                             </div>
                           )}
                         </div>
@@ -222,19 +222,19 @@ export default function AdminStaking() {
               <p className="font-bold text-primary">{stakings.filter(s => s.status === "active").length}</p>
             </div>
             <div className="bg-secondary rounded-xl p-3 text-center">
-              <p className="text-xs text-muted-foreground">Total bloqué</p>
-              <p className="font-bold text-orange-600">{totalStaked.toLocaleString()} F</p>
+               <p className="text-xs text-muted-foreground">Total locked</p>
+               <p className="font-bold text-orange-600">{totalStaked.toLocaleString()} PHP</p>
             </div>
             <div className="bg-secondary rounded-xl p-3 text-center">
-              <p className="text-xs text-muted-foreground">Total libéré</p>
-              <p className="font-bold text-green-600">{totalReleased.toLocaleString()} F</p>
+               <p className="text-xs text-muted-foreground">Total released</p>
+               <p className="font-bold text-green-600">{totalReleased.toLocaleString()} PHP</p>
             </div>
           </div>
 
           {stakingsLoading ? (
             Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)
           ) : stakings.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Aucun achat staking</div>
+             <div className="text-center py-8 text-muted-foreground">No staking purchases</div>
           ) : (
             <div className="space-y-2">
               {stakings.map(s => (
@@ -245,18 +245,18 @@ export default function AdminStaking() {
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm">{s.user.fullName}</p>
                           <Badge variant={s.status === "released" ? "default" : "secondary"} className="text-xs">
-                            {s.status === "released" ? "Libéré" : "En cours"}
+                             {s.status === "released" ? "Released" : "Active"}
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">{s.user.phone} · {s.product.name}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {s.amountPaid.toLocaleString()} F → {s.returnAmount.toLocaleString()} F · Déblocage : {formatDate(s.releaseDate)}
+                           {s.amountPaid.toLocaleString()} PHP → {s.returnAmount.toLocaleString()} PHP · Unlock: {formatDate(s.releaseDate)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">{formatDate(s.purchasedAt)}</p>
                         {s.status === "released" && s.releasedAt && (
-                          <p className="text-xs text-green-600 font-medium">Libéré le {formatDate(s.releasedAt)}</p>
+                           <p className="text-xs text-green-600 font-medium">Released on {formatDate(s.releasedAt)}</p>
                         )}
                       </div>
                     </div>
@@ -273,7 +273,7 @@ export default function AdminStaking() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editTarget ? "Modifier le produit staking" : forms.length > 1 ? `Ajouter ${forms.length} produits staking` : "Ajouter un produit staking"}
+               {editTarget ? "Edit staking product" : forms.length > 1 ? `Add ${forms.length} staking products` : "Add staking product"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
@@ -281,28 +281,28 @@ export default function AdminStaking() {
               <div key={i} className={`space-y-3 ${forms.length > 1 ? "border border-border rounded-xl p-4" : ""}`}>
                 {forms.length > 1 && <p className="font-semibold text-sm text-primary">Produit {i + 1}</p>}
                 <div>
-                  <label className="text-sm font-medium">Nom du produit</label>
+                   <label className="text-sm font-medium">Product name</label>
                   <Input value={form.name} onChange={e => updateForm(i, "name", e.target.value)}
                     placeholder="Ex: Staking Gold 30 jours" className="mt-1" data-testid={`input-name-${i}`} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Description <span className="text-muted-foreground font-normal">(optionnel)</span></label>
+                   <label className="text-sm font-medium">Description <span className="text-muted-foreground font-normal">(optional)</span></label>
                   <Input value={form.description} onChange={e => updateForm(i, "description", e.target.value)}
                     placeholder="Description du produit" className="mt-1" />
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="text-sm font-medium">Prix (F)</label>
+                     <label className="text-sm font-medium">Price (PHP)</label>
                     <Input type="number" value={form.price} onChange={e => updateForm(i, "price", e.target.value)}
                       placeholder="5000" className="mt-1" data-testid={`input-price-${i}`} />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Retour (F)</label>
+                     <label className="text-sm font-medium">Return (PHP)</label>
                     <Input type="number" value={form.returnAmount} onChange={e => updateForm(i, "returnAmount", e.target.value)}
                       placeholder="7000" className="mt-1" data-testid={`input-return-${i}`} />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Durée (j)</label>
+                     <label className="text-sm font-medium">Duration (days)</label>
                     <Input type="number" value={form.lockDays} onChange={e => updateForm(i, "lockDays", e.target.value)}
                       placeholder="30" className="mt-1" data-testid={`input-days-${i}`} />
                   </div>
@@ -310,7 +310,7 @@ export default function AdminStaking() {
                 <div>
                   <label className="text-sm font-medium flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    Date de lancement <span className="text-muted-foreground font-normal">(optionnel — si planifié, les utilisateurs voient le produit mais ne peuvent pas acheter avant)</span>
+                     Launch date <span className="text-muted-foreground font-normal">(optional — scheduled products are visible but cannot be purchased yet)</span>
                   </label>
                   <Input type="datetime-local" value={form.launchDate} onChange={e => updateForm(i, "launchDate", e.target.value)}
                     className="mt-1" data-testid={`input-launch-${i}`} />
@@ -318,12 +318,12 @@ export default function AdminStaking() {
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id={`active-${i}`} checked={form.isActive}
                     onChange={e => updateForm(i, "isActive", e.target.checked)} />
-                  <label htmlFor={`active-${i}`} className="text-sm font-medium">Actif immédiatement</label>
+                   <label htmlFor={`active-${i}`} className="text-sm font-medium">Active immediately</label>
                 </div>
               </div>
             ))}
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={closeForm}>Annuler</Button>
+               <Button variant="outline" className="flex-1" onClick={closeForm}>Cancel</Button>
               <Button className="flex-1" onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || forms.some(f => !f.name || !f.price || !f.returnAmount || !f.lockDays)}
                 data-testid="button-save-staking">

@@ -39,18 +39,18 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="secondary" className="text-xs"><Clock className="w-3 h-3 mr-1" /> En attente</Badge>;
+        return <Badge variant="secondary" className="text-xs"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
       case "approved":
-        return <Badge className="text-xs bg-green-500"><Check className="w-3 h-3 mr-1" /> Approuvé</Badge>;
+        return <Badge className="text-xs bg-green-500"><Check className="w-3 h-3 mr-1" /> Approved</Badge>;
       case "rejected":
-        return <Badge variant="destructive" className="text-xs"><X className="w-3 h-3 mr-1" /> Rejeté</Badge>;
+        return <Badge variant="destructive" className="text-xs"><X className="w-3 h-3 mr-1" /> Rejected</Badge>;
       default:
         return <Badge variant="outline" className="text-xs">{status}</Badge>;
     }
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("fr-FR", {
+    return new Date(date).toLocaleDateString("en-US", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -63,14 +63,14 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Historique des transactions</DialogTitle>
+          <DialogTitle>Transaction history</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="deposits">Dépôts</TabsTrigger>
-            <TabsTrigger value="withdrawals">Retraits</TabsTrigger>
-            <TabsTrigger value="earnings">Revenus</TabsTrigger>
+            <TabsTrigger value="deposits">Deposits</TabsTrigger>
+            <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
+            <TabsTrigger value="earnings">Earnings</TabsTrigger>
           </TabsList>
 
           <div className="flex-1 overflow-y-auto mt-4">
@@ -102,7 +102,7 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
               ) : (
                 <div className="text-center py-8">
                   <ArrowDownToLine className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">Aucun dépôt</p>
+                  <p className="text-muted-foreground">No deposits</p>
                 </div>
               )}
             </TabsContent>
@@ -124,7 +124,7 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
                               -{formatCurrency(withdrawal.amount, user.country)}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Net: {formatCurrency(withdrawal.netAmount, user.country)}
+                               Net: {formatCurrency(withdrawal.netAmount, user.country)}
                             </p>
                             <p className="text-xs text-muted-foreground">{formatDate(withdrawal.createdAt as unknown as string)}</p>
                           </div>
@@ -137,7 +137,7 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
               ) : (
                 <div className="text-center py-8">
                   <ArrowUpFromLine className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">Aucun retrait</p>
+                  <p className="text-muted-foreground">No withdrawals</p>
                 </div>
               )}
             </TabsContent>
@@ -169,7 +169,7 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
               ) : (
                 <div className="text-center py-8">
                   <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">Aucun revenu</p>
+                  <p className="text-muted-foreground">No earnings</p>
                 </div>
               )}
             </TabsContent>

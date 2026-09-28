@@ -56,7 +56,7 @@ export default function InvestPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
       refreshUser();
       setConfirmProduct(null);
-      toast({ title: "Produit acheté !", description: "Vous commencerez à recevoir des gains demain." });
+       toast({ title: "Product purchased!", description: "You will start receiving earnings tomorrow." });
     },
     onError: (error: any) => {
       setConfirmProduct(null);
@@ -68,7 +68,7 @@ export default function InvestPage() {
 
   const balance     = parseFloat(user.balance || "0");
   const country     = getCountryByCode(user.country);
-  const currency    = country?.currency || "FCFA";
+  const currency    = "PHP";
   const paidProducts = products?.filter(p => !p.isFree && p.isActive) || [];
 
   return (
@@ -133,10 +133,10 @@ export default function InvestPage() {
                   {/* Stats */}
                   <div className="space-y-1 mt-auto">
                     {[
-                      { label: "Prix unitaire",    value: `${currency} ${Number(product.price).toLocaleString("fr-FR")}` },
-                      { label: "Validité",         value: `${product.cycleDays} Jours` },
-                      { label: "Gains quotidiens", value: `${currency} ${Number(product.dailyEarnings).toLocaleString("fr-FR")}` },
-                      { label: "Revenu total",     value: `${currency} ${Number(product.totalReturn).toLocaleString("fr-FR")}` },
+                       { label: "Unit price",    value: `${currency} ${Number(product.price).toLocaleString("en-PH")}` },
+                       { label: "Validity",         value: `${product.cycleDays} days` },
+                       { label: "Daily earnings", value: `${currency} ${Number(product.dailyEarnings).toLocaleString("en-PH")}` },
+                       { label: "Total return",     value: `${currency} ${Number(product.totalReturn).toLocaleString("en-PH")}` },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex items-center justify-between">
                         <span className="text-gray-400 text-[11px]">{label}</span>
@@ -183,7 +183,7 @@ export default function InvestPage() {
                   {confirmProduct.name}
                 </p>
                 <p className="text-white/70 text-sm mt-2 leading-relaxed">
-                  Après l'achat du produit, vos gains seront crédités sur votre compte toutes les 24 heures.
+                  After purchasing this product, earnings will be credited to your account every 24 hours.
                 </p>
               </div>
 
@@ -197,10 +197,10 @@ export default function InvestPage() {
                 {/* Info list */}
                 <div className="flex-1 space-y-2">
                   {[
-                    { label: "Prix",              value: `${currency} ${Number(confirmProduct.price).toLocaleString("fr-FR")}` },
-                    { label: "Revenu quotidien",  value: `${currency} ${daily.toLocaleString("fr-FR")}` },
-                    { label: "Revenu total",      value: `${currency} ${total.toLocaleString("fr-FR")}` },
-                    { label: "Période de validité", value: `${duration} jours` },
+                    { label: "Price",              value: `${currency} ${Number(confirmProduct.price).toLocaleString("en-PH")}` },
+                    { label: "Daily earnings",  value: `${currency} ${daily.toLocaleString("en-PH")}` },
+                    { label: "Total return",      value: `${currency} ${total.toLocaleString("en-PH")}` },
+                    { label: "Validity period", value: `${duration} days` },
                   ].map(row => (
                     <div key={row.label}>
                       <p className="text-white/60 text-[10px] leading-none">{row.label}</p>
@@ -216,7 +216,7 @@ export default function InvestPage() {
                   style={{ background: "rgba(220,50,50,0.22)", border: "1px solid rgba(255,100,100,0.35)" }}>
                   <AlertTriangle className="w-4 h-4 text-red-300 shrink-0" />
                   <p className="text-red-200 text-xs leading-snug">
-                    Solde insuffisant. Il vous manque {currency} {shortage.toLocaleString("fr-FR")}.
+                     Insufficient balance. You are short by {currency} {shortage.toLocaleString("en-PH")}.
                   </p>
                 </div>
               )}
@@ -229,7 +229,7 @@ export default function InvestPage() {
                   style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.25)" }}
                   data-testid="button-cancel-purchase"
                 >
-                  Annuler
+                   Cancel
                 </button>
                 <button
                   onClick={() => purchaseMutation.mutate(confirmProduct.id)}
@@ -240,7 +240,7 @@ export default function InvestPage() {
                 >
                   {purchaseMutation.isPending
                     ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : "Confirmer"
+                     : "Confirm"
                   }
                 </button>
               </div>

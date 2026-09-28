@@ -66,28 +66,28 @@ function TeamMemberCard({ member }: { member: TeamMember; level: number }) {
           <div>
             <p className="font-medium text-foreground">{member.fullName}</p>
             <p className="text-xs text-muted-foreground">{member.phone} - {member.country}</p>
-            <p className="text-xs text-muted-foreground">Inscrit: {new Date(member.createdAt).toLocaleDateString()}</p>
+            <p className="text-xs text-muted-foreground">Registered: {new Date(member.createdAt).toLocaleDateString("en-PH")}</p>
           </div>
           <div className="text-right">
             {member.hasActiveProduct && (
               <Badge className="text-xs mb-1">Actif</Badge>
             )}
             {member.hasDeposited && (
-              <Badge variant="secondary" className="text-xs mb-1 ml-1">A depose</Badge>
+              <Badge variant="secondary" className="text-xs mb-1 ml-1">Has deposited</Badge>
             )}
           </div>
         </div>
         <div className="mt-2 pt-2 border-t">
           <p className="text-sm font-medium text-primary">
-            Total investi: {member.totalInvested.toLocaleString()} F
+             Total invested: {member.totalInvested.toLocaleString()} PHP
           </p>
           {member.products.length > 0 && (
             <div className="mt-1">
               <p className="text-xs text-muted-foreground">Produits:</p>
               {member.products.map((p, i) => (
                 <p key={i} className="text-xs">
-                  - {p.productName} ({p.productPrice.toLocaleString()} F)
-                  {p.isActive ? " (actif)" : " (termine)"}
+                   - {p.productName} ({p.productPrice.toLocaleString()} PHP)
+                   {p.isActive ? " (active)" : " (completed)"}
                 </p>
               ))}
             </div>
@@ -259,7 +259,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
             variant={statusFilter === status ? "default" : "outline"}
             onClick={() => setStatusFilter(status)}
           >
-            {status === "all" ? "Tous" : status === "banned" ? "Bannis" : status === "blocked" ? "Retrait bloque" : "Promoteurs"}
+             {status === "all" ? "All" : status === "banned" ? "Banned" : status === "blocked" ? "Withdrawal blocked" : "Promoters"}
           </Button>
         ))}
       </div>
@@ -277,29 +277,29 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                       <p className="font-medium text-foreground">{user.fullName}</p>
                       {user.isAdmin && <Badge variant="destructive" className="text-xs">Admin</Badge>}
                       {(user as any).isBanker && <Badge className="text-xs bg-orange-500">Bankier</Badge>}
-                      {user.isPromoter && <Badge className="text-xs">Promoteur</Badge>}
-                      {user.isBanned && <Badge variant="destructive" className="text-xs">Banni</Badge>}
-                      {user.isWithdrawalBlocked && <Badge variant="secondary" className="text-xs">Retrait bloque</Badge>}
+                       {user.isPromoter && <Badge className="text-xs">Promoter</Badge>}
+                       {user.isBanned && <Badge variant="destructive" className="text-xs">Banned</Badge>}
+                       {user.isWithdrawalBlocked && <Badge variant="secondary" className="text-xs">Withdrawal blocked</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground">{user.phone} - {user.country}</p>
                     <p className="text-xs text-muted-foreground">Code: {user.referralCode}</p>
                     {user.referrerName && (
                       <p className="text-xs text-primary flex items-center gap-1 mt-1">
                         <UserPlus className="w-3 h-3" />
-                        Invite par: <span className="font-medium">{user.referrerName}</span>
+                         Invited by: <span className="font-medium">{user.referrerName}</span>
                       </p>
                     )}
                     {user.referredBy && !user.referrerName && (
                       <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                         <UserPlus className="w-3 h-3" />
-                        Code parrain: {user.referredBy}
+                         Referral code: {user.referredBy}
                       </p>
                     )}
                   </div>
                   <div className="flex gap-1">
                     <Button size="sm" variant="outline" onClick={() => navigate(`${ADMIN_PATH}/team/${user.id}`)}>
                       <Users className="w-4 h-4 mr-1" />
-                      Equipe
+                       Team
                     </Button>
                     <Button size="icon" variant="ghost" onClick={() => setSelectedUser(user)}>
                       <Edit className="w-4 h-4" />
@@ -309,15 +309,15 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
 
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Solde</p>
+                   <p className="text-muted-foreground">Balance</p>
                     <p className="font-medium text-foreground">{formatCurrency(parseFloat(user.balance), user.country)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Equipe</p>
+                   <p className="text-muted-foreground">Team</p>
                     <p className="font-medium text-foreground">{user.level1Count + user.level2Count + user.level3Count}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Commissions</p>
+                   <p className="text-muted-foreground">Commissions</p>
                     <p className="font-medium text-primary">{formatCurrency(user.totalCommission, user.country)}</p>
                   </div>
                 </div>
@@ -326,7 +326,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
           ))
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            Aucun utilisateur trouve
+             No users found
           </div>
         )}
       </div>
@@ -341,7 +341,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
             data-testid="button-prev-page"
           >
             <ChevronLeft className="w-4 h-4" />
-            Precedent
+             Previous
           </Button>
           <span className="text-sm text-muted-foreground px-2">
             {currentPage} / {usersData.totalPages}
@@ -353,7 +353,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
             disabled={currentPage === usersData.totalPages || isLoading}
             data-testid="button-next-page"
           >
-            Suivant
+             Next
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -362,7 +362,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
       <Dialog open={showTeamModal} onOpenChange={() => { setShowTeamModal(false); setTeamUserId(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Equipe de l'utilisateur</DialogTitle>
+             <DialogTitle>User team</DialogTitle>
           </DialogHeader>
 
           {teamLoading ? (
@@ -387,9 +387,9 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                 <Card className="mb-3">
                   <CardContent className="p-3 text-center">
                     <p className="text-lg font-bold text-primary">
-                      {teamData.totalLevel1Invested.toLocaleString()} F
+                       {teamData.totalLevel1Invested.toLocaleString()} PHP
                     </p>
-                    <p className="text-xs text-muted-foreground">Total investi niveau 1</p>
+                     <p className="text-xs text-muted-foreground">Total level 1 investment</p>
                   </CardContent>
                 </Card>
                 {teamData.level1.length > 0 ? (
@@ -397,7 +397,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                     <TeamMemberCard key={member.id} member={member} level={1} />
                   ))
                 ) : (
-                  <p className="text-center text-muted-foreground py-4">Aucun filleul niveau 1</p>
+                   <p className="text-center text-muted-foreground py-4">No level 1 referrals</p>
                 )}
               </TabsContent>
 
@@ -405,9 +405,9 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                 <Card className="mb-3">
                   <CardContent className="p-3 text-center">
                     <p className="text-lg font-bold text-primary">
-                      {teamData.totalLevel2Invested.toLocaleString()} F
+                       {teamData.totalLevel2Invested.toLocaleString()} PHP
                     </p>
-                    <p className="text-xs text-muted-foreground">Total investi niveau 2</p>
+                     <p className="text-xs text-muted-foreground">Total level 2 investment</p>
                   </CardContent>
                 </Card>
                 {teamData.level2.length > 0 ? (
@@ -415,7 +415,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                     <TeamMemberCard key={member.id} member={member} level={2} />
                   ))
                 ) : (
-                  <p className="text-center text-muted-foreground py-4">Aucun filleul niveau 2</p>
+                   <p className="text-center text-muted-foreground py-4">No level 2 referrals</p>
                 )}
               </TabsContent>
 
@@ -423,9 +423,9 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                 <Card className="mb-3">
                   <CardContent className="p-3 text-center">
                     <p className="text-lg font-bold text-primary">
-                      {teamData.totalLevel3Invested.toLocaleString()} F
+                       {teamData.totalLevel3Invested.toLocaleString()} PHP
                     </p>
-                    <p className="text-xs text-muted-foreground">Total investi niveau 3</p>
+                     <p className="text-xs text-muted-foreground">Total level 3 investment</p>
                   </CardContent>
                 </Card>
                 {teamData.level3.length > 0 ? (
@@ -433,7 +433,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                     <TeamMemberCard key={member.id} member={member} level={3} />
                   ))
                 ) : (
-                  <p className="text-center text-muted-foreground py-4">Aucun filleul niveau 3</p>
+                   <p className="text-center text-muted-foreground py-4">No level 3 referrals</p>
                 )}
               </TabsContent>
             </Tabs>
@@ -444,7 +444,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Gerer {selectedUser?.fullName}</DialogTitle>
+             <DialogTitle>Manage {selectedUser?.fullName}</DialogTitle>
           </DialogHeader>
 
           {selectedUser && (
@@ -452,7 +452,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
               {selectedUser.referrerName && (
                 <div className="bg-secondary rounded-lg p-3">
                   <p className="text-sm">
-                    <span className="text-muted-foreground">Invite par:</span>{" "}
+                     <span className="text-muted-foreground">Invited by:</span>{" "}
                     <span className="font-medium">{selectedUser.referrerName}</span>
                   </p>
                 </div>
@@ -478,7 +478,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
 
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm font-medium">Modifier le solde</label>
+                   <label className="text-sm font-medium">Edit balance</label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       type="number"
@@ -496,7 +496,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">Reinitialiser mot de passe</label>
+                   <label className="text-sm font-medium">Reset password</label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       type="text"
@@ -514,16 +514,16 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">Attribuer un produit</label>
+                   <label className="text-sm font-medium">Assign a product</label>
                   <div className="flex gap-2 mt-1">
                     <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Choisir un produit" />
+                         <SelectValue placeholder="Select a product" />
                       </SelectTrigger>
                       <SelectContent>
                         {products?.filter(p => !p.isFree).map((product) => (
                           <SelectItem key={product.id} value={product.id.toString()}>
-                            {product.name} - {product.price.toLocaleString()} F
+                             {product.name} - {product.price.toLocaleString()} PHP
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -538,7 +538,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">Produits de l'utilisateur</label>
+                   <label className="text-sm font-medium">User products</label>
                   <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
                     {userProductsLoading ? (
                       <p className="text-sm text-muted-foreground">Chargement...</p>
@@ -566,7 +566,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm text-muted-foreground">Aucun produit</p>
+                       <p className="text-sm text-muted-foreground">No products</p>
                     )}
                   </div>
                 </div>

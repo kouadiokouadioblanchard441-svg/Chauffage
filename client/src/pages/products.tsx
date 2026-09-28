@@ -65,8 +65,8 @@ export default function ProductsPage() {
   if (!user) return null;
 
   const country = getCountryByCode(user.country);
-  const currency = country?.currency || "FCFA";
-  const formatAmount = (value: number) => `${currency} ${Math.round(value).toLocaleString("fr-FR")}`;
+  const currency = "PHP";
+  const formatAmount = (value: number) => `${currency} ${Math.round(value).toLocaleString("en-PH")}`;
   const availableProducts = products?.filter(product => !product.isFree) || [];
   const activeUserProducts = (userProducts || []).filter(product => product.status === "active");
   const ownedCount = activeUserProducts.length;
@@ -218,41 +218,41 @@ export default function ProductsPage() {
         <header className="cp-products-header">
           <div className="cp-products-brand">
             <img src={chargepointLogo} alt="ChargePoint" />
-            <strong>Produits</strong>
+            <strong>Products</strong>
           </div>
-          <button className="cp-products-service" onClick={() => navigate("/service")}>Service</button>
+             <button className="cp-products-service" onClick={() => navigate("/service")}>Support</button>
         </header>
 
         <section className="cp-products-hero" aria-label="Catalogue ChargePoint">
           <img src={chargepointPromo} alt="" />
           <div className="cp-products-hero-copy">
-            <h1>Équipements ChargePoint</h1>
-            <p>Choisissez un produit et commencez à recevoir vos revenus quotidiens.</p>
+             <h1>ChargePoint equipment</h1>
+             <p>Choose a product and start receiving daily earnings.</p>
           </div>
         </section>
 
         <section className="cp-products-stats" aria-label="Résumé des produits">
           <div className="cp-products-stat">
             <span className="cp-products-stat-icon"><ShoppingBag aria-hidden="true" /></span>
-            <span><strong className="cp-products-stat-value">{ownedCount}</strong><small className="cp-products-stat-label">Mes équipements</small></span>
+             <span><strong className="cp-products-stat-value">{ownedCount}</strong><small className="cp-products-stat-label">My equipment</small></span>
           </div>
           <div className="cp-products-stat">
-            <span className="cp-products-stat-icon"><span aria-hidden="true">XAF</span></span>
-            <span><strong className="cp-products-stat-value">{formatAmount(dailyRevenue)}</strong><small className="cp-products-stat-label">Revenu quotidien</small></span>
+             <span className="cp-products-stat-icon"><span aria-hidden="true">PHP</span></span>
+             <span><strong className="cp-products-stat-value">{formatAmount(dailyRevenue)}</strong><small className="cp-products-stat-label">Daily earnings</small></span>
           </div>
         </section>
 
         <div className="cp-products-section-title">
-          <h2>Nos produits</h2>
+           <h2>Our products</h2>
         </div>
 
         <section className="cp-products-list" aria-label="Produits disponibles">
           {isLoading ? (
-            <div className="cp-products-empty"><Loader2 className="animate-spin" /><p>Chargement des produits...</p></div>
+             <div className="cp-products-empty"><Loader2 className="animate-spin" /><p>Loading products...</p></div>
           ) : availableProducts.length === 0 ? (
             <div className="cp-products-empty">
               <img src={emptyProductsIllustration} alt="" />
-              <p>Aucun produit disponible pour le moment</p>
+               <p>No products available at the moment</p>
             </div>
           ) : availableProducts.map((product, index) => (
             <article className={`cp-product-card${product.isActive ? "" : " is-unavailable"}`} key={product.id} data-testid={`product-card-${product.id}`}>
@@ -260,21 +260,21 @@ export default function ProductsPage() {
               <div className="cp-product-info">
                 <h3 className="cp-product-name">
                   {product.name}
-                  {!product.isActive && <span className="ml-2 text-xs font-bold uppercase text-gray-500">Indisponible</span>}
+                 {!product.isActive && <span className="ml-2 text-xs font-bold uppercase text-gray-500">Unavailable</span>}
                 </h3>
                 <div className="cp-product-line"><span>Prix :</span><strong>{formatAmount(Number(product.price))}</strong></div>
                 <div className="cp-product-line revenue"><span>Revenu quotidien :</span><strong>{formatAmount(Number(product.dailyEarnings))}</strong></div>
                 <div className="cp-product-line revenue"><span>Revenu total :</span><strong>{formatAmount(Number(product.totalReturn))}</strong></div>
                 <div className="cp-product-line"><span>Cycle :</span><strong>{product.cycleDays} jours</strong></div>
               </div>
-              <button
+               <button
                 className={`cp-product-buy${product.isActive ? "" : " is-unavailable"}`}
                 onClick={() => product.isActive && setSelectedProduct(product)}
                 disabled={!product.isActive}
                 aria-disabled={!product.isActive}
                 data-testid={`button-purchase-${product.id}`}
               >
-                {product.isActive ? <>Acheter <ChevronRight aria-hidden="true" size={16} /></> : "Indisponible"}
+                 {product.isActive ? <>Buy <ChevronRight aria-hidden="true" size={16} /></> : "Unavailable"}
               </button>
             </article>
           ))}
@@ -285,16 +285,16 @@ export default function ProductsPage() {
         <div className="cp-products-modal-backdrop" onClick={() => setSelectedProduct(null)}>
           <div className="cp-products-modal" onClick={event => event.stopPropagation()}>
             <h2>{selectedProduct.name}</h2>
-            <p>Après l’achat, vos revenus seront crédités quotidiennement pendant {selectedProduct.cycleDays} jours.</p>
+             <p>After purchase, your earnings will be credited daily for {selectedProduct.cycleDays} days.</p>
             <div className="cp-product-line"><span>Prix :</span><strong>{formatAmount(Number(selectedProduct.price))}</strong></div>
             <div className="cp-product-line revenue"><span>Revenu quotidien :</span><strong>{formatAmount(Number(selectedProduct.dailyEarnings))}</strong></div>
             {Number(user.balance || 0) < Number(selectedProduct.price) && (
-              <div className="cp-products-modal-warning"><AlertTriangle size={16} />Solde insuffisant pour acheter ce produit.</div>
+               <div className="cp-products-modal-warning"><AlertTriangle size={16} />Insufficient balance to purchase this product.</div>
             )}
             <div className="cp-products-modal-actions">
-              <button onClick={() => setSelectedProduct(null)}>Annuler</button>
+               <button onClick={() => setSelectedProduct(null)}>Cancel</button>
               <button onClick={() => purchaseMutation.mutate(selectedProduct.id)} disabled={purchaseMutation.isPending}>
-                {purchaseMutation.isPending ? <Loader2 className="mx-auto animate-spin" size={17} /> : "Confirmer"}
+                 {purchaseMutation.isPending ? <Loader2 className="mx-auto animate-spin" size={17} /> : "Confirm"}
               </button>
             </div>
           </div>

@@ -12,9 +12,9 @@ import { ChevronDown, Eye, EyeOff, Globe2, Loader2, LockKeyhole } from "lucide-r
 import loginIllustration from "@/assets/auth-chargepoint-combined.png";
 
 const loginSchema = z.object({
-  phone: z.string().min(8, "Numéro de téléphone invalide"),
-  country: z.string().min(2, "Sélectionnez un pays"),
-  password: z.string().min(1, "Le mot de passe est requis"),
+  phone: z.string().min(8, "Invalid phone number"),
+  country: z.string().min(2, "Select a country"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -75,7 +75,7 @@ export default function LoginPage() {
       await login(data.phone, data.country, data.password);
       navigate("/");
     } catch (error: any) {
-      toast({ title: "Connexion impossible", description: error.message || "Vérifiez votre numéro et votre mot de passe.", variant: "destructive" });
+      toast({ title: "Unable to sign in", description: error.message || "Check your phone number and password.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -129,36 +129,36 @@ export default function LoginPage() {
         <section className="auth-panel">
           <h1 className="auth-brand">ChargePoint</h1>
           <div className="auth-illustration-frame" onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()}>
-            <img className="auth-illustration" src={loginIllustration} alt="Borne domestique et station de recharge ChargePoint" draggable={false} />
+             <img className="auth-illustration" src={loginIllustration} alt="ChargePoint home charger and charging station" draggable={false} />
           </div>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <input type="hidden" {...form.register("country")} />
 
             <div className="auth-fields">
                <div className={`auth-field${form.formState.errors.phone || form.formState.errors.country ? " has-error" : ""}`}>
-                 <button type="button" className="auth-prefix" onClick={() => setCountryModalOpen(true)} data-testid="button-select-country" aria-label={`Choisir le pays${countryData ? `, ${countryData.name}, indicatif +${displayedPrefix}` : ""}`} aria-haspopup="dialog" aria-expanded={countryModalOpen} aria-describedby={form.formState.errors.country ? "login-country-error" : undefined}>
+                 <button type="button" className="auth-prefix" onClick={() => setCountryModalOpen(true)} data-testid="button-select-country" aria-label={`Choose country${countryData ? `, ${countryData.name}, calling code +${displayedPrefix}` : ""}`} aria-haspopup="dialog" aria-expanded={countryModalOpen} aria-describedby={form.formState.errors.country ? "login-country-error" : undefined}>
                    <Globe2 aria-hidden="true" />
                   <span>+{displayedPrefix}</span>
                    <ChevronDown className="auth-country-arrow" aria-hidden="true" />
                 </button>
-                 <input {...form.register("phone")} type="tel" inputMode="tel" autoComplete="username" placeholder="Numéro de téléphone" aria-label="Numéro de téléphone" aria-invalid={!!form.formState.errors.phone} aria-describedby={form.formState.errors.phone ? "login-phone-error" : undefined} data-testid="input-phone" />
+                  <input {...form.register("phone")} type="tel" inputMode="tel" autoComplete="username" placeholder="Phone number" aria-label="Phone number" aria-invalid={!!form.formState.errors.phone} aria-describedby={form.formState.errors.phone ? "login-phone-error" : undefined} data-testid="input-phone" />
               </div>
                {form.formState.errors.country && <p id="login-country-error" role="alert" className="auth-error">{form.formState.errors.country.message}</p>}
                {form.formState.errors.phone && <p id="login-phone-error" role="alert" className="auth-error">{form.formState.errors.phone.message}</p>}
 
                <div className={`auth-field${form.formState.errors.password ? " has-error" : ""}`}>
                 <LockKeyhole className="auth-field-icon" aria-hidden="true" />
-                 <input {...form.register("password")} type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Mot de passe" aria-label="Mot de passe" aria-invalid={!!form.formState.errors.password} aria-describedby={form.formState.errors.password ? "login-password-error" : undefined} data-testid="input-password" />
-                 <button type="button" className="auth-visibility" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} aria-pressed={showPassword}>
+                  <input {...form.register("password")} type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Password" aria-label="Password" aria-invalid={!!form.formState.errors.password} aria-describedby={form.formState.errors.password ? "login-password-error" : undefined} data-testid="input-password" />
+                  <button type="button" className="auth-visibility" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}>
                    {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                  </button>
               </div>
                {form.formState.errors.password && <p id="login-password-error" role="alert" className="auth-error">{form.formState.errors.password.message}</p>}
             </div>
 
-            <button type="button" className="auth-switch" onClick={() => navigate("/register")} data-testid="link-register">Aller à l'inscription &gt;</button>
+             <button type="button" className="auth-switch" onClick={() => navigate("/register")} data-testid="link-register">Go to registration &gt;</button>
             <button type="submit" disabled={isLoading} className="auth-submit" data-testid="button-login">
-              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Se connecter"}
+               {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Sign in"}
             </button>
           </form>
         </section>

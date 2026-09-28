@@ -15,8 +15,8 @@ import { Link, useLocation, useSearch } from "wouter";
 import type { WithdrawalWallet } from "@shared/schema";
 
 const walletSchema = z.object({
-  accountNumber: z.string().min(8, "Numéro requis"),
-  paymentMethod: z.string().min(2, "Moyen de paiement requis"),
+  accountNumber: z.string().min(8, "Account number is required"),
+  paymentMethod: z.string().min(2, "Payment method is required"),
 });
 
 type WalletForm = z.infer<typeof walletSchema>;
@@ -704,20 +704,20 @@ export default function WalletPage() {
       });
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Le portefeuille n'a pas pu être ajouté.");
+         throw new Error(result.message || "The wallet could not be added.");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
-      toast({ title: "Portefeuille ajouté !" });
+       toast({ title: "Wallet added!" });
       form.reset();
       setSelectedMethod("");
       setSelectedCountry(user?.country || "");
       setShowForm(false);
     },
     onError: (error: any) => {
-      toast({ title: "Ajout du portefeuille impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to add wallet", description: error.message, variant: "destructive" });
     },
   });
 
@@ -726,16 +726,16 @@ export default function WalletPage() {
       const response = await apiRequest("DELETE", `/api/wallets/${walletId}`, {});
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Le portefeuille n'a pas pu être supprimé.");
+         throw new Error(result.message || "The wallet could not be deleted.");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
-      toast({ title: "Portefeuille supprimé !" });
+       toast({ title: "Wallet deleted!" });
     },
     onError: (error: any) => {
-      toast({ title: "Suppression du portefeuille impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to delete wallet", description: error.message, variant: "destructive" });
     },
   });
 
@@ -744,7 +744,7 @@ export default function WalletPage() {
       const response = await apiRequest("PATCH", `/api/wallets/${walletId}/default`, {});
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Le portefeuille par défaut n'a pas pu être défini.");
+         throw new Error(result.message || "The default wallet could not be set.");
       }
       return response.json();
     },
@@ -752,7 +752,7 @@ export default function WalletPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
     },
     onError: (error: any) => {
-      toast({ title: "Sélection du portefeuille impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to select wallet", description: error.message, variant: "destructive" });
     },
   });
 
@@ -780,7 +780,7 @@ export default function WalletPage() {
 
   const handleSubmit = () => {
     if (!selectedCountry) {
-      toast({ title: "Pays requis", description: "Sélectionnez un pays.", variant: "destructive" });
+       toast({ title: "Country required", description: "Select a country.", variant: "destructive" });
       return;
     }
     form.handleSubmit((data) => addMutation.mutate(data))();
@@ -791,7 +791,7 @@ export default function WalletPage() {
   const selectedCountryData = apiCountries.find(
     (country) => country.code === selectedCountry && country.isActive,
   );
-  const selectedCountryLabel = selectedCountryData?.name || selectedCountry || "Sélectionner un pays";
+   const selectedCountryLabel = selectedCountryData?.name || selectedCountry || "Select a country";
   const paymentMethods = getWithdrawalMethodsForCountry(selectedCountry, apiCountries);
   const activeCountries = apiCountries
     .filter((country) => country.isActive)
@@ -809,20 +809,20 @@ export default function WalletPage() {
               onClick={() => { setShowForm(false); form.reset(); setSelectedMethod(""); setSelectedCountry(user.country); }}
               className="wallet-back"
               data-testid="button-back-form"
-              aria-label="Retour"
+               aria-label="Back"
             >
               <ChevronLeft size={21} />
             </button>
             <div className="wallet-heading">
-              <span className="wallet-eyebrow">Compte de retrait</span>
-              <h1 className="wallet-title">Ajouter un compte</h1>
+               <span className="wallet-eyebrow">Withdrawal account</span>
+               <h1 className="wallet-title">Add an account</h1>
             </div>
             <div className="w-10" aria-hidden="true" />
           </header>
 
           <main className="wallet-content wallet-form-content">
             <section className="wallet-reference-card">
-              <h2>Informations du compte</h2>
+               <h2>Account information</h2>
 
               <button
                 type="button"
@@ -847,7 +847,7 @@ export default function WalletPage() {
               >
                 <span className="wallet-reference-label">Network</span>
                 <span className={`wallet-reference-value${selectedMethod ? "" : " is-empty"}`}>
-                  {selectedMethod || "Sélectionner un opérateur"}
+                   {selectedMethod || "Select an operator"}
                 </span>
                 <ChevronDown size={19} />
               </button>
@@ -855,12 +855,12 @@ export default function WalletPage() {
               <div className="wallet-reference-divider" />
 
               <div className="wallet-reference-address">
-                <label htmlFor="wallet-account-number">Adresse</label>
+                 <label htmlFor="wallet-account-number">Account number</label>
                 <input
                   id="wallet-account-number"
                   {...form.register("accountNumber")}
                   type="tel"
-                  placeholder="Saisissez le numéro"
+                   placeholder="Enter the number"
                   className="wallet-input"
                   data-testid="input-wallet-number"
                 />
@@ -871,7 +871,7 @@ export default function WalletPage() {
             </section>
 
             <p className="wallet-form-note">
-              Le numéro sera utilisé pour recevoir vos retraits.
+               This number will be used to receive your withdrawals.
             </p>
           </main>
 
@@ -886,10 +886,10 @@ export default function WalletPage() {
               {addMutation.isPending ? (
                 <>
                   <Loader2 size={17} className="animate-spin" />
-                  Enregistrement...
+                   Saving...
                 </>
               ) : (
-                "Confirmer"
+                 "Confirm"
               )}
             </button>
           </div>
@@ -905,11 +905,11 @@ export default function WalletPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="country-picker-header">
-                <h2>Choisir un pays</h2>
+                 <h2>Choose a country</h2>
                 <button
                   className="country-picker-close"
                   onClick={() => { setCountrySearch(""); setShowCountrySheet(false); }}
-                  aria-label="Fermer"
+                   aria-label="Close"
                 >
                   <X aria-hidden="true" />
                 </button>
@@ -920,13 +920,13 @@ export default function WalletPage() {
                   autoFocus
                   value={countrySearch}
                   onChange={(e) => setCountrySearch(e.target.value)}
-                  placeholder="Rechercher un pays"
-                  aria-label="Rechercher un pays"
+                   placeholder="Search countries"
+                   aria-label="Search countries"
                 />
               </div>
               <div className="country-picker-list">
                 {countriesError && (
-                  <p className="country-picker-empty" role="status">Liste locale temporaire affichée.</p>
+                   <p className="country-picker-empty" role="status">Showing a temporary local list.</p>
                 )}
                 {activeCountries
                   .filter((country) => country.name.toLowerCase().includes(countrySearch.trim().toLowerCase()))
@@ -945,12 +945,12 @@ export default function WalletPage() {
                     </button>
                   ))}
                 {activeCountries.length === 0 && (
-                  <p className="country-picker-empty">Chargement des pays...</p>
+                   <p className="country-picker-empty">Loading countries...</p>
                 )}
                 {activeCountries.length > 0 && activeCountries.filter(
                   (country) => country.name.toLowerCase().includes(countrySearch.trim().toLowerCase()),
                 ).length === 0 && (
-                  <p className="country-picker-empty">Aucun pays trouvé</p>
+                   <p className="country-picker-empty">No countries found</p>
                 )}
               </div>
             </section>
@@ -963,11 +963,11 @@ export default function WalletPage() {
               className="country-picker"
               role="dialog"
               aria-modal="true"
-              aria-label="Choisir un opérateur de paiement"
+                aria-label="Choose a payment operator"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="country-picker-header">
-                <h2>Choisir un opérateur</h2>
+                <h2>Choose an operator</h2>
                 <button
                   className="country-picker-close"
                   onClick={() => { setBankSearch(""); setShowBankSheet(false); }}
@@ -983,7 +983,7 @@ export default function WalletPage() {
                   value={bankSearch}
                   onChange={(e) => setBankSearch(e.target.value)}
                   placeholder="Rechercher"
-                  aria-label="Rechercher un opérateur"
+                  aria-label="Search operators"
                 />
               </div>
               <div className="country-picker-list">
@@ -1003,7 +1003,7 @@ export default function WalletPage() {
                   </button>
                 ))}
                 {paymentMethods.filter((method) => method.toLowerCase().includes(bankSearch.trim().toLowerCase())).length === 0 && (
-                  <p className="country-picker-empty">Aucun opérateur trouvé</p>
+                  <p className="country-picker-empty">No operators found</p>
                 )}
               </div>
             </section>
@@ -1025,9 +1025,9 @@ export default function WalletPage() {
             </button>
           </Link>
           <div className="wallet-heading">
-            <span className="wallet-eyebrow">{selectMode ? "Retrait" : "Sécurité du compte"}</span>
+            <span className="wallet-eyebrow">{selectMode ? "Withdrawal" : "Account security"}</span>
             <h1 className="wallet-title">
-              {selectMode ? "Sélectionner un compte" : "Mes cartes bancaires"}
+              {selectMode ? "Select an account" : "My payment accounts"}
             </h1>
           </div>
           {!selectMode ? (
@@ -1061,9 +1061,9 @@ export default function WalletPage() {
               <section className="wallet-section wallet-list-section">
                 <div className="wallet-section-header">
                   <div>
-                    <h2 className="wallet-section-title">Comptes enregistrés</h2>
+                    <h2 className="wallet-section-title">Saved accounts</h2>
                     <p className="wallet-section-caption">
-                      {wallets?.length ? `${wallets.length} compte${wallets.length > 1 ? "s" : ""} disponible${wallets.length > 1 ? "s" : ""}` : "Aucun compte ajouté"}
+                      {wallets?.length ? `${wallets.length} account${wallets.length > 1 ? "s" : ""} available` : "No accounts added"}
                     </p>
                   </div>
                   <span className="wallet-step"><CreditCard size={13} /></span>
@@ -1112,10 +1112,10 @@ export default function WalletPage() {
                                 disabled={setDefaultMutation.isPending}
                                 className="wallet-icon-action"
                                 data-testid={`button-set-default-${wallet.id}`}
-                                aria-label="Définir comme compte par défaut"
+                                aria-label="Set as default account"
                               >
                                 <Check size={16} />
-                                Définir par défaut
+                                Set as default
                               </button>
                             )}
                             <button
@@ -1136,7 +1136,7 @@ export default function WalletPage() {
                 ) : (
                   <div className="wallet-empty">
                     <img src={emptyIllustration} alt="" />
-                    <p>Aucun compte bancaire enregistré</p>
+                    <p>No payment accounts saved</p>
                     <p>Ajoutez un compte pour effectuer vos retraits.</p>
                   </div>
                 )}

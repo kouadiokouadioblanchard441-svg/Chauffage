@@ -17,8 +17,8 @@ export default function ServicePage() {
   });
 
   const supportLinks = [
-    { label: "Service client", href: settings?.supportLink || "https://t.me/sybotx", testId: "button-support-link", size: "short" },
-    { label: "Groupe officiel", href: settings?.groupLink || "https://t.me/sybotx", testId: "button-group-link", size: "tall" },
+    { label: "Customer support", href: settings?.supportLink || "https://t.me/sybotx", testId: "button-support-link", size: "short" },
+    { label: "Official group", href: settings?.groupLink || "https://t.me/sybotx", testId: "button-group-link", size: "tall" },
   ];
 
   return (
@@ -71,7 +71,7 @@ export default function ServicePage() {
           </Link>
           <div className="service-brand">
             <img className="service-logo" src={chargepointLogo} alt="ChargePoint" />
-            <h1 className="service-title">Service client</h1>
+            <h1 className="service-title">Customer support</h1>
           </div>
         </header>
 
@@ -80,7 +80,7 @@ export default function ServicePage() {
         </section>
 
         <section className="telegram-section" aria-labelledby="support-heading">
-          <h2 id="support-heading" className="telegram-title">Assistance ChargePoint</h2>
+           <h2 id="support-heading" className="telegram-title">ChargePoint support</h2>
           <div className="telegram-grid">
             <img className="bike-image" src={chargepointDevice} alt="Borne de recharge ChargePoint" />
             <div className="telegram-actions">
@@ -91,7 +91,7 @@ export default function ServicePage() {
                 </button>
               ))}
               <div className="online-hours">
-                <p>Horaires en ligne :</p>
+                <p>Online hours:</p>
                 <p>9:00 AM-7:00 PM</p>
               </div>
             </div>
@@ -99,9 +99,9 @@ export default function ServicePage() {
         </section>
 
         <section className="advice" aria-label="Conseils">
-          <h2 className="advice-title">CONSEILS :</h2>
-          <p className="advice-copy">1. Pour toute question, n'hésitez pas à contacter notre service client en ligne. Nous serons ravis de vous aider.</p>
-          <p className="advice-copy">2. Veuillez conserver votre mot de passe en lieu sûr et ne le partagez avec personne.</p>
+           <h2 className="advice-title">TIPS:</h2>
+           <p className="advice-copy">1. If you have any questions, contact our online customer support. We will be happy to help.</p>
+           <p className="advice-copy">2. Keep your password safe and never share it with anyone.</p>
         </section>
       </div>
     </main>

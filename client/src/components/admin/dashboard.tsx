@@ -71,7 +71,7 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
       const response = await apiRequest("POST", "/api/admin/reset-stats");
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Réinitialisation des statistiques impossible");
+         throw new Error(result.message || "Unable to reset statistics");
       }
       return response.json();
     },
@@ -81,7 +81,7 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
       toast({ title: "Statistiques reinitialisees avec succes!" });
     },
     onError: (error: any) => {
-      toast({ title: "Réinitialisation des statistiques impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to reset statistics", description: error.message, variant: "destructive" });
     },
   });
 
@@ -99,17 +99,17 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
 
   const mainStats = [
     {
-      title: "Utilisateurs totaux",
+       title: "Total users",
       value: stats.totalUsers,
-      subtitle: `+${stats.todayUsers} aujourd'hui`,
+       subtitle: `+${stats.todayUsers} today`,
       icon: Users,
       color: "text-orange-500",
       bg: "bg-orange-500/20",
     },
     {
-      title: "Investisseurs actifs",
+       title: "Active investors",
       value: stats.usersWithProducts,
-      subtitle: `${stats.totalActiveProducts} produits actifs`,
+       subtitle: `${stats.totalActiveProducts} active products`,
       icon: ShoppingCart,
       color: "text-orange-500",
       bg: "bg-orange-500/20",
@@ -118,17 +118,17 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
 
   const depositStats = [
     {
-      title: "Total depots approuves",
-      value: `${stats.totalDeposits.toLocaleString()} F`,
-      subtitle: `+${stats.todayDeposits.toLocaleString()} F aujourd'hui`,
+       title: "Total approved deposits",
+       value: `${stats.totalDeposits.toLocaleString()} PHP`,
+       subtitle: `+${stats.todayDeposits.toLocaleString()} PHP today`,
       icon: ArrowDownToLine,
       color: "text-green-500",
       bg: "bg-green-500/20",
     },
     {
-      title: "Depots en attente",
-      value: `${stats.pendingDeposits.toLocaleString()} F`,
-      subtitle: `${stats.pendingDepositsCount} demande(s)`,
+       title: "Pending deposits",
+       value: `${stats.pendingDeposits.toLocaleString()} PHP`,
+       subtitle: `${stats.pendingDepositsCount} request(s)`,
       icon: Clock,
       color: "text-[#2196F3]",
       bg: "bg-orange-500/20",
@@ -137,17 +137,17 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
 
   const withdrawalStats = [
     {
-      title: "Total retraits approuves",
-      value: `${stats.totalWithdrawals.toLocaleString()} F`,
-      subtitle: `+${stats.todayWithdrawals.toLocaleString()} F aujourd'hui`,
+       title: "Total approved withdrawals",
+       value: `${stats.totalWithdrawals.toLocaleString()} PHP`,
+       subtitle: `+${stats.todayWithdrawals.toLocaleString()} PHP today`,
       icon: ArrowUpFromLine,
       color: "text-red-500",
       bg: "bg-red-500/20",
     },
     {
-      title: "Retraits en attente",
-      value: `${stats.pendingWithdrawals.toLocaleString()} F`,
-      subtitle: `${stats.pendingWithdrawalsCount} demande(s)`,
+       title: "Pending withdrawals",
+       value: `${stats.pendingWithdrawals.toLocaleString()} PHP`,
+       subtitle: `${stats.pendingWithdrawalsCount} request(s)`,
       icon: Clock,
       color: "text-[#2196F3]",
       bg: "bg-[#2196F3]/20",
@@ -156,25 +156,25 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
 
   const financialStats = [
     {
-      title: "Solde total plateforme",
-      value: `${stats.totalBalance.toLocaleString()} F`,
-      subtitle: "Tous les utilisateurs",
+       title: "Total platform balance",
+       value: `${stats.totalBalance.toLocaleString()} PHP`,
+       subtitle: "All users",
       icon: Wallet,
       color: "text-primary",
       bg: "bg-primary/20",
     },
     {
-      title: "Gains totaux distribues",
-      value: `${stats.totalEarnings.toLocaleString()} F`,
-      subtitle: "Depuis le debut",
+       title: "Total earnings distributed",
+       value: `${stats.totalEarnings.toLocaleString()} PHP`,
+       subtitle: "Since the beginning",
       icon: TrendingUp,
       color: "text-emerald-500",
       bg: "bg-emerald-500/20",
     },
     {
-      title: "Commissions versees",
-      value: `${stats.totalCommissions.toLocaleString()} F`,
-      subtitle: "Parrainages",
+       title: "Commissions paid",
+       value: `${stats.totalCommissions.toLocaleString()} PHP`,
+       subtitle: "Referrals",
       icon: Award,
       color: "text-orange-500",
       bg: "bg-orange-500/20",
@@ -183,25 +183,25 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
 
   const periodStats = appliedDates.start || appliedDates.end ? [
     {
-      title: "Utilisateurs (periode)",
+       title: "Users (period)",
       value: stats.periodUsers,
-      subtitle: `Du ${appliedDates.start || "debut"} au ${appliedDates.end || "aujourd'hui"}`,
+       subtitle: `From ${appliedDates.start || "start"} to ${appliedDates.end || "today"}`,
       icon: Users,
       color: "text-cyan-500",
       bg: "bg-cyan-500/20",
     },
     {
-      title: "Depots (periode)",
-      value: `${stats.periodDeposits.toLocaleString()} F`,
-      subtitle: "Approuves sur la periode",
+       title: "Deposits (period)",
+       value: `${stats.periodDeposits.toLocaleString()} PHP`,
+       subtitle: "Approved during period",
       icon: ArrowDownToLine,
       color: "text-green-600",
       bg: "bg-green-600/20",
     },
     {
-      title: "Retraits (periode)",
-      value: `${stats.periodWithdrawals.toLocaleString()} F`,
-      subtitle: "Approuves sur la periode",
+       title: "Withdrawals (period)",
+       value: `${stats.periodWithdrawals.toLocaleString()} PHP`,
+       subtitle: "Approved during period",
       icon: ArrowUpFromLine,
       color: "text-red-600",
       bg: "bg-red-600/20",
@@ -231,7 +231,7 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-3">
             <Calendar className="w-5 h-5 text-muted-foreground" />
-            <span className="text-sm font-medium">Filtrer par date</span>
+             <span className="text-sm font-medium">Filter by date</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <Input
@@ -239,21 +239,21 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="flex-1 min-w-32"
-              placeholder="Date debut"
+               placeholder="Start date"
             />
             <Input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="flex-1 min-w-32"
-              placeholder="Date fin"
+               placeholder="End date"
             />
             <Button onClick={applyDateFilter} size="sm">
-              Appliquer
+               Apply
             </Button>
             {(appliedDates.start || appliedDates.end) && (
               <Button onClick={clearDateFilter} variant="outline" size="sm">
-                Effacer
+                 Clear
               </Button>
             )}
           </div>
@@ -262,7 +262,7 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
 
       {periodStats.length > 0 && (
         <>
-          <p className="text-sm font-medium text-muted-foreground">Statistiques de la periode</p>
+           <p className="text-sm font-medium text-muted-foreground">Period statistics</p>
           <div className="grid grid-cols-3 gap-3">
             {periodStats.map((stat, index) => (
               <StatCard key={index} stat={stat} />
@@ -271,28 +271,28 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
         </>
       )}
 
-      <p className="text-sm font-medium text-muted-foreground">Vue generale</p>
+       <p className="text-sm font-medium text-muted-foreground">Overview</p>
       <div className="grid grid-cols-2 gap-3">
         {mainStats.map((stat, index) => (
           <StatCard key={index} stat={stat} />
         ))}
       </div>
 
-      <p className="text-sm font-medium text-muted-foreground">Depots</p>
+       <p className="text-sm font-medium text-muted-foreground">Deposits</p>
       <div className="grid grid-cols-2 gap-3">
         {depositStats.map((stat, index) => (
           <StatCard key={index} stat={stat} />
         ))}
       </div>
 
-      <p className="text-sm font-medium text-muted-foreground">Retraits</p>
+       <p className="text-sm font-medium text-muted-foreground">Withdrawals</p>
       <div className="grid grid-cols-2 gap-3">
         {withdrawalStats.map((stat, index) => (
           <StatCard key={index} stat={stat} />
         ))}
       </div>
 
-      <p className="text-sm font-medium text-muted-foreground">Finances</p>
+       <p className="text-sm font-medium text-muted-foreground">Finances</p>
       <div className="grid grid-cols-1 gap-3">
         {financialStats.map((stat, index) => (
           <StatCard key={index} stat={stat} />
@@ -308,8 +308,8 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
                   <AlertTriangle className="w-5 h-5 text-destructive" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Reinitialiser les statistiques</p>
-                  <p className="text-xs text-muted-foreground">Remet a zero tous les compteurs</p>
+             <p className="font-medium text-foreground">Reset statistics</p>
+             <p className="text-xs text-muted-foreground">Reset all counters</p>
                 </div>
               </div>
               <Button 
@@ -319,7 +319,7 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
                 data-testid="button-reset-stats"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Reinitialiser
+                 Reset
               </Button>
             </div>
           </CardContent>
@@ -329,16 +329,16 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
       <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmer la reinitialisation</DialogTitle>
+           <DialogTitle>Confirm reset</DialogTitle>
             <DialogDescription>
-              Cette action va remettre les compteurs de statistiques a zero.
-              Les donnees reelles (depots, retraits, produits, comptes) ne seront PAS supprimees.
-              Les statistiques afficheront uniquement les nouvelles donnees apres cette reinitialisation.
+               This action will reset all statistics counters.
+               Real data (deposits, withdrawals, products, accounts) will NOT be deleted.
+               Statistics will show only new data after this reset.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowResetDialog(false)}>
-              Annuler
+               Cancel
             </Button>
             <Button 
               variant="destructive" 
@@ -349,7 +349,7 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
               {resetStatsMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                "Confirmer la reinitialisation"
+                 "Confirm reset"
               )}
             </Button>
           </DialogFooter>

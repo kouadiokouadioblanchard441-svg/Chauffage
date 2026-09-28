@@ -5,10 +5,10 @@ import teamNavIcon from "@/assets/team-nav.svg";
 import accountNavIcon from "@assets/20260228_010619_1787388821589.png";
 
 const navItems = [
-  { path: "/",            label: "maison",  icon: homeNavIcon },
-  { path: "/products",    label: "produit", icon: productsNavIcon },
-  { path: "/team",        label: "équipe",  icon: teamNavIcon },
-  { path: "/account",     label: "mon",     icon: accountNavIcon },
+  { path: "/",            label: "home",    icon: homeNavIcon },
+  { path: "/products",    label: "products", icon: productsNavIcon },
+  { path: "/team",        label: "team",   icon: teamNavIcon },
+  { path: "/account",     label: "account", icon: accountNavIcon },
 ];
 
 export default function BottomNav() {
@@ -25,12 +25,12 @@ export default function BottomNav() {
     <nav
       className={`bottom-nav fixed bottom-0 left-0 right-0 z-50 border-t bg-white shadow-[0_-1px_2px_rgba(0,0,0,.05)] ${isHome ? "cp-bottom-nav" : ""}`}
       style={{ borderColor: usesOrangeBrand ? "rgba(255, 122, 20, 0.3)" : "rgba(0, 204, 44, 0.2)" }}
-      aria-label="Navigation principale"
+      aria-label="Main navigation"
     >
       <div className="mx-auto flex h-[59px] max-w-[500px] items-center justify-around pb-1">
         {navItems.map((item) => {
           const isActive = location === item.path || (item.path === "/team" && isTeam);
-          const homeLabel = item.path === "/" ? "Accueil" : item.path === "/products" ? "Produits" : item.path === "/team" ? "Équipe" : "Mon compte";
+          const homeLabel = item.path === "/" ? "Home" : item.path === "/products" ? "Products" : item.path === "/team" ? "Team" : "My account";
 
           return (
             <button

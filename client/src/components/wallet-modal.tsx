@@ -17,9 +17,9 @@ import { Loader2, Plus, Trash2, CreditCard, Check } from "lucide-react";
 import type { WithdrawalWallet } from "@shared/schema";
 
 const walletSchema = z.object({
-  accountName: z.string().min(2, "Nom du compte requis"),
-  accountNumber: z.string().min(8, "Numéro requis"),
-  paymentMethod: z.string().min(2, "Moyen de paiement requis"),
+  accountName: z.string().min(2, "Account name is required"),
+  accountNumber: z.string().min(8, "Number is required"),
+  paymentMethod: z.string().min(2, "Payment method is required"),
 });
 
 type WalletForm = z.infer<typeof walletSchema>;
@@ -56,18 +56,18 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
       });
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Impossible d'ajouter le portefeuille");
+        throw new Error(result.message || "Unable to add the wallet");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
-      toast({ title: "Portefeuille ajouté!" });
+      toast({ title: "Wallet added!" });
       form.reset();
       setShowForm(false);
     },
     onError: (error: any) => {
-      toast({ title: "Ajout du portefeuille impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Unable to add wallet", description: error.message, variant: "destructive" });
     },
   });
 
@@ -76,16 +76,16 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
       const response = await apiRequest("DELETE", `/api/wallets/${walletId}`, {});
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Impossible de supprimer le portefeuille");
+        throw new Error(result.message || "Unable to delete the wallet");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
-      toast({ title: "Portefeuille supprimé!" });
+      toast({ title: "Wallet deleted!" });
     },
     onError: (error: any) => {
-      toast({ title: "Suppression du portefeuille impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Unable to delete wallet", description: error.message, variant: "destructive" });
     },
   });
 
@@ -94,16 +94,16 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
       const response = await apiRequest("PATCH", `/api/wallets/${walletId}/default`, {});
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Impossible de définir le portefeuille par défaut");
+        throw new Error(result.message || "Unable to set the default wallet");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
-      toast({ title: "Portefeuille par défaut mis à jour!" });
+      toast({ title: "Default wallet updated!" });
     },
     onError: (error: any) => {
-      toast({ title: "Mise à jour du portefeuille par défaut impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Unable to update default wallet", description: error.message, variant: "destructive" });
     },
   });
 
@@ -115,7 +115,7 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Gestion des portefeuilles</DialogTitle>
+          <DialogTitle>Wallet management</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -161,7 +161,7 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
                   </div>
                   {wallet.isDefault && (
                     <div className="mt-2">
-                      <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">Par défaut</span>
+                       <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">Default</span>
                     </div>
                   )}
                 </CardContent>
@@ -170,7 +170,7 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
           ) : !showForm ? (
             <div className="text-center py-8">
               <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground mb-4">Aucun portefeuille enregistré</p>
+               <p className="text-muted-foreground mb-4">No wallets registered</p>
             </div>
           ) : null}
 
@@ -182,9 +182,9 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
                   name="accountName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nom du compte</FormLabel>
+                        <FormLabel>Account name</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Votre nom complet" data-testid="input-wallet-name" />
+                         <Input {...field} placeholder="Your full name" data-testid="input-wallet-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,9 +196,9 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
                   name="accountNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Numéro</FormLabel>
+                        <FormLabel>Number</FormLabel>
                       <FormControl>
-                        <Input {...field} type="tel" placeholder="Votre numéro" data-testid="input-wallet-number" />
+                         <Input {...field} type="tel" placeholder="Your number" data-testid="input-wallet-number" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -210,11 +210,11 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
                   name="paymentMethod"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Moyen de paiement</FormLabel>
+                        <FormLabel>Payment method</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-wallet-method">
-                            <SelectValue placeholder="Choisir" />
+                             <SelectValue placeholder="Choose" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -232,10 +232,10 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
 
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="flex-1">
-                    Annuler
+                     Cancel
                   </Button>
                   <Button type="submit" className="flex-1" disabled={addMutation.isPending}>
-                    {addMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Ajouter"}
+                     {addMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
                   </Button>
                 </div>
               </form>
@@ -243,7 +243,7 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
           ) : (
             <Button className="w-full" onClick={() => setShowForm(true)} data-testid="button-add-wallet">
               <Plus className="w-4 h-4 mr-2" />
-              Ajouter un portefeuille
+               Add a wallet
             </Button>
           )}
         </div>

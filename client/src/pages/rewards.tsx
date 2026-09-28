@@ -30,8 +30,8 @@ export default function RewardsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
-        title: "Felicitations",
-        description: "Recompense recue avec succes !",
+        title: "Congratulations",
+        description: "Reward received successfully!",
       });
     },
     onError: (error: Error) => {
@@ -46,7 +46,7 @@ export default function RewardsPage() {
   if (!user) return null;
 
   const country = getCountryByCode(user.country);
-  const currency = country?.currency || "FCFA";
+  const currency = "PHP";
 
   const totalReward = tasks?.reduce((sum, t) => sum + t.reward, 0) || 0;
   const claimedReward = tasks?.filter(t => t.isCompleted).reduce((sum: number, t: any) => sum + t.reward, 0) || 0;
@@ -60,7 +60,7 @@ export default function RewardsPage() {
           <button onClick={() => navigate("/account")} className="mb-3" data-testid="button-back">
             <ArrowLeft className="w-6 h-6 text-gray-700" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900 mb-4">Recevoir</h1>
+          <h1 className="text-xl font-bold text-gray-900 mb-4">Rewards</h1>
 
           <div className="relative rounded-2xl overflow-hidden" style={{ backgroundColor: "#2196F3" }}>
             <img src={globeImg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
@@ -118,7 +118,7 @@ export default function RewardsPage() {
                         style={{ backgroundColor: "#2196F3" }}
                         data-testid={`button-claim-${task.id}`}
                       >
-                        Recevoir
+                        Claim
                       </button>
                     ) : (
                       <span className="text-xs font-semibold px-3 py-1.5 rounded-md bg-gray-100 text-gray-400" data-testid={`task-locked-${task.id}`}>

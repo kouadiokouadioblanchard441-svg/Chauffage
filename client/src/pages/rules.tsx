@@ -26,31 +26,31 @@ export default function RulesPage() {
         <Link href="/account">
           <button className="cp-rules-back" data-testid="button-back">
             <ChevronLeft aria-hidden="true" />
-            <span>Retour</span>
+            <span>Back</span>
           </button>
         </Link>
-        <h1>Règles de la plateforme</h1>
+        <h1>Platform rules</h1>
       </header>
 
       <div className="cp-rules-body">
         <section className="cp-rules-section">
-          <h2>1. Investissement</h2>
+          <h2>1. Investments</h2>
           <ul>
-            <li>Chaque utilisateur peut posséder plusieurs produits d'investissement simultanément.</li>
-            <li>Les revenus sont générés quotidiennement et accrédités sur votre solde de compte toutes les 24 heures.</li>
-            <li>Le cycle d'investissement standard est de 80 jours, sauf indication contraire pour les produits spéciaux.</li>
+            <li>Each user may own multiple investment products at the same time.</li>
+            <li>Earnings are generated daily and credited to your account balance every 24 hours.</li>
+            <li>The standard investment cycle is 80 days unless otherwise stated for special products.</li>
           </ul>
         </section>
 
         <section className="cp-rules-section">
-          <h2>2. Dépôts et Retraits</h2>
+          <h2>2. Deposits and withdrawals</h2>
           <ul>
-            <li>Le montant minimum de dépôt est de {parseInt(minDeposit).toLocaleString()} FCFA.</li>
-            <li>Le montant minimum d'achat d'un produit est de 4 500 FCFA.</li>
-            <li>Le montant minimum de retrait est de {parseInt(minWithdrawal).toLocaleString()} FCFA.</li>
-            <li>Les frais de retrait sont fixés à {withdrawalFees}% pour couvrir les frais de transaction et d'entretien.</li>
-            <li>Les retraits sont traités entre {withdrawalStartHour}h et {withdrawalEndHour}h les jours ouvrables.</li>
-            <li>Limite de {maxWithdrawalsPerDay} retrait(s) maximum par jour par utilisateur.</li>
+            <li>The minimum deposit is {parseInt(minDeposit).toLocaleString("en-PH")} PHP.</li>
+            <li>The minimum product purchase is 4,500 PHP.</li>
+            <li>The minimum withdrawal is {parseInt(minWithdrawal).toLocaleString("en-PH")} PHP.</li>
+            <li>Withdrawal fees are set at {withdrawalFees}% to cover transaction and maintenance costs.</li>
+            <li>Withdrawals are processed between {withdrawalStartHour}:00 and {withdrawalEndHour}:00 on business days.</li>
+            <li>Limit of {maxWithdrawalsPerDay} withdrawal(s) per user per day.</li>
           </ul>
         </section>
 
@@ -67,7 +67,7 @@ export default function RulesPage() {
         <section className="cp-rules-section">
           <h2>4. Bonus d'inscription</h2>
           <ul>
-            <li>Chaque nouveau membre reçoit {parseInt(signupBonus).toLocaleString()} FCFA de bonus à l'inscription.</li>
+            <li>Each new member receives {parseInt(signupBonus).toLocaleString("en-PH")} PHP as a sign-up bonus.</li>
           </ul>
         </section>
 

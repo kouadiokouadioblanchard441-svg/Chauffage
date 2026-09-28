@@ -32,7 +32,7 @@ export default function OrdersPage() {
   return (
     <div className="flex flex-col min-h-full bg-white">
       <header className="px-4 py-3 border-b">
-        <h1 className="text-lg font-semibold text-gray-800 text-center">Mes commandes</h1>
+        <h1 className="text-lg font-semibold text-gray-800 text-center">My orders</h1>
       </header>
 
       <div className="flex border-b">
@@ -46,7 +46,7 @@ export default function OrdersPage() {
           data-testid="orders-tab-active"
         >
           <span className="w-2 h-2 rounded-full bg-[#2196F3]"></span>
-          En cours
+          In progress
         </button>
         <button
           onClick={() => setActiveTab("completed")}
@@ -58,16 +58,16 @@ export default function OrdersPage() {
           data-testid="orders-tab-completed"
         >
           <span className="text-gray-400">&#10003;</span>
-          Termine
+          Completed
         </button>
       </div>
 
       <div className="bg-orange-50 p-3 mx-4 mt-3 rounded-lg">
         <p className="text-xs text-orange-700 leading-relaxed">
-          Les revenus du produit sont credites automatiquement une fois toutes les 24 heures.
+          Product earnings are credited automatically every 24 hours.
         </p>
         <p className="text-xs text-orange-700 leading-relaxed mt-1">
-          Vous pouvez acheter plusieurs machines pour augmenter vos revenus.
+          You can buy multiple machines to increase your earnings.
         </p>
       </div>
 
@@ -84,8 +84,8 @@ export default function OrdersPage() {
               const daysCompleted = (up.product?.cycleDays || 0) - (up.daysRemaining || 0);
               const totalEarned = daysCompleted * (up.product?.dailyEarnings || 0);
               const purchaseDateTime = up.purchasedAt ? new Date(up.purchasedAt) : null;
-              const purchaseDate = purchaseDateTime ? purchaseDateTime.toLocaleDateString('fr-FR') : '-';
-              const purchaseTime = purchaseDateTime ? purchaseDateTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-';
+              const purchaseDate = purchaseDateTime ? purchaseDateTime.toLocaleDateString('en-PH') : '-';
+              const purchaseTime = purchaseDateTime ? purchaseDateTime.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) : '-';
               
               return (
                 <div 
@@ -118,22 +118,22 @@ export default function OrdersPage() {
                       
                       <div className="space-y-0.5 text-[12px]">
                         <p className="text-gray-600">
-                          Prix : <span className="text-orange-500 font-medium">{up.product?.price?.toLocaleString() || 0} Fcfa</span>
+                          Price: <span className="text-orange-500 font-medium">{up.product?.price?.toLocaleString("en-PH") || 0} PHP</span>
                         </p>
                         <p className="text-gray-600">
-                          Gains/jour : <span className="text-green-500 font-medium">{up.product?.dailyEarnings?.toLocaleString() || 0} Fcfa</span>
+                           Daily earnings: <span className="text-green-500 font-medium">{up.product?.dailyEarnings?.toLocaleString("en-PH") || 0} PHP</span>
                         </p>
                         <p className="text-gray-600">
-                          Duree : <span className="text-orange-500 font-medium">{up.product?.cycleDays || 0} Jours</span>
+                           Duration: <span className="text-orange-500 font-medium">{up.product?.cycleDays || 0} days</span>
                         </p>
                         <p className="text-gray-600">
-                          Jours restants : <span className="text-[#2196F3] font-medium">{up.daysRemaining || 0}</span>
+                           Days remaining: <span className="text-[#2196F3] font-medium">{up.daysRemaining || 0}</span>
                         </p>
                         <p className="text-gray-600">
-                          Total gagne : <span className="text-green-600 font-bold">{totalEarned.toLocaleString()} Fcfa</span>
+                           Total earned: <span className="text-green-600 font-bold">{totalEarned.toLocaleString("en-PH")} PHP</span>
                         </p>
                         <p className="text-gray-600">
-                          Date : <span className="text-gray-700 font-medium">{purchaseDate}</span> a <span className="text-gray-700 font-medium">{purchaseTime}</span>
+                           Date: <span className="text-gray-700 font-medium">{purchaseDate}</span> at <span className="text-gray-700 font-medium">{purchaseTime}</span>
                         </p>
                       </div>
                     </div>
