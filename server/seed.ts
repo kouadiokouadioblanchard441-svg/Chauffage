@@ -100,47 +100,26 @@ export async function seed() {
     console.log("Super admin access verified");
   }
 
-  // Seed countries only on first install — never overwrite admin changes
+  // Seed the Philippines on first install. On existing installations without
+  // it, retain country records for historical references but deactivate them.
   const existingCountries = await db.select().from(countries);
+  const philippines = {
+    code: "PH",
+    name: "Philippines",
+    currency: "PHP",
+    phonePrefix: "63",
+    operators: JSON.stringify([]),
+    isActive: true,
+  };
   if (existingCountries.length === 0) {
-    const defaultCountries = [
-      {
-        code: "TG",
-        name: "Togo",
-        currency: "XOF",
-        phonePrefix: "228",
-        operators: JSON.stringify(["Togocel", "Moov Africa Togo"]),
-        isActive: true,
-      },
-      {
-        code: "CI",
-        name: "Côte d'Ivoire",
-        currency: "XOF",
-        phonePrefix: "225",
-        operators: JSON.stringify([]),
-        isActive: true,
-      },
-      {
-        code: "BF",
-        name: "Burkina Faso",
-        currency: "XOF",
-        phonePrefix: "226",
-        operators: JSON.stringify(["Orange Burkina", "Moov Africa Burkina"]),
-        isActive: true,
-      },
-      {
-        code: "NE",
-        name: "Niger",
-        currency: "XOF",
-        phonePrefix: "227",
-        operators: JSON.stringify(["NITA TRANSFERT", "AMANA TRANSFERT"]),
-        isActive: true,
-      },
-    ];
-    for (const countryData of defaultCountries) {
-      await db.insert(countries).values(countryData);
-      console.log(`Country added: ${countryData.name}`);
-    }
+    await db.insert(countries).values(philippines);
+    console.log("Country added: Philippines");
+  } else if (!existingCountries.some(country => country.code === "PH")) {
+    await db.transaction(async (tx) => {
+      await tx.update(countries).set({ isActive: false }).where(sql`true`);
+      await tx.insert(countries).values(philippines);
+    });
+    console.log("Philippines activated; existing country records preserved as inactive");
   } else {
     console.log(`Countries skipped — ${existingCountries.length} existing countries preserved`);
   }

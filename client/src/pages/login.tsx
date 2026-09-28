@@ -31,7 +31,7 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       phone: "",
-      country: "NE",
+      country: "PH",
       password: "",
     },
   });

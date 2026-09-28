@@ -451,11 +451,23 @@ function validatePhone(value: unknown, fieldName: string): string {
   return result.data;
 }
 
-function requireAuth(req: Request, res: Response, next: NextFunction) {
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ message: "Non authentifié" });
   }
-  next();
+  try {
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "Non authentifié" });
+    if (user.isAdmin) return next();
+    const activeCountries = await storage.getActiveCountries();
+    if (!activeCountries.some(country => country.code === user.country)) {
+      req.session.destroy(() => res.status(403).json({ message: "Compte indisponible dans ce pays" }));
+      return;
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
@@ -473,11 +485,21 @@ async function requireBanker(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ message: "Non authentifié" });
   }
-  const user = await storage.getUser(req.session.userId);
-  if (!user?.isAdmin && !user?.isBanker) {
-    return res.status(403).json({ message: "Accès refusé" });
+  try {
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.status(401).json({ message: "Non authentifié" });
+    if (!user.isAdmin) {
+      const activeCountries = await storage.getActiveCountries();
+      if (!activeCountries.some(country => country.code === user.country)) {
+        req.session.destroy(() => res.status(403).json({ message: "Compte indisponible dans ce pays" }));
+        return;
+      }
+    }
+    if (!user.isAdmin && !user.isBanker) return res.status(403).json({ message: "Accès refusé" });
+    next();
+  } catch (error) {
+    next(error);
   }
-  next();
 }
 
 export async function registerRoutes(
@@ -568,7 +590,13 @@ export async function registerRoutes(
     try {
       const data = loginSchema.parse(req.body);
       
-      let user = await storage.getUserByPhone(data.phone, data.country);
+      const activeCountries = await storage.getActiveCountries();
+      const selectedCountryIsActive = activeCountries.some(
+        country => country.code === data.country.toUpperCase(),
+      );
+      let user = selectedCountryIsActive
+        ? await storage.getUserByPhone(data.phone, data.country.toUpperCase())
+        : undefined;
 
       // Administrators may select any country at login. Regular users must
       // still authenticate with the country saved on their account.
@@ -615,7 +643,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/auth/me", async (req, res) => {
+  app.get("/api/auth/me", requireAuth, async (req, res) => {
     if (!req.session.userId) {
       return res.status(401).json({ message: "Non authentifié" });
     }
