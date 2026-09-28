@@ -64,6 +64,5 @@ timeoutMs = 120000
 
 [userenv.shared]
 ADMIN_COUNTRY = "CI"
-TELEGRAM_CHAT_ID = "-1004362035077"
 
 [userenv.development]
