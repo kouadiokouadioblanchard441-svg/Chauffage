@@ -125,7 +125,7 @@ export default function AdminGiftCodes() {
                   id="code"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder="Ex: BONUS2026"
+                  placeholder="e.g. BONUS2026"
                   data-testid="input-code"
                 />
               </div>
@@ -136,7 +136,7 @@ export default function AdminGiftCodes() {
                   type="number"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  placeholder="Ex: 500"
+                  placeholder="e.g. 500"
                   data-testid="input-amount"
                 />
               </div>
@@ -147,7 +147,7 @@ export default function AdminGiftCodes() {
                   type="number"
                   value={formData.maxUses}
                   onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
-                  placeholder="Ex: 100"
+                  placeholder="e.g. 100"
                   data-testid="input-max-uses"
                 />
               </div>

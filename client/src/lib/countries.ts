@@ -101,8 +101,6 @@ export function getWithdrawalMethodsForCountry(code: string, apiCountries?: ApiC
   return country ? getWithdrawalMethods(country.code, country.paymentMethods) : [];
 }
 
-export function formatCurrency(amount: number, countryCode: string, apiCountries?: ApiCountry[]): string {
-  const country = getCountryByCode(countryCode, apiCountries);
-  const currency = country?.currency || "PHP";
-  return `${amount.toLocaleString("en-PH")} ${currency}`;
+export function formatCurrency(amount: number, _countryCode: string, _apiCountries?: ApiCountry[]): string {
+  return `${amount.toLocaleString("en-PH")} PHP`;
 }

@@ -41,7 +41,7 @@ type ClapayConfig = {
 
 function requiredEnv(name: string): string {
   const value = process.env[name]?.trim();
-  if (!value) throw new Error(`Configuration Clapay manquante dans Plesk : ${name}`);
+  if (!value) throw new Error(`Clapay configuration is missing in Plesk: ${name}`);
   return value;
 }
 
@@ -50,7 +50,7 @@ function parseJsonEnv(name: string): unknown {
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error(`La variable Plesk ${name} doit contenir un JSON valide`);
+    throw new Error(`The Plesk variable ${name} must contain valid JSON`);
   }
 }
 
@@ -59,7 +59,7 @@ function parseStatusSet(name: string, defaults: string[]): Set<string> {
   const values = (raw ? raw.split(",") : defaults)
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
-  if (!values.length) throw new Error(`La variable Plesk ${name} ne contient aucun statut`);
+  if (!values.length) throw new Error(`The Plesk variable ${name} does not contain any statuses`);
   return new Set(values);
 }
 
@@ -92,16 +92,16 @@ function loadConfig(): ClapayConfig {
   try {
     baseUrl = new URL(baseUrlRaw);
   } catch {
-    throw new Error("CLAPAY_API_BASE_URL doit être une URL valide");
+    throw new Error("CLAPAY_API_BASE_URL must be a valid URL");
   }
   if (baseUrl.protocol !== "https:") {
-    throw new Error("CLAPAY_API_BASE_URL doit utiliser HTTPS");
+    throw new Error("CLAPAY_API_BASE_URL must use HTTPS");
   }
   baseUrl.pathname = `${baseUrl.pathname.replace(/\/+$/, "")}/`;
 
   const authHeader = process.env.CLAPAY_API_KEY_HEADER?.trim() || "Authorization";
   if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(authHeader)) {
-    throw new Error("CLAPAY_API_KEY_HEADER n'est pas un nom d'en-tête HTTP valide");
+    throw new Error("CLAPAY_API_KEY_HEADER is not a valid HTTP header name");
   }
 
   return {
@@ -189,12 +189,12 @@ function fillTemplate(template: unknown, values: RequestValues): unknown {
   const exactMatch = template.match(/^\{\{([A-Za-z][A-Za-z0-9_]*)\}\}$/);
   if (exactMatch) {
     const value = values[exactMatch[1]];
-    if (value === undefined) throw new Error(`Variable Clapay inconnue : ${exactMatch[1]}`);
+    if (value === undefined) throw new Error(`Unknown Clapay variable: ${exactMatch[1]}`);
     return value;
   }
   return template.replace(/\{\{([A-Za-z][A-Za-z0-9_]*)\}\}/g, (_match, key: string) => {
     const value = values[key];
-    if (value === undefined) throw new Error(`Variable Clapay inconnue : ${key}`);
+    if (value === undefined) throw new Error(`Unknown Clapay variable: ${key}`);
     return String(value);
   });
 }
@@ -205,7 +205,7 @@ function endpointUrl(config: ClapayConfig, path: string): URL {
     ? new URL(normalizedPath, config.baseUrl.origin)
     : new URL(normalizedPath.replace(/^\/+/, ""), config.baseUrl);
   if (url.origin !== config.baseUrl.origin) {
-    throw new Error("Le chemin API Clapay doit rester sur l'hôte CLAPAY_API_BASE_URL");
+    throw new Error("The Clapay API path must stay on the CLAPAY_API_BASE_URL host");
   }
   return url;
 }
@@ -289,7 +289,7 @@ async function callClapay(
       signal: controller.signal,
     });
   } catch (error: any) {
-    const reason = error?.name === "AbortError" ? "délai dépassé" : "connexion impossible";
+    const reason = error?.name === "AbortError" ? "Request timed out" : "Connection failed";
     throw Object.assign(new Error(`Clapay : ${reason}`), {
       requestMayHaveReachedProvider: true,
     } satisfies Partial<ClapayRequestError>);
@@ -302,7 +302,7 @@ async function callClapay(
     responseText = await response.text();
   } catch {
     throw Object.assign(
-      new Error("Clapay a interrompu sa réponse"),
+      new Error("Clapay interrupted its response"),
       { httpStatus: response.status, requestMayHaveReachedProvider: true } satisfies Partial<ClapayRequestError>,
     );
   }
@@ -311,14 +311,14 @@ async function callClapay(
     payload = responseText ? JSON.parse(responseText) : {};
   } catch {
     throw Object.assign(
-      new Error(`Clapay a renvoyé une réponse non JSON (HTTP ${response.status})`),
+      new Error(`Clapay returned a non-JSON response (HTTP ${response.status})`),
       { httpStatus: response.status, requestMayHaveReachedProvider: true } satisfies Partial<ClapayRequestError>,
     );
   }
   if (!response.ok) {
     const providerDetail = getProviderDetail(payload);
     throw Object.assign(
-      new Error(`Clapay a refusé la requête (HTTP ${response.status})`),
+      new Error(`Clapay rejected the request (HTTP ${response.status})`),
       {
         httpStatus: response.status,
         requestMayHaveReachedProvider: response.status >= 500,
@@ -349,14 +349,14 @@ export async function getClapayOperators(country: string): Promise<ClapayOperato
     }
   }
   if (!rawOperators) {
-    throw new Error("La réponse Clapay ne contient pas la liste d'opérateurs configurée");
+    throw new Error("The Clapay response does not contain the configured operator list");
   }
 
   const operators = rawOperators.map((operator) => {
     const id = getAtPath(operator, config.operatorIdPath);
     const name = getAtPath(operator, config.operatorNamePath);
     if ((typeof id !== "string" && typeof id !== "number") || typeof name !== "string") {
-      throw new Error("Un opérateur Clapay ne contient pas l'identifiant ou le nom attendu");
+      throw new Error("A Clapay operator is missing the expected ID or name");
     }
     return {
       id: String(id),
@@ -394,7 +394,7 @@ export async function initiateClapayPayment(values: RequestValues): Promise<{
   const operatorOtp = values.operatorOtp;
   if (typeof operatorOtp === "string" && operatorOtp.trim()) {
     if (!body || typeof body !== "object" || Array.isArray(body)) {
-      throw new Error("Le modèle de requête Clapay doit être un objet pour transmettre l’OTP opérateur");
+      throw new Error("The Clapay request template must be an object to send the operator OTP");
     }
     (body as JsonRecord).operator_otp = operatorOtp.trim();
   }
@@ -402,7 +402,7 @@ export async function initiateClapayPayment(values: RequestValues): Promise<{
   const signature = getAtPath(data, config.initiateSignaturePath);
   if (typeof signature !== "string" && typeof signature !== "number") {
     throw Object.assign(
-      new Error("La réponse Clapay ne contient pas la signature configurée"),
+      new Error("The Clapay response does not contain the configured signature"),
       { requestMayHaveReachedProvider: true } satisfies Partial<ClapayRequestError>,
     );
   }
@@ -422,7 +422,7 @@ export async function initiateClapayPayment(values: RequestValues): Promise<{
       redirectUrl = parsedRedirectUrl.toString();
     } catch {
       throw Object.assign(
-        new Error("Clapay a renvoyé une URL de paiement invalide"),
+        new Error("Clapay returned an invalid payment URL"),
         { requestMayHaveReachedProvider: true } satisfies Partial<ClapayRequestError>,
       );
     }
@@ -443,7 +443,7 @@ export async function checkClapayPayment(signature: string): Promise<{
   const data = await callClapay(config, config.statusPath, { method: "POST", body });
   const rawStatusValue = getAtPath(data, config.statusValuePath);
   if (typeof rawStatusValue !== "string" && typeof rawStatusValue !== "number") {
-    throw new Error("La réponse de vérification Clapay ne contient pas le statut configuré");
+    throw new Error("The Clapay verification response does not contain the configured status");
   }
   const rawStatus = String(rawStatusValue);
   const normalizedStatus = rawStatus.trim().toLowerCase();

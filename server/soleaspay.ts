@@ -1,18 +1,18 @@
 function getSoleaspayApiBaseUrl(): string {
   const configuredUrl = process.env.SOLEASPAY_API_BASE_URL?.trim();
   if (!configuredUrl) {
-    throw new Error("SOLEASPAY_API_BASE_URL doit être configurée dans les variables d'environnement Plesk.");
+    throw new Error("SOLEASPAY_API_BASE_URL must be configured in the Plesk environment variables.");
   }
   const parsedUrl = new URL(configuredUrl);
   if (parsedUrl.protocol !== "https:") {
-    throw new Error("SOLEASPAY_API_BASE_URL doit utiliser HTTPS.");
+    throw new Error("SOLEASPAY_API_BASE_URL must use HTTPS.");
   }
   return parsedUrl.toString().replace(/\/+$/, "");
 }
 
 function getApiKey(): string {
   const key = process.env.SOLEASPAY_API_KEY;
-  if (!key) throw new Error("SOLEASPAY_API_KEY doit être configurée dans les variables d'environnement Plesk.");
+  if (!key) throw new Error("SOLEASPAY_API_KEY must be configured in the Plesk environment variables.");
   return key;
 }
 
@@ -149,7 +149,7 @@ function getPublicBaseUrl(): string {
   if (configuredUrl) {
     const parsedUrl = new URL(configuredUrl);
     if (process.env.NODE_ENV === "production" && parsedUrl.protocol !== "https:") {
-      throw new Error("PUBLIC_APP_URL doit utiliser HTTPS en production.");
+      throw new Error("PUBLIC_APP_URL must use HTTPS in production.");
     }
     return parsedUrl.origin;
   }
@@ -159,7 +159,7 @@ function getPublicBaseUrl(): string {
     return `https://${devDomain}`;
   }
 
-  throw new Error("PUBLIC_APP_URL doit être configuré pour recevoir les retours SoleaPay.");
+  throw new Error("PUBLIC_APP_URL must be configured to receive SoleaPay returns.");
 }
 
 function buildReturnUrl(baseUrl: string, result: "success" | "failure", orderId: string): string {
@@ -180,7 +180,7 @@ export async function initiatePayment(
 ): Promise<SoleaspayPaymentResponse> {
   const serviceId = getServiceId(country, paymentMethod);
   if (!serviceId) {
-    throw new Error(`Service non supporte pour ${country} - ${paymentMethod}`);
+    throw new Error(`Service is not supported for ${country} - ${paymentMethod}`);
   }
 
   const currency = getCurrency(country);
@@ -191,7 +191,7 @@ export async function initiatePayment(
     amount,
     currency,
     order_id: orderId,
-    description: `Depot Intel #${orderId}`,
+    description: `Intel deposit #${orderId}`,
     payer: payerName,
     payerEmail,
     successUrl: buildReturnUrl(baseUrl, "success", orderId),

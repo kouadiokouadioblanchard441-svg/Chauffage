@@ -178,7 +178,7 @@ export default function TeamPage() {
                   rel="noopener noreferrer"
                    aria-label="Copy my invitation message and open Instagram"
                   data-testid="share-instagram"
-                  onClick={() => void copy(referralMessage, "Message d'invitation")}
+                  onClick={() => void copy(referralMessage, "Invitation message")}
                 >
                   <img src={instagramIcon} alt="" />
                   <span>Instagram</span>

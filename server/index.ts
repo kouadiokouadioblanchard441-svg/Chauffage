@@ -182,7 +182,7 @@ app.use((req, res, next) => {
                   userId: user.id,
                   type: "deposit",
                   amount: deposit.amount.toString(),
-                  description: `Dépôt AshtechPay #${deposit.id}`,
+                  description: `AshtechPay deposit #${deposit.id}`,
                 });
                 await storage.processDepositReferralCommissions(user.id, deposit.amount);
               }

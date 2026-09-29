@@ -74,7 +74,7 @@ export default function RobotPayPage() {
   const [clapayOperatorOtp, setClapayOperatorOtp] = useState("");
   const [operator, setOperator] = useState<Operator | null>(null);
   const [depositId, setDepositId] = useState<number | null>(clapayReturnDepositId);
-  const [transactionReference] = useState(() => `dépôt-${Math.floor(10000 + Math.random() * 90000)}`);
+  const [transactionReference] = useState(() => `deposit-${Math.floor(10000 + Math.random() * 90000)}`);
   const [paymentToken, setPaymentToken] = useState("");
   const [otpToken, setOtpToken] = useState("");
   const [otp, setOtp] = useState("");
@@ -763,12 +763,12 @@ export default function RobotPayPage() {
                 <Check className="mx-auto h-24 w-24 rounded-full bg-green-500 p-4 text-white" />
                 <h2 className="text-xl font-bold text-gray-900">Your payment was approved</h2>
                 <div className="rounded-xl border-2 border-[#111827] bg-[#fffaf6] p-3 text-left text-sm leading-7 text-gray-800">
-                  <b>Payeur :</b> {phone}<br />
-                  <b>ID Transaction :</b> {transactionReference}<br />
+                  <b>Payer:</b> {phone}<br />
+                  <b>Transaction ID:</b> {transactionReference}<br />
                   <b>Payment date:</b> {new Date().toLocaleString("en-PH")}
                 </div>
                 <p className="pt-6 text-gray-600">🔒 Payment verified</p>
-                <button onClick={() => navigate("/")} className="text-lg font-semibold text-[#111827] underline decoration-[#FF7A14] underline-offset-4 hover:text-[#b84d00]">Retourner sur le site</button>
+                <button onClick={() => navigate("/")} className="text-lg font-semibold text-[#111827] underline decoration-[#FF7A14] underline-offset-4 hover:text-[#b84d00]">Return to the site</button>
               </div>
             )
           )}

@@ -114,14 +114,16 @@ export async function seed() {
   if (existingCountries.length === 0) {
     await db.insert(countries).values(philippines);
     console.log("Country added: Philippines");
-  } else if (!existingCountries.some(country => country.code === "PH")) {
+  } else {
     await db.transaction(async (tx) => {
       await tx.update(countries).set({ isActive: false }).where(sql`true`);
-      await tx.insert(countries).values(philippines);
+      if (existingCountries.some(country => country.code === "PH")) {
+        await tx.update(countries).set({ isActive: true }).where(eq(countries.code, "PH"));
+      } else {
+        await tx.insert(countries).values(philippines);
+      }
     });
-    console.log("Philippines activated; existing country records preserved as inactive");
-  } else {
-    console.log(`Countries skipped — ${existingCountries.length} existing countries preserved`);
+    console.log("Philippines activated; all other country records preserved as inactive");
   }
 
   // Product and staking catalogs are administered in the panel; do not seed hardcoded catalog entries.
@@ -151,6 +153,12 @@ export async function seed() {
     ["Parrain Platine", "Inviter 30 personnes a investir", "Platinum Referral", "Invite 30 people to invest"],
     ["Parrain Diamant", "Inviter 100 personnes a investir", "Diamond Referral", "Invite 100 people to invest"],
     ["Parrain Elite", "Inviter 300 personnes a investir", "Elite Referral", "Invite 300 people to invest"],
+    ["Parrain Bronze", "Inviter 3 personnes", "Bronze Referral", "Invite 3 people"],
+    ["Parrain Argent", "Inviter 5 personnes", "Silver Referral", "Invite 5 people"],
+    ["Parrain Or", "Inviter 10 personnes", "Gold Referral", "Invite 10 people"],
+    ["Parrain Platine", "Inviter 20 personnes", "Platinum Referral", "Invite 20 people"],
+    ["Parrain Diamant", "Inviter 50 personnes", "Diamond Referral", "Invite 50 people"],
+    ["Parrain Elite", "Inviter 100 personnes", "Elite Referral", "Invite 100 people"],
   ] as const;
   for (const [oldName, oldDescription, name, description] of legacyTasks) {
     await db.update(tasks)

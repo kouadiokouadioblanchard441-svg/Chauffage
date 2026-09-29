@@ -5,11 +5,11 @@ export function getSendavapayApiBaseUrl(): string {
     ""
   ).trim();
   if (!configured) {
-    throw new Error("SENDAVAPAY_API_BASE_URL doit être configurée dans les variables d'environnement Plesk.");
+    throw new Error("SENDAVAPAY_API_BASE_URL must be configured in the Plesk environment variables.");
   }
   const parsed = new URL(configured);
   if (parsed.protocol !== "https:") {
-    throw new Error("SENDAVAPAY_API_BASE_URL doit utiliser HTTPS.");
+    throw new Error("SENDAVAPAY_API_BASE_URL must use HTTPS.");
   }
   return parsed.toString().replace(/\/+$/, "");
 }
@@ -103,7 +103,7 @@ export async function createPayment(params: {
   const body: Record<string, any> = {
     amount: params.amount,
     currency: params.currency,
-    description: params.description || `Dépôt #${params.externalReference}`,
+    description: params.description || `Deposit #${params.externalReference}`,
     customerName: params.customerName,
     customerPhone: params.customerPhone,
     payerCountry: params.payerCountry,

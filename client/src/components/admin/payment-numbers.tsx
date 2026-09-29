@@ -320,7 +320,7 @@ export default function AdminPaymentNumbers() {
               ) : (
                 <div className="flex gap-2 mt-1">
                   <Input value={form.operatorName} onChange={(e) => setForm(f => ({ ...f, operatorName: e.target.value }))}
-                    placeholder="Ex: Airtel Money, Moov Money" className="flex-1" data-testid="input-operator-name" />
+                    placeholder="e.g. GCash, Maya" className="flex-1" data-testid="input-operator-name" />
                   {operatorOptions.length > 0 && (
                     <Button type="button" variant="outline" size="sm" onClick={() => { setCustomOperator(false); setForm(f => ({ ...f, operatorName: "" })); }}>
                        List
@@ -349,7 +349,7 @@ export default function AdminPaymentNumbers() {
               )}
               {form.paymentType === "phone" ? (
                 <Input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
-                  placeholder="Ex: +23599000000" className="mt-1" data-testid="input-phone" />
+                placeholder="e.g. +639171234567" className="mt-1" data-testid="input-phone" />
               ) : (
                 <Input value={form.paymentLink} onChange={(e) => setForm(f => ({ ...f, paymentLink: e.target.value }))}
                   placeholder="https://..." type="url" className="mt-1" data-testid="input-payment-link" />
@@ -358,7 +358,7 @@ export default function AdminPaymentNumbers() {
             <div>
                <label className="text-sm font-medium">Owner name</label>
               <Input value={form.ownerName} onChange={(e) => setForm(f => ({ ...f, ownerName: e.target.value }))}
-                placeholder="Ex: Jean Dupont" className="mt-1" data-testid="input-owner-name" />
+                placeholder="e.g. John Smith" className="mt-1" data-testid="input-owner-name" />
             </div>
             <div>
                <label className="text-sm font-medium">Logo URL <span className="text-muted-foreground font-normal">(optional)</span></label>

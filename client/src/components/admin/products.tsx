@@ -179,7 +179,7 @@ export default function AdminProducts() {
       <FormField control={form.control} name="name" render={({ field }) => (
         <FormItem>
            <FormLabel>Product name</FormLabel>
-          <FormControl><Input {...field} placeholder="Ex: VIP 3" /></FormControl>
+          <FormControl><Input {...field} placeholder="e.g. VIP 3" /></FormControl>
           <FormMessage />
         </FormItem>
       )} />
@@ -187,14 +187,14 @@ export default function AdminProducts() {
         <FormField control={form.control} name="price" render={({ field }) => (
           <FormItem>
              <FormLabel>Price (PHP)</FormLabel>
-          <FormControl><Input {...field} type="number" min="0" step="1" placeholder="Ex: 15000" /></FormControl>
+          <FormControl><Input {...field} type="number" min="0" step="1" placeholder="e.g. 15000" /></FormControl>
             <FormMessage />
           </FormItem>
         )} />
         <FormField control={form.control} name="dailyEarnings" render={({ field }) => (
           <FormItem>
              <FormLabel>Daily earnings (PHP)</FormLabel>
-          <FormControl><Input {...field} type="number" min="0" step="1" placeholder="Ex: 300" /></FormControl>
+          <FormControl><Input {...field} type="number" min="0" step="1" placeholder="e.g. 300" /></FormControl>
             <FormMessage />
           </FormItem>
         )} />

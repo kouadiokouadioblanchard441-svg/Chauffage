@@ -82,7 +82,7 @@ export function getInpayApiBase(): string {
   if (!configured) return "";
   const parsed = new URL(configured);
   if (parsed.protocol !== "https:") {
-    throw new Error("INPAY_API_BASE_URL doit utiliser HTTPS et être configurée dans Plesk");
+    throw new Error("INPAY_API_BASE_URL must use HTTPS and be configured in Plesk");
   }
   return parsed.toString().replace(/\/+$/, "");
 }
@@ -200,7 +200,7 @@ async function postInpay<T>(
         .trim()
         .slice(0, 300);
       throw new InpayRequestError(
-        `L'API InPay a renvoyé une page HTML (HTTP ${response.status}) sur ${endpoint}${detail ? ` : ${detail}` : ""}`,
+        `The InPay API returned an HTML page (HTTP ${response.status}) at ${endpoint}${detail ? `: ${detail}` : ""}`,
         endpoint,
         requestData,
       );
@@ -211,7 +211,7 @@ async function postInpay<T>(
       .trim()
       .slice(0, 240);
     throw new InpayRequestError(
-      `Réponse InPay invalide (HTTP ${response.status})${detail ? ` : ${detail}` : ""}`,
+      `Invalid InPay response (HTTP ${response.status})${detail ? `: ${detail}` : ""}`,
       endpoint,
       requestData,
     );
@@ -268,7 +268,7 @@ export async function createPayin(params: {
     { ...payload, sign: createInpaySignature(payload, params.apiKey) },
   );
   if (String(result.code) !== "0" || !result.data?.url || !result.data.order_number) {
-    throw new Error(result.message || "InPay n'a pas créé le paiement");
+    throw new Error(result.message || "InPay did not create the payment");
   }
   return { url: result.data.url, orderNumber: result.data.order_number };
 }
@@ -300,7 +300,7 @@ export function resolveBankCode(country: string, paymentMethod: string): string 
   const countryMappings = mappings[normalizedCountry] || {};
   const match = Object.entries(countryMappings).find(([name]) => method.includes(name));
   if (match) return match[1];
-  throw new Error(`Code bancaire InPay introuvable pour ${paymentMethod} (${normalizedCountry})`);
+  throw new Error(`InPay bank code not found for ${paymentMethod} (${normalizedCountry})`);
 }
 
 export async function createPayout(params: {
@@ -334,7 +334,7 @@ export async function createPayout(params: {
     { ...payload, sign: createInpaySignature(payload, params.apiKey) },
   );
   if (String(result.code) !== "0") {
-    throw new Error(result.message || "InPay n'a pas créé le retrait");
+    throw new Error(result.message || "InPay did not create the withdrawal");
   }
   return {
     orderNumber: result.data?.orderNumber,
@@ -356,7 +356,7 @@ export async function getBalance(params: {
     { ...payload, sign: createInpaySignature(payload, params.apiKey) },
   );
   if (String(result.code) !== "0" || result.data?.balance === undefined) {
-    throw new Error(result.message || "Solde InPay indisponible");
+    throw new Error(result.message || "InPay balance is unavailable");
   }
   return String(result.data.balance);
 }

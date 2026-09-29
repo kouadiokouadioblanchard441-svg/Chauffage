@@ -754,7 +754,7 @@ export default function DepositPage() {
     if (!amount || Number(amount) < MIN_DEPOSIT) {
       toast({
         title: "Invalid amount",
-        description: `Le minimum est de ${MIN_DEPOSIT.toLocaleString()} ${currency}`,
+        description: `The minimum deposit is ${MIN_DEPOSIT.toLocaleString()} ${currency}`,
         variant: "destructive",
       });
       return;

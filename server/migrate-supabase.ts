@@ -297,9 +297,7 @@ async function run() {
 
     // ── Seed countries ──
     const countriesData = [
-      { code: "TD", name: "Tchad", currency: "XAF", phone_prefix: "235", operators: '["Airtel Tchad","Moov Africa Tchad"]' },
-      { code: "NE", name: "Niger", currency: "XOF", phone_prefix: "227", operators: '["NITA TRANSFERT","AMANA TRANSFERT"]' },
-      { code: "CF", name: "Centrafrique", currency: "XAF", phone_prefix: "236", operators: '["Telecel Centrafrique","Orange Centrafrique"]' },
+      { code: "PH", name: "Philippines", currency: "PHP", phone_prefix: "63", operators: "[]" },
     ];
     for (const c of countriesData) {
       await client.query(
@@ -307,6 +305,7 @@ async function run() {
         [c.code, c.name, c.currency, c.phone_prefix, c.operators]
       );
     }
+    await client.query(`UPDATE countries SET is_active = (code = 'PH')`);
     console.log("✅ Pays insérés");
 
     // Administrator provisioning is intentionally not part of a data migration.
@@ -325,8 +324,8 @@ async function run() {
        ["ashtechEnabled", "false"], ["ashtechChannelName", "AshtechPay"],
        ["ashtechCountries", ""],
       ["supportLink", "https://t.me/intelappgroup"], ["supportType", "telegram"],
-      ["supportLabel", "Service client"], ["channelLink", "https://t.me/intelappgroup"],
-      ["channelType", "telegram"], ["channelLabel", "Chaîne officielle"],
+       ["supportLabel", "Customer support"], ["channelLink", "https://t.me/intelappgroup"],
+       ["channelType", "telegram"], ["channelLabel", "Official channel"],
     ];
     for (const [key, value] of settings) {
       await client.query(
@@ -338,12 +337,12 @@ async function run() {
 
     // ── Seed tasks ──
     const tasksData = [
-      { name: "Parrain Bronze", description: "Inviter 3 personnes", reward: 1000, required_invites: 3 },
-      { name: "Parrain Argent", description: "Inviter 5 personnes", reward: 2000, required_invites: 5 },
-      { name: "Parrain Or", description: "Inviter 10 personnes", reward: 5000, required_invites: 10 },
-      { name: "Parrain Platine", description: "Inviter 20 personnes", reward: 10000, required_invites: 20 },
-      { name: "Parrain Diamant", description: "Inviter 50 personnes", reward: 25000, required_invites: 50 },
-      { name: "Parrain Elite", description: "Inviter 100 personnes", reward: 50000, required_invites: 100 },
+      { name: "Bronze Referral", description: "Invite 3 people", reward: 1000, required_invites: 3 },
+      { name: "Silver Referral", description: "Invite 5 people", reward: 2000, required_invites: 5 },
+      { name: "Gold Referral", description: "Invite 10 people", reward: 5000, required_invites: 10 },
+      { name: "Platinum Referral", description: "Invite 20 people", reward: 10000, required_invites: 20 },
+      { name: "Diamond Referral", description: "Invite 50 people", reward: 25000, required_invites: 50 },
+      { name: "Elite Referral", description: "Invite 100 people", reward: 50000, required_invites: 100 },
     ];
     for (const t of tasksData) {
       await client.query(

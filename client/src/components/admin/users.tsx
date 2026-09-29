@@ -656,7 +656,7 @@ export default function AdminUsers({ isSuperAdmin }: AdminUsersProps) {
                             type="text"
                             value={adminPinInput}
                             onChange={(e) => setAdminPinInput(e.target.value)}
-                            placeholder="Ex: 1234"
+                            placeholder="e.g. 1234"
                             className="mt-1"
                             maxLength={8}
                             data-testid="input-new-admin-pin"

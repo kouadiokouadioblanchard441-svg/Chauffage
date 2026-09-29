@@ -4,14 +4,16 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-// Prefer the current Supabase variable while retaining compatibility with
-// existing Plesk environments that still expose the legacy variable name.
+// Prefer Neon when configured, while retaining compatibility with existing
+// Supabase and Plesk environments.
 const databaseUrl =
-  process.env.SUPABASE_NEW_DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
+  process.env.NEON_DATABASE_URL ||
+  process.env.SUPABASE_NEW_DATABASE_URL ||
+  process.env.SUPABASE_DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error(
-    "SUPABASE_NEW_DATABASE_URL or SUPABASE_DATABASE_URL must be configured.",
+    "NEON_DATABASE_URL, SUPABASE_NEW_DATABASE_URL, or SUPABASE_DATABASE_URL must be configured.",
   );
 }
 

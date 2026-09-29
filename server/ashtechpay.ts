@@ -8,11 +8,11 @@ function getApiBase() {
     ""
   ).trim();
   if (!configured) {
-    throw new Error("AshtechPay non configuré : ASHTECHPAY_API_BASE_URL est manquante dans Plesk");
+    throw new Error("AshtechPay is not configured: ASHTECHPAY_API_BASE_URL is missing from Plesk");
   }
   const parsed = new URL(configured);
   if (parsed.protocol !== "https:") {
-    throw new Error("ASHTECHPAY_API_BASE_URL doit utiliser HTTPS");
+    throw new Error("ASHTECHPAY_API_BASE_URL must use HTTPS");
   }
   return parsed.toString().replace(/\/+$/, "");
 }
@@ -67,7 +67,7 @@ export class AshtechApiError extends Error {
 function getApiKey() {
   const key = process.env.ASHTECH_API_KEY || process.env.ASHTECHPAY_API_KEY;
   if (!key) {
-    throw new Error("AshtechPay non configuré : ASHTECH_API_KEY est manquante");
+    throw new Error("AshtechPay is not configured: ASHTECH_API_KEY is missing");
   }
   return key;
 }

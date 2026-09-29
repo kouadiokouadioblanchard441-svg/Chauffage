@@ -160,7 +160,7 @@ export default function AdminDeposits() {
                         {deposit.user.isPromoter && <Badge className="text-xs">Promoter</Badge>}
                         {isManual && (
                           <Badge className="text-xs bg-red-600 text-white border-red-600">
-                            Paiement manuel
+                            Manual payment
                           </Badge>
                         )}
                       </div>

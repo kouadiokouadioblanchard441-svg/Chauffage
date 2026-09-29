@@ -2,17 +2,17 @@ import crypto from "crypto";
 
 function getWestpayApiBaseUrl(): string {
   const configured = (process.env.WESTPAY_API_BASE_URL || "").trim();
-  if (!configured) throw new Error("WESTPAY_API_BASE_URL n'est pas configurée dans Plesk");
+  if (!configured) throw new Error("WESTPAY_API_BASE_URL is not configured in Plesk");
   const parsed = new URL(configured);
-  if (parsed.protocol !== "https:") throw new Error("WESTPAY_API_BASE_URL doit utiliser HTTPS");
+  if (parsed.protocol !== "https:") throw new Error("WESTPAY_API_BASE_URL must use HTTPS");
   return parsed.toString().replace(/\/+$/, "");
 }
 
 function getWestpayCheckoutBaseUrl(): string {
   const configured = (process.env.WESTPAY_CHECKOUT_BASE_URL || "").trim();
-  if (!configured) throw new Error("WESTPAY_CHECKOUT_BASE_URL n'est pas configurée dans Plesk");
+  if (!configured) throw new Error("WESTPAY_CHECKOUT_BASE_URL is not configured in Plesk");
   const parsed = new URL(configured);
-  if (parsed.protocol !== "https:") throw new Error("WESTPAY_CHECKOUT_BASE_URL doit utiliser HTTPS");
+  if (parsed.protocol !== "https:") throw new Error("WESTPAY_CHECKOUT_BASE_URL must use HTTPS");
   return parsed.toString();
 }
 
@@ -81,8 +81,8 @@ export function getMerchantSlug(): string {
 export function validateWestpayConfig(): void {
   getWestpayApiBaseUrl();
   getWestpayCheckoutBaseUrl();
-  if (!getMerchantSlug()) throw new Error("WESTPAY_MERCHANT_SLUG doit être configurée dans Plesk");
-  if (!process.env.WESTPAY_WEBHOOK_SECRET) throw new Error("WESTPAY_WEBHOOK_SECRET doit être configurée dans Plesk");
+  if (!getMerchantSlug()) throw new Error("WESTPAY_MERCHANT_SLUG must be configured in Plesk");
+  if (!process.env.WESTPAY_WEBHOOK_SECRET) throw new Error("WESTPAY_WEBHOOK_SECRET must be configured in Plesk");
 }
 
 export function getApiKeyForCountry(code: string): string {
@@ -111,7 +111,7 @@ export function buildPaymentUrl(params: {
   redirectUrl: string;
 }): string {
   const slug = getMerchantSlug();
-  if (!slug) throw new Error("WESTPAY_MERCHANT_SLUG non configuré");
+  if (!slug) throw new Error("WESTPAY_MERCHANT_SLUG is not configured");
   const url = new URL(getWestpayCheckoutBaseUrl());
   url.searchParams.set("merchant", slug);
   url.searchParams.set("amount", String(params.amount));
@@ -142,7 +142,7 @@ export async function transfer(params: {
   if (!apiKey) {
     return {
       success: false,
-      error: `Clé API WestPay manquante pour ${params.countryCode} — configurez WESTPAY_API_KEY_${params.countryCode} dans Plesk`,
+      error: `WestPay API key is missing for ${params.countryCode} — configure WESTPAY_API_KEY_${params.countryCode} in Plesk`,
     };
   }
   try {
@@ -164,7 +164,7 @@ export async function transfer(params: {
     if (res.ok) return { success: true, reference: data.reference, fees: data.fees };
     return { success: false, error: data.message || `Erreur ${res.status}` };
   } catch (err: any) {
-    return { success: false, error: err.message || "Erreur réseau WestPay" };
+    return { success: false, error: err.message || "WestPay network error" };
   }
 }
 

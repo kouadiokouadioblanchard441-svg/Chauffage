@@ -237,7 +237,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
         <DialogHeader className="withdraw-modal-header">
           <DialogTitle className="withdraw-modal-heading">Withdrawal</DialogTitle>
           <DialogDescription className="withdraw-modal-subtitle">
-            Minimum: {formatCurrency(minWithdrawal, user.country)} | Frais: {fees}%
+            Minimum: {formatCurrency(minWithdrawal, user.country)} | Fee: {fees}%
           </DialogDescription>
           <div className="withdraw-modal-balance">
             <div>
@@ -322,7 +322,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                     <span className="text-foreground">{formatCurrency(amount, user.country)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Frais ({fees}%)</span>
+                    <span className="text-muted-foreground">Fee ({fees}%)</span>
                     <span className="text-destructive">-{formatCurrency(feeAmount, user.country)}</span>
                   </div>
                   <div className="flex justify-between border-t pt-2">

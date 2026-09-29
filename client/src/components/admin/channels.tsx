@@ -201,7 +201,7 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
                   <FormItem>
                      <FormLabel>Channel name</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Ex: LeekPay" />
+                      <Input {...field} placeholder="e.g. LeekPay" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

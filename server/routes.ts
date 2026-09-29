@@ -233,7 +233,9 @@ declare module "express-session" {
 
 const PgSession = ConnectPgSimple(session);
 const sessionDatabaseUrl =
-  process.env.SUPABASE_NEW_DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
+  process.env.NEON_DATABASE_URL ||
+  process.env.SUPABASE_NEW_DATABASE_URL ||
+  process.env.SUPABASE_DATABASE_URL;
 const sessionSecret = process.env.SESSION_SECRET;
 
 if (!sessionDatabaseUrl) {
@@ -687,7 +689,7 @@ export async function registerRoutes(
 
       res.json({ success: true, message: "Password changed successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message || "Erreur serveur" });
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 
@@ -1496,7 +1498,7 @@ export async function registerRoutes(
          paymentChannelId: normalizedDeposit.paymentChannelId && normalizedDeposit.paymentChannelId > 0 ? normalizedDeposit.paymentChannelId : null,
          paymentNumberId: selectedPaymentNumber?.id || null,
          channelName: selectedPaymentNumber
-           ? `${selectedPaymentNumber.operatorName} - ${selectedPaymentNumber.paymentLink ? "Lien de paiement" : selectedPaymentNumber.phone}`
+           ? `${selectedPaymentNumber.operatorName} - ${selectedPaymentNumber.paymentLink ? "Payment link" : selectedPaymentNumber.phone}`
            : channelName || null,
         screenshot: screenshot || null,
         paymentMessage: paymentMessage || null,
@@ -1522,7 +1524,7 @@ export async function registerRoutes(
       }
 
       if (deposit.userId !== req.session.userId) {
-        return res.status(403).json({ message: "Acces refuse" });
+        return res.status(403).json({ message: "Access denied" });
       }
 
       if (deposit.status === "approved" || deposit.status === "rejected") {
@@ -1821,7 +1823,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
           ussdCode: otpUssdCode,
         });
       }
-      const message = error.message || "Erreur AshtechPay";
+      const message = error.message || "AshtechPay error";
       const errorUser = await storage.getUser(req.session.userId!);
       void sendTelegramMessage(
         [
@@ -1942,7 +1944,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         .replace(/\/+$/, "");
       if (!/^https:\/\//i.test(baseUrl)) {
         return res.status(503).json({
-          message: "SendavaPay exige l'URL publique HTTPS du serveur dans la variable Plesk PUBLIC_APP_URL",
+          message: "SendavaPay requires the server's public HTTPS URL in the Plesk PUBLIC_APP_URL variable",
         });
       }
       const webhookUrl = `${baseUrl}/api/webhooks/sendavapay`;
@@ -2059,7 +2061,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     } catch (error: any) {
       console.error("[sendavapay] submit-otp error:", error);
       notifyTelegramPaymentError({
-        operation: "Validation OTP SendavaPay",
+        operation: "SendavaPay OTP verification",
         error,
         userId: req.session.userId,
         paymentMethod: "SendavaPay",
@@ -2296,14 +2298,14 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         const secret = process.env.WESTPAY_WEBHOOK_SECRET || "";
         if (!secret) {
           console.error("[westpay webhook] Webhook secret not configured");
-          return res.status(503).json({ message: "Webhook secret non configuré" });
+          return res.status(503).json({ message: "Webhook secret is not configured" });
         }
         const sig = (req.headers["x-robotpay-signature"] as string) || "";
         // req.rawBody is captured by the global express.json verify callback
         const rawBuf = (req as any).rawBody as Buffer | undefined;
         if (secret && rawBuf && !westpayVerifySignature(rawBuf, sig, secret)) {
           console.warn("[westpay webhook] Signature invalide");
-          return res.status(401).json({ message: "Signature invalide" });
+          return res.status(401).json({ message: "Invalid signature" });
         }
         const payload = req.body;
         const { event, txId, status } = payload;
@@ -2459,7 +2461,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       if (user.mustInviteToWithdraw) {
         const stats = await storage.getTeamStats(user.id);
         if (stats.level1Invested < 1) {
-          return res.status(400).json({ message: "Invitez quelqu'un qui investit" });
+          return res.status(400).json({ message: "Invite someone who invests" });
         }
       }
 
@@ -2945,7 +2947,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const user = await storage.getUser(req.session.userId!);
       
       if (!user?.isAdmin) {
-        return res.status(403).json({ message: "Acces refuse" });
+        return res.status(403).json({ message: "Access denied" });
       }
       
       // If password is not required for this admin, auto-verify
@@ -3028,9 +3030,9 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const withdrawalId = parseInt(req.params.id);
       const allWithdrawals = await storage.getWithdrawals();
       const withdrawal = allWithdrawals.find((item) => item.id === withdrawalId);
-      if (!withdrawal) return res.status(404).json({ message: "Retrait non trouvé" });
+      if (!withdrawal) return res.status(404).json({ message: "Withdrawal not found" });
       if (withdrawal.status !== "pending") {
-        return res.status(409).json({ message: "Ce retrait a déjà été traité ou envoyé" });
+        return res.status(409).json({ message: "This withdrawal has already been processed or sent" });
       }
 
       const settings = await storage.getSettings();
@@ -3068,7 +3070,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       res.json(updated);
     } catch (error: any) {
       void sendTelegramInpayError({
-        operation: "Retrait payout",
+        operation: "Withdrawal payout",
         error,
         recordId: req.params.id,
       }).catch((notificationError) => {
@@ -3141,11 +3143,11 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         case "toggle-must-invite":
           const user4 = await storage.getUser(userId);
           await storage.updateUser(userId, { mustInviteToWithdraw: !user4?.mustInviteToWithdraw });
-          await storage.logAdminAction(req.session.userId!, "toggle_must_invite", userId, `Doit inviter: ${!user4?.mustInviteToWithdraw}`);
+          await storage.logAdminAction(req.session.userId!, "toggle_must_invite", userId, `Must invite: ${!user4?.mustInviteToWithdraw}`);
           break;
         case "toggle-admin":
           if (!adminUser?.isSuperAdmin) {
-            return res.status(403).json({ message: "Action réservée au super admin" });
+            return res.status(403).json({ message: "This action is restricted to the super admin" });
           }
           const user5 = await storage.getUser(userId);
           const newAdminStatus = !user5?.isAdmin;
@@ -3159,17 +3161,17 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
           break;
         case "update-admin-pin":
           if (!adminUser?.isSuperAdmin) {
-            return res.status(403).json({ message: "Action réservée au super admin" });
+            return res.status(403).json({ message: "This action is restricted to the super admin" });
           }
           await storage.updateUser(userId, { adminPin: value });
           await storage.logAdminAction(req.session.userId!, "update_admin_pin", userId, `Admin PIN updated`);
           break;
         case "toggle-password-required":
           if (!adminUser?.isSuperAdmin) {
-            return res.status(403).json({ message: "Action réservée au super admin" });
+            return res.status(403).json({ message: "This action is restricted to the super admin" });
           }
           await storage.updateUser(userId, { isAdminPasswordRequired: value });
-          await storage.logAdminAction(req.session.userId!, "toggle_password_required", userId, `Mot de passe admin requis: ${value}`);
+          await storage.logAdminAction(req.session.userId!, "toggle_password_required", userId, `Admin password required: ${value}`);
           break;
         case "assign-product":
           await storage.purchaseProduct(userId, value, true);
@@ -3181,7 +3183,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
           break;
         case "toggle-super-admin":
           if (!adminUser?.isSuperAdmin) {
-            return res.status(403).json({ message: "Action réservée au super admin" });
+            return res.status(403).json({ message: "This action is restricted to the super admin" });
           }
           const userSA = await storage.getUser(userId);
           const newSuperAdminStatus = !userSA?.isSuperAdmin;
@@ -3450,7 +3452,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       res.json({ country, name: inpayGetCountryName(country), balance });
     } catch (error: any) {
       void sendTelegramInpayError({
-        operation: "Consultation du solde",
+        operation: "Balance lookup",
         error,
         country,
       }).catch((notificationError) => {
@@ -3539,7 +3541,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
           : value as string;
         await storage.setSetting(key, serializedValue, req.session.userId);
       }
-      await storage.logAdminAction(req.session.userId!, "update_settings", null, `Paramètres modifiés`);
+      await storage.logAdminAction(req.session.userId!, "update_settings", null, "Settings updated");
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3551,11 +3553,11 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const adminUser = await storage.getUser(req.session.userId!);
       if (!adminUser?.isSuperAdmin) {
-        return res.status(403).json({ message: "Action réservée au super admin" });
+        return res.status(403).json({ message: "This action is restricted to the super admin" });
       }
 
       await storage.resetStats();
-      await storage.logAdminAction(req.session.userId!, "reset_stats", null, "Réinitialisation des statistiques de la plateforme");
+      await storage.logAdminAction(req.session.userId!, "reset_stats", null, "Platform statistics reset");
       res.json({ success: true, message: "Statistics reset" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3612,7 +3614,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const id = parseInt(req.params.id);
       await storage.deleteGiftCode(id);
-      await storage.logAdminAction(req.session.userId!, "delete_gift_code", null, `Code cadeau supprimé: #${id}`);
+      await storage.logAdminAction(req.session.userId!, "delete_gift_code", null, `Gift code deleted: #${id}`);
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3726,7 +3728,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     } catch (error: any) {
       console.error("[clapay] webhook verification error:", error);
       notifyTelegramPaymentError({
-        operation: "Vérification du webhook Clapay",
+        operation: "Clapay webhook verification",
         error,
         recordId: depositId,
         userId: deposit?.userId,
@@ -3831,7 +3833,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       await storage.updateDeposit(deposit.id, { reference: orderReference });
       const configuredPublicUrl = new URL(getPublicBaseUrl(req));
       if (configuredPublicUrl.protocol !== "https:") {
-        throw new Error("L’URL publique du site doit utiliser HTTPS pour Clapay");
+        throw new Error("The public site URL must use HTTPS for Clapay");
       }
       const publicBaseUrl = configuredPublicUrl.origin;
       const returnUrl = new URL("/robotpay", publicBaseUrl);
@@ -3870,7 +3872,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       return res.json({
         depositId: deposit.id,
         redirectUrl: payment.redirectUrl,
-        message: payment.message || "Confirmez le paiement sur votre téléphone.",
+        message: payment.message || "Confirm the payment on your phone.",
       });
     } catch (error: any) {
       const initiationMayHaveReachedProvider =
@@ -3880,10 +3882,10 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       }
       console.error("[clapay] initiation error:", error);
       const telegramError = typeof error?.providerDetail === "string"
-        ? new Error(`${error.message || "Erreur Clapay"} — détail Clapay : ${error.providerDetail}`)
+        ? new Error(`${error.message || "Clapay error"} — provider details: ${error.providerDetail}`)
         : error;
       notifyTelegramPaymentError({
-        operation: "Initiation du dépôt Clapay",
+        operation: "Clapay deposit initiation",
         error: telegramError,
         recordId: depositId,
         userId: req.session.userId,
@@ -3894,10 +3896,10 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       if (depositId && initiationMayHaveReachedProvider) {
         return res.status(202).json({
           depositId,
-          message: "L’état de la demande est incertain. Ne relancez pas le paiement; la vérification se poursuit automatiquement.",
+          message: "The request status is uncertain. Do not retry the payment; verification will continue automatically.",
         });
       }
-      return res.status(502).json({ message: error.message || "Impossible d'initier le paiement Clapay" });
+      return res.status(502).json({ message: error.message || "Unable to initiate the Clapay payment" });
     }
   });
 
@@ -3905,13 +3907,13 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const depositId = Number(req.params.id);
       if (!Number.isInteger(depositId) || depositId <= 0) {
-        return res.status(400).json({ message: "Identifiant de dépôt invalide" });
+        return res.status(400).json({ message: "Invalid deposit ID" });
       }
       const deposit = await storage.getDeposit(depositId);
-      if (!deposit) return res.status(404).json({ message: "Dépôt non trouvé" });
-      if (deposit.userId !== req.session.userId) return res.status(403).json({ message: "Accès refusé" });
+      if (!deposit) return res.status(404).json({ message: "Deposit not found" });
+      if (deposit.userId !== req.session.userId) return res.status(403).json({ message: "Access denied" });
       if (!deposit.paymentMethod.startsWith("Clapay — ")) {
-        return res.status(400).json({ message: "Ce dépôt ne provient pas de Clapay" });
+        return res.status(400).json({ message: "This deposit is not from Clapay" });
       }
       if (deposit.status === "approved" || deposit.status === "rejected") {
         return res.json({ status: deposit.status });
@@ -3936,13 +3938,13 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     } catch (error: any) {
       console.error("[clapay] status verification error:", error);
       notifyTelegramPaymentError({
-        operation: "Vérification du dépôt Clapay",
+        operation: "Clapay deposit verification",
         error,
         recordId: req.params.id,
         userId: req.session.userId,
         paymentMethod: "Clapay",
       });
-      return res.status(502).json({ message: error.message || "Erreur de vérification Clapay" });
+      return res.status(502).json({ message: error.message || "Clapay verification failed" });
     }
   });
 
@@ -3951,7 +3953,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const country = String(req.params.country || "").trim().toUpperCase();
       const active = await storage.getActiveCountries();
       if (!active.some(c => c.code.toUpperCase() === country)) {
-        return res.status(404).json({ message: "Pays indisponible" });
+        return res.status(404).json({ message: "Country is unavailable" });
       }
       const settings = await storage.getSettings();
       const providers: Array<{ provider: "ashtech" | "sendavapay" | "clapay"; name: string }> = [];
@@ -3990,7 +3992,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const country = String(req.params.country || "").trim().toUpperCase();
       const activeCountries = await storage.getActiveCountries();
       if (!activeCountries.some((entry) => entry.code.toUpperCase() === country)) {
-        return res.status(404).json({ message: "Pays indisponible" });
+        return res.status(404).json({ message: "Country is unavailable" });
       }
       const settings = await storage.getSettings();
       const manualNumbers = await storage.getPaymentNumbersByCountry(country);

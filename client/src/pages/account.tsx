@@ -536,7 +536,7 @@ export default function AccountPage() {
               type="password"
               value={adminPin}
               onChange={(event) => setAdminPin(event.target.value)}
-              placeholder="Code PIN"
+              placeholder="PIN code"
               className="text-center text-2xl tracking-widest"
               maxLength={8}
               data-testid="input-admin-pin"
