@@ -9,7 +9,6 @@ import AdminDeposits from "@/components/admin/deposits";
 import AdminWithdrawals from "@/components/admin/withdrawals";
 import AdminUsers from "@/components/admin/users";
 import AdminProducts from "@/components/admin/products";
-import AdminPaymentNumbers from "@/components/admin/payment-numbers";
 import AdminSettings from "@/components/admin/settings";
 import AdminGiftCodes from "@/components/admin/gift-codes";
 import AdminCountries from "@/components/admin/countries";
@@ -40,7 +39,6 @@ export default function AdminPage() {
               <TabsTrigger value="withdrawals" data-testid="tab-withdrawals">Withdrawals</TabsTrigger>
               <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
               <TabsTrigger value="products" data-testid="tab-products">Products</TabsTrigger>
-              <TabsTrigger value="payment-numbers" data-testid="tab-payment-numbers">Payment Numbers</TabsTrigger>
               <TabsTrigger value="countries" data-testid="tab-countries">Countries</TabsTrigger>
               <TabsTrigger value="giftcodes" data-testid="tab-giftcodes">Gift Codes</TabsTrigger>
               <TabsTrigger value="settings" data-testid="tab-settings">Settings</TabsTrigger>
@@ -66,10 +64,6 @@ export default function AdminPage() {
 
           <TabsContent value="products" className="mt-4">
             <AdminProducts />
-          </TabsContent>
-
-          <TabsContent value="payment-numbers" className="mt-4">
-            <AdminPaymentNumbers />
           </TabsContent>
 
           <TabsContent value="countries" className="mt-4">

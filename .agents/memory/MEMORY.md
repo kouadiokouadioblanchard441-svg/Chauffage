@@ -1,5 +1,5 @@
 - [Brand transition](vestas-platform.md) — ChargePoint is the new direction for authentication; other Stone by ton branding has not been explicitly replaced.
-- [Deposit checkout routing](deposit-checkout-routing.md) — Clients must not choose payment aggregators; route automatically by country and keep provider names internal/admin-only.
+- [Deposit checkout routing](deposit-checkout-routing.md) — CloudPay / Galaxy is the sole new payment provider for the Philippines; preserve legacy records and reconciliation.
 - [WestPay Integration](westpay-integration.md) — Redirect-based deposit flow + HMAC webhook; per-country API keys for withdrawals; secrets only (never in code/DB).
 - [SendavaPay integration](sendavapay-integration.md) — Payin deposit flow: backend creates+initiates, user phone auto-used, OTP/redirect handled, webhook HMAC verified.
 - [Imported database setup](imported-database-setup.md) — Preserve an existing Replit session table when applying a first-run Drizzle schema.

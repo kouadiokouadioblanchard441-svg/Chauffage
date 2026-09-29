@@ -255,7 +255,9 @@ export default function DepositPage() {
       },
       enabled: !!country,
     });
-  const depositMethods = depositMethodsData?.methods || [];
+  const depositMethods = (depositMethodsData?.methods || []).filter(
+    (method) => method.provider === "cloudpay",
+  );
   const depositMethodIds = new Set(depositMethods.map((method) => method.provider));
   const depositMethodSignature = depositMethods.map((method) => method.provider).join(",");
   useEffect(() => {
@@ -270,11 +272,11 @@ export default function DepositPage() {
     3500, 5000, 10000, 25000, 50000,
     100000, 200000, 300000, 400000, 500000,
   ].filter((preset) => preset >= MIN_DEPOSIT);
-  const ashtechAvailable = depositMethodIds.has("ashtech");
+  const ashtechAvailable = false;
 
   const depositCountryPriority: Record<string, number> = { CI: 0, NE: 1 };
   const activeDepositCountries = apiCountries
-    .filter(c => c.isActive)
+    .filter(c => c.isActive && c.code.trim().toUpperCase() === "PH")
     .sort((first, second) =>
       (depositCountryPriority[first.code.toUpperCase()] ?? 2) -
       (depositCountryPriority[second.code.toUpperCase()] ?? 2),
@@ -1545,7 +1547,7 @@ export default function DepositPage() {
                 setSoleaspayDepositId(null);
                 setSoleaspayStatus("");
                 setSoleaspayPolling(false);
-                window.location.href = `/robotpay?amount=${encodeURIComponent(Number(amount))}&country=${encodeURIComponent(country)}&provider=soleaspay`;
+                window.location.href = `/robotpay?amount=${encodeURIComponent(Number(amount))}&country=${encodeURIComponent(country)}&provider=cloudpay`;
               }}
               className="deposit-step-primary flex-1 py-3 text-sm"
               style={{ background: TON_GRADIENT }}

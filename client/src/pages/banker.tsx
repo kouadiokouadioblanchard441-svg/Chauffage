@@ -80,14 +80,14 @@ export default function BankerPage() {
   });
 
   const withdrawalMutation = useMutation({
-    mutationFn: async ({ id, action }: { id: number; action: "approve" | "reject" }) => {
+  mutationFn: async ({ id, action }: { id: number; action: "reject" }) => {
       const res = await apiRequest("POST", `/api/banker/withdrawals/${id}/${action}`, {});
        if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Unable to process withdrawal"); }
       return res.json();
     },
-    onSuccess: (_, vars) => {
+  onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/banker/withdrawals"] });
-       toast({ title: vars.action === "approve" ? "Withdrawal approved!" : "Withdrawal rejected and refunded" });
+    toast({ title: "Withdrawal rejected and refunded" });
     },
      onError: (e: any) => toast({ title: "Unable to process withdrawal", description: e.message, variant: "destructive" }),
   });
@@ -390,15 +390,6 @@ export default function BankerPage() {
 
                       {w.status === "pending" && (
                         <div className="flex gap-2">
-                          <Button
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                            size="sm"
-                            onClick={() => withdrawalMutation.mutate({ id: w.id, action: "approve" })}
-                            disabled={withdrawalMutation.isPending}
-                            data-testid={`button-approve-withdrawal-${w.id}`}
-                          >
-                            {withdrawalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" />Approve</>}
-                          </Button>
                           <Button
                             variant="destructive"
                             className="flex-1"

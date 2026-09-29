@@ -15,72 +15,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Save, Link, Clock, Users, Zap } from "lucide-react";
 
 type AdminCountry = { code: string; name: string; isActive: boolean };
-type DepositMethodId = "manual" | "soleaspay" | "ashtech" | "sendavapay" | "westpay" | "inpay" | "clapay" | "cloudpay";
-
-const DEPOSIT_METHOD_OPTIONS: Array<{ value: DepositMethodId; label: string }> = [
-  { value: "manual", label: "Manual payment" },
-  { value: "soleaspay", label: "SoleaPay" },
-  { value: "ashtech", label: "AshtechPay" },
-  { value: "sendavapay", label: "SendavaPay" },
-  { value: "westpay", label: "WestPay" },
-  { value: "inpay", label: "InPay" },
-  { value: "clapay", label: "Clapay" },
-  { value: "cloudpay", label: "CloudPay / Galaxy" },
-];
-
-function getInitialDepositRouting(
-  settings: Record<string, string>,
-  countries: AdminCountry[],
-  paymentNumbers: Array<{ country: string; isActive: boolean }>,
-): Record<string, DepositMethodId[]> {
-  const parsed = settings.depositMethodsByCountry;
-  if (parsed) {
-    try {
-      const stored = JSON.parse(parsed) as Record<string, unknown>;
-      return Object.fromEntries(countries.map(({ code }) => {
-        const methods = Array.isArray(stored[code.toUpperCase()])
-          ? (stored[code.toUpperCase()] as unknown[]).filter(
-              (method): method is DepositMethodId =>
-                typeof method === "string" &&
-                DEPOSIT_METHOD_OPTIONS.some((option) => option.value === method),
-            )
-          : [];
-        return [code.toUpperCase(), methods];
-      }));
-    } catch {
-      return Object.fromEntries(countries.map(({ code }) => [code.toUpperCase(), []]));
-    }
-  }
-
-  const countryAllowed = (value: string | undefined, code: string, emptyMeansAll = false) => {
-    const configured = (value || "").split(",").map((item) => item.trim().toUpperCase()).filter(Boolean);
-    return configured.length === 0 ? emptyMeansAll : configured.includes(code);
-  };
-  return Object.fromEntries(countries.map(({ code }) => {
-    const normalizedCode = code.toUpperCase();
-    const methods: DepositMethodId[] = [];
-    if (settings.soleaspayEnabled === "true" && countryAllowed(settings.soleaspayCountries, normalizedCode)) {
-      methods.push("soleaspay");
-    }
-    if (settings.ashtechEnabled === "true" && countryAllowed(settings.ashtechCountries, normalizedCode, true)) {
-      methods.push("ashtech");
-    }
-    if (settings.sendavapayEnabled === "true") methods.push("sendavapay");
-    if (settings.westpayEnabled === "true" && countryAllowed(settings.westpayCountries, normalizedCode, true)) {
-      methods.push("westpay");
-    }
-    if (settings.inpayEnabled === "true" && countryAllowed(settings.inpayCountries, normalizedCode)) {
-      methods.push("inpay");
-    }
-    if (settings.cloudpayEnabled === "true" && normalizedCode === "PH") {
-      methods.push("cloudpay");
-    }
-    if (paymentNumbers.some((number) => number.isActive && number.country.toUpperCase() === normalizedCode)) {
-      methods.push("manual");
-    }
-    return [normalizedCode, methods];
-  }));
-}
 
 const NETWORKS = [
   { value: "telegram", label: "Telegram" },
@@ -149,12 +83,6 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
   const { data: countries = [], isLoading: countriesLoading } = useQuery<AdminCountry[]>({
     queryKey: ["/api/admin/countries"],
   });
-  const { data: paymentNumbers = [], isLoading: paymentNumbersLoading } = useQuery<
-    Array<{ country: string; isActive: boolean }>
-  >({
-    queryKey: ["/api/admin/payment-numbers"],
-  });
-  const [depositMethodsByCountry, setDepositMethodsByCountry] = useState<Record<string, DepositMethodId[]>>({});
 
   const form = useForm<SettingsForm>({
     resolver: zodResolver(settingsSchema),
@@ -248,28 +176,27 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
         clapayChannelName: settings.clapayChannelName || "Clapay",
         cloudpayEnabled: settings.cloudpayEnabled === "true",
       });
-      if (!countriesLoading && !paymentNumbersLoading) {
-        setDepositMethodsByCountry(getInitialDepositRouting(settings, countries, paymentNumbers));
-      }
     }
-  }, [settings, form, countries, paymentNumbers, countriesLoading, paymentNumbersLoading]);
+  }, [settings, form]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: SettingsForm) => {
       const serialized = {
         ...data,
-        depositMethodsByCountry: JSON.stringify(depositMethodsByCountry),
+        depositMethodsByCountry: JSON.stringify({
+          PH: data.cloudpayEnabled ? ["cloudpay"] : [],
+        }),
         supportEnabled: String(data.supportEnabled),
         support2Enabled: String(data.support2Enabled),
         channelEnabled: String(data.channelEnabled),
         groupEnabled: String(data.groupEnabled),
         withdrawalPrepaymentEnabled: String(data.withdrawalPrepaymentEnabled),
-        sendavapayEnabled: String(data.sendavapayEnabled),
-        soleaspayEnabled: String(data.soleaspayEnabled),
-        westpayEnabled: String(data.westpayEnabled),
-        ashtechEnabled: String(data.ashtechEnabled),
-        inpayEnabled: String(data.inpayEnabled),
-        clapayEnabled: String(data.clapayEnabled),
+        sendavapayEnabled: "false",
+        soleaspayEnabled: "false",
+        westpayEnabled: "false",
+        ashtechEnabled: "false",
+        inpayEnabled: "false",
+        clapayEnabled: "false",
         cloudpayEnabled: String(data.cloudpayEnabled),
       };
       const response = await apiRequest("POST", "/api/admin/settings", serialized);
@@ -307,7 +234,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
     },
   });
 
-  if (isLoading || countriesLoading || paymentNumbersLoading) {
+  if (isLoading || countriesLoading) {
     return <Skeleton className="h-96" />;
   }
 
@@ -317,56 +244,15 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
 
         <Card>
           <CardHeader className="pb-2">
-           <CardTitle className="text-base">Deposit methods by country</CardTitle>
+            <CardTitle className="text-base">Deposit routing</CardTitle>
             <p className="text-sm text-gray-500">
-               Select the allowed methods for each country. If multiple methods are selected, the customer will choose one when depositing.
-               The provider switches below are global activation controls; they do not replace this country-level configuration.
-               Provider URLs, credentials, keys, and secrets remain in the Plesk environment variables.
+              New deposits use CloudPay / Galaxy only, and only for Philippines accounts. Older payment records and callback handlers remain available for reconciliation.
             </p>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {[...countries]
-              .sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.name.localeCompare(b.name))
-              .map((country) => {
-                const code = country.code.toUpperCase();
-                const selectedMethods = new Set(depositMethodsByCountry[code] || []);
-                return (
-                  <div key={code} className="rounded-xl border p-3">
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="font-semibold text-gray-800">{country.name} ({code})</span>
-                      {!country.isActive && (
-                         <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Inactive</span>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {DEPOSIT_METHOD_OPTIONS
-                        .filter((method) => method.value !== "cloudpay" || code === "PH")
-                        .map((method) => (
-                        <label key={method.value} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-                          <input
-                            type="checkbox"
-                            checked={selectedMethods.has(method.value)}
-                            onChange={(event) => {
-                              setDepositMethodsByCountry((current) => {
-                                const nextMethods = new Set(current[code] || []);
-                                if (event.target.checked) nextMethods.add(method.value);
-                                else nextMethods.delete(method.value);
-                                return {
-                                  ...current,
-                                  [code]: DEPOSIT_METHOD_OPTIONS
-                                    .map((option) => option.value)
-                                    .filter((value) => nextMethods.has(value)),
-                                };
-                              });
-                            }}
-                          />
-                          {method.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+          <CardContent>
+            <div className="rounded-xl border border-orange-100 bg-orange-50 p-3 text-sm text-orange-900">
+              Philippines bank and e-wallet deposits are routed automatically through CloudPay / Galaxy. No other gateway or manual payment option can be enabled here.
+            </div>
           </CardContent>
         </Card>
 
@@ -709,6 +595,8 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           </CardContent>
         </Card>
 
+        {false && (
+          <>
         {/* ── SendavaPay ── */}
         <Card>
           <CardHeader className="pb-2">
@@ -977,6 +865,9 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           </CardContent>
         </Card>
 
+          </>
+        )}
+
         {/* ── CloudPay / Galaxy ── */}
         <Card>
           <CardHeader className="pb-2">
@@ -989,7 +880,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
                 <p className="text-sm font-semibold text-gray-800">Enable CloudPay / Galaxy</p>
-                <p className="text-xs text-gray-500">Enables Philippines deposits and admin-submitted withdrawals after approval.</p>
+                <p className="text-xs text-gray-500">Enables Philippines deposits and CloudPay withdrawals.</p>
               </div>
               <FormField control={form.control} name="cloudpayEnabled" render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0">
@@ -1008,11 +899,13 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               </p>
               <p>Set <code>CLOUDPAY_MERCHANT_ID</code> and a newly issued <code>CLOUDPAY_SIGNING_SECRET</code> in Replit Secrets. Do not reuse the key previously posted in chat or paste secrets into this settings page. If production runs on Plesk, configure its secret environment separately after key rotation.</p>
               <p>Also set <code>CLOUDPAY_PAYMENT_TYPE</code> to the merchant-approved value and confirm the merchant account accepts PHP by setting <code>CLOUDPAY_AMOUNT_CURRENCY=PHP</code>. The app blocks CloudPay until this currency confirmation is present.</p>
-              <p><code>CLOUDPAY_API_BASE_URL</code> is optional and defaults to the documented host. Configure the callback URL as <code>/api/webhooks/cloudpay</code>. Customer checkout uses bank/e-wallet names; provider selection remains administrator-controlled.</p>
+              <p><code>CLOUDPAY_API_BASE_URL</code> is optional and defaults to the documented host. Configure the callback URL as <code>/api/webhooks/cloudpay</code>. New deposits and payouts use CloudPay only.</p>
             </div>
           </CardContent>
         </Card>
 
+        {false && (
+          <>
         {/* ── OmniPay ── */}
         <Card>
           <CardHeader className="pb-2">
@@ -1028,6 +921,8 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             </div>
           </CardContent>
         </Card>
+          </>
+        )}
 
         <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
           {updateMutation.isPending ? (

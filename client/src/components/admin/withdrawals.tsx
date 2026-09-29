@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, X, Search, Loader2, Send } from "lucide-react";
+import { X, Search, Loader2, Send } from "lucide-react";
 import type { Withdrawal } from "@shared/schema";
 
 interface WithdrawalWithUser extends Withdrawal {
@@ -44,7 +44,7 @@ export default function AdminWithdrawals() {
   const [processingId, setProcessingId] = useState<number | null>(null);
 
   const processMutation = useMutation({
-    mutationFn: async ({ id, action }: { id: number; action: "approve" | "reject" }) => {
+  mutationFn: async ({ id, action }: { id: number; action: "reject" }) => {
       setProcessingId(id);
       const res = await fetch(`/api/admin/withdrawals/${id}/${action}`, {
         method: "POST",
@@ -63,28 +63,6 @@ export default function AdminWithdrawals() {
     },
     onError: (error: any) => {
        toast({ title: "Unable to process withdrawal", description: error.message, variant: "destructive" });
-    },
-    onSettled: () => setProcessingId(null),
-  });
-
-  const inpayMutation = useMutation({
-    mutationFn: async (id: number) => {
-      setProcessingId(id);
-      const res = await fetch(`/api/admin/withdrawals/${id}/inpay`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
-        if (!res.ok) throw new Error(data.message || `Sending withdrawal to InPay failed (code ${res.status})`);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-       toast({ title: "Withdrawal sent to InPay" });
-    },
-    onError: (error: any) => {
-       toast({ title: "Unable to send withdrawal to InPay", description: error.message, variant: "destructive" });
     },
     onSettled: () => setProcessingId(null),
   });
@@ -266,18 +244,6 @@ export default function AdminWithdrawals() {
 
                 {withdrawal.status === "pending" && (
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => inpayMutation.mutate(withdrawal.id)}
-                      disabled={processingId === withdrawal.id}
-                      data-testid={`button-send-inpay-${withdrawal.id}`}
-                    >
-                      {processingId === withdrawal.id
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : <><Send className="w-4 h-4 mr-1" /> Send to InPay</>}
-                    </Button>
                     {withdrawal.country.toUpperCase() === "PH" &&
                       adminSettings?.cloudpayEnabled === "true" &&
                       adminSettings?.cloudpayConfigured === "true" && (
@@ -296,17 +262,8 @@ export default function AdminWithdrawals() {
                       )}
                     <Button
                       size="sm"
-                      className="flex-1"
-                      onClick={() => processMutation.mutate({ id: withdrawal.id, action: "approve" })}
-                      disabled={processingId === withdrawal.id}
-                      data-testid={`button-approve-${withdrawal.id}`}
-                    >
-                      {processingId === withdrawal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" /> Approve</>}
-                    </Button>
-                    <Button
-                      size="sm"
                       variant="destructive"
-                      onClick={() => processMutation.mutate({ id: withdrawal.id, action: "reject" })}
+      onClick={() => processMutation.mutate({ id: withdrawal.id, action: "reject" })}
                       disabled={processingId === withdrawal.id}
                       data-testid={`button-reject-${withdrawal.id}`}
                     >

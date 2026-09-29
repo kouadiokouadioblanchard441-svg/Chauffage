@@ -54,26 +54,27 @@ export default function RobotPayPage() {
   const amount = Number(params.get("amount") || 0);
   const country = (params.get("country") || "").toUpperCase();
   const requestedProvider = (params.get("provider") || "").toLowerCase();
-  const isSoleaspayFlow = requestedProvider === "soleaspay";
-  const isManualFlow = requestedProvider === "manual";
-  const forcedProvider = requestedProvider === "ashtech" || requestedProvider === "sendavapay" || requestedProvider === "clapay" || requestedProvider === "cloudpay"
-    ? requestedProvider
-    : "";
   const feePaymentId = Number(params.get("feePaymentId") || 0) || undefined;
   const withdrawalAmount = Number(params.get("withdrawalAmount") || 0) || undefined;
-  const parsedClapayReturnDepositId = forcedProvider === "clapay"
+const parsedClapayReturnDepositId = requestedProvider === "clapay"
     ? Number(params.get("clapayDepositId") || 0)
     : 0;
   const clapayReturnDepositId = Number.isSafeInteger(parsedClapayReturnDepositId) && parsedClapayReturnDepositId > 0
     ? parsedClapayReturnDepositId
     : null;
-  const parsedCloudPayReturnDepositId = forcedProvider === "cloudpay"
+const parsedCloudPayReturnDepositId = requestedProvider === "cloudpay"
     ? Number(params.get("cloudpayDepositId") || 0)
     : 0;
   const cloudPayReturnDepositId = Number.isSafeInteger(parsedCloudPayReturnDepositId) && parsedCloudPayReturnDepositId > 0
     ? parsedCloudPayReturnDepositId
     : null;
   const returnedDepositId = clapayReturnDepositId || cloudPayReturnDepositId;
+const isLegacyReturn = returnedDepositId !== null;
+const isSoleaspayFlow = false;
+const isManualFlow = false;
+const forcedProvider = isLegacyReturn
+  ? (clapayReturnDepositId ? "clapay" : "cloudpay")
+  : "cloudpay";
   const isWithdrawalFeePayment = Boolean(feePaymentId);
   // 0 = operator, 1 = phone, 2 = confirmation, 3 = success
   const [step, setStep] = useState(returnedDepositId ? 2 : 0);
@@ -109,21 +110,21 @@ export default function RobotPayPage() {
   const { data: providerInfo, isLoading: providerLoading, error: providerError } = useQuery<ProviderInfo>({
     queryKey: ["/api/deposit/provider", country, forcedProvider],
     queryFn: async () => {
-      const providerQuery = forcedProvider ? `?provider=${encodeURIComponent(forcedProvider)}` : "";
+    const providerQuery = "?provider=cloudpay";
       const res = await fetch(`/api/deposit/provider/${country}${providerQuery}`, { credentials: "include" });
       const data = await res.json();
        if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "No automatic payment channel is available"));
       return data;
     },
-    enabled: !!country && !isSoleaspayFlow && !isManualFlow,
+  enabled: !!country && !isLegacyReturn,
   });
-  const provider: Provider = isSoleaspayFlow
-    ? "soleaspay"
-    : forcedProvider || providerInfo?.provider || "sendavapay";
+const provider: Provider = isLegacyReturn
+  ? forcedProvider
+  : providerInfo?.provider || "cloudpay";
   const activeProvider = operator?.provider || provider;
-  const availableProviders = isSoleaspayFlow
-    ? [{ provider: "soleaspay" as const, name: "SoleaPay" }]
-    : providerInfo?.providers || (providerInfo ? [{ provider: providerInfo.provider, name: providerInfo.name }] : []);
+const availableProviders = isLegacyReturn
+  ? []
+  : providerInfo?.providers || (providerInfo ? [{ provider: providerInfo.provider, name: providerInfo.name }] : []);
   const countryInfo = countries.find(c => c.code === country && c.isActive);
   const currency = "PHP";
   const phonePrefix = countryInfo && "phonePrefix" in countryInfo ? countryInfo.phonePrefix : "";
@@ -222,28 +223,7 @@ export default function RobotPayPage() {
     name: bank.name,
     provider: "cloudpay",
   }));
-  const automaticOperators: Operator[] = isSoleaspayFlow
-    ? soleaspayOperators
-    : [...ashtechOperators, ...sendavaOperators, ...clapayOperators, ...cloudPayOperators];
-  const operators: Operator[] = isManualFlow
-    ? manualNumbers.map(number => ({
-        id: `manual-${number.id}`,
-        name: number.operatorName,
-        manualNumber: number,
-      }))
-    : isSoleaspayFlow
-      ? soleaspayOperators
-      : forcedProvider
-        ? automaticOperators
-        : [
-        ...automaticOperators,
-        ...manualNumbers
-          .map(number => ({
-            id: `manual-${number.id}`,
-            name: number.operatorName,
-            manualNumber: number,
-          })),
-          ];
+const operators: Operator[] = isLegacyReturn ? [] : cloudPayOperators;
   const loadingOperators = isSoleaspayFlow
     ? soleaspayServicesLoading
       : manualNumbersLoading || providerLoading || sendavaLoading || ashtechLoading || clapayLoading || cloudPayBanksLoading;
@@ -478,17 +458,21 @@ export default function RobotPayPage() {
 
   const submitPhone = () => {
       if (!phone.trim()) { toast({ title: "Number required", description: "Enter the Mobile Money number used.", variant: "destructive" }); return; }
-    if (!operator) { toast({ title: "Operator required", description: "Select your operator.", variant: "destructive" }); return; }
-    if (activeProvider === "clapay" && operator.requiresOtp && !clapayOperatorOtp.trim()) {
-      toast({ title: "OTP required", description: "Enter the code requested by this operator.", variant: "destructive" });
+  if (
+    isLegacyReturn ||
+    activeProvider !== "cloudpay" ||
+    !operator ||
+    operator.provider !== "cloudpay" ||
+    operator.manualNumber
+  ) {
+    toast({
+      title: "Checkout unavailable",
+      description: "Only the configured bank and e-wallet checkout is available.",
+      variant: "destructive",
+    });
       return;
     }
-    if (operator.manualNumber) manualMutation.mutate();
-    else if (activeProvider === "ashtech") ashtechMutation.mutate(undefined);
-    else if (activeProvider === "soleaspay") soleaspayMutation.mutate();
-    else if (activeProvider === "clapay") clapayMutation.mutate();
-    else if (activeProvider === "cloudpay") cloudPayMutation.mutate();
-    else sendavaMutation.mutate();
+  cloudPayMutation.mutate();
   };
   const submitOtp = async () => {
     if (activeProvider === "ashtech") {

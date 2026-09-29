@@ -268,6 +268,23 @@ const SENSITIVE_SETTING_KEYS = new Set([
   "westpayWebhookSecret",
   "ashtechWebhookSecret",
 ]);
+const DISABLED_DEPOSIT_SETTING_KEYS = [
+  "sendavapayEnabled",
+  "soleaspayEnabled",
+  "westpayEnabled",
+  "ashtechEnabled",
+  "inpayEnabled",
+  "clapayEnabled",
+];
+const LEGACY_DEPOSIT_SETTING_KEYS = [
+  ...DISABLED_DEPOSIT_SETTING_KEYS,
+  "sendavapayChannelName",
+  "soleaspayChannelName",
+  "westpayChannelName",
+  "ashtechChannelName",
+  "inpayChannelName",
+  "clapayChannelName",
+];
 const DEPOSIT_METHOD_IDS = [
   "manual",
   "soleaspay",
@@ -290,17 +307,12 @@ const PUBLIC_SETTING_KEYS = new Set([
   "maxWithdrawalsPerDay", "withdrawalStartHour", "withdrawalEndHour",
   "withdrawalPrepaymentEnabled",
   "level1Commission", "level2Commission", "level3Commission",
-  "sendavapayEnabled", "sendavapayChannelName",
-  "soleaspayEnabled", "soleaspayChannelName", "soleaspayCountries",
-  "westpayEnabled", "westpayChannelName", "westpayCountries",
-  "ashtechEnabled", "ashtechChannelName", "ashtechCountries",
-  "inpayEnabled", "inpayChannelName", "inpayCountries",
-  "clapayEnabled", "clapayChannelName",
-  "cloudpayEnabled",
-  "depositMethodsByCountry",
 ]);
 const ADMIN_SETTING_KEYS = new Set([
   ...Array.from(PUBLIC_SETTING_KEYS),
+  ...LEGACY_DEPOSIT_SETTING_KEYS,
+  "cloudpayEnabled",
+  "depositMethodsByCountry",
 ]);
 const MASKED_SETTING_VALUE = "********";
 
@@ -340,77 +352,20 @@ function parseDepositMethodsByCountry(
   return result;
 }
 
-function isCountryInSettingsList(
-  value: string | undefined,
-  country: string,
-  emptyMeansAll = false,
-): boolean {
-  const countries = (value || "")
-    .split(",")
-    .map((code) => code.trim().toUpperCase())
-    .filter(Boolean);
-  return countries.length === 0 ? emptyMeansAll : countries.includes(country.toUpperCase());
-}
-
-function isLegacyDepositMethodAssigned(
-  method: DepositMethodId,
-  country: string,
-  settings: Record<string, string>,
-): boolean {
-  switch (method) {
-    case "manual":
-      return true;
-    case "soleaspay":
-      return settings.soleaspayEnabled === "true" &&
-        isCountryInSettingsList(settings.soleaspayCountries, country);
-    case "ashtech":
-      return settings.ashtechEnabled === "true" &&
-        isCountryInSettingsList(settings.ashtechCountries, country, true);
-    case "sendavapay":
-      return settings.sendavapayEnabled === "true";
-    case "westpay":
-      return settings.westpayEnabled === "true" &&
-        isCountryInSettingsList(settings.westpayCountries, country, true);
-    case "inpay":
-      return settings.inpayEnabled === "true" &&
-        isCountryInSettingsList(settings.inpayCountries, country);
-    case "clapay":
-      // Clapay is deliberately excluded from derived legacy routing. It only
-      // becomes available after an administrator saves an explicit country map.
-      return false;
-    case "cloudpay":
-      // CloudPay is PH-only and requires an explicit country routing choice.
-      return false;
-  }
-}
-
 function getAssignedDepositMethods(
   country: string,
   settings: Record<string, string>,
 ): DepositMethodId[] {
-  const normalizedCountry = country.trim().toUpperCase();
-  const explicitRouting = parseDepositMethodsByCountry(settings.depositMethodsByCountry);
-  if (explicitRouting) return explicitRouting[normalizedCountry] || [];
-  return DEPOSIT_METHOD_IDS.filter((method) =>
-    isLegacyDepositMethodAssigned(method, normalizedCountry, settings)
-  );
+  return isPhilippinesCountryCode(country) && settings.cloudpayEnabled === "true"
+    ? ["cloudpay"]
+    : [];
 }
 
 function isDepositProviderGloballyEnabled(
   method: DepositMethodId,
   settings: Record<string, string>,
 ): boolean {
-  if (method === "manual") return true;
-  const settingKey: Record<Exclude<DepositMethodId, "manual">, string> = {
-    soleaspay: "soleaspayEnabled",
-    ashtech: "ashtechEnabled",
-    sendavapay: "sendavapayEnabled",
-    westpay: "westpayEnabled",
-    inpay: "inpayEnabled",
-    clapay: "clapayEnabled",
-    cloudpay: "cloudpayEnabled",
-  };
-  return settings[settingKey[method]] === "true";
+  return method === "cloudpay" && settings.cloudpayEnabled === "true";
 }
 
 function isDepositMethodConfigured(
@@ -418,12 +373,8 @@ function isDepositMethodConfigured(
   method: DepositMethodId,
   settings: Record<string, string>,
 ): boolean {
-  const explicitRouting = parseDepositMethodsByCountry(settings.depositMethodsByCountry);
-  if (explicitRouting) {
-    return (explicitRouting[country.trim().toUpperCase()] || []).includes(method) &&
-      isDepositProviderGloballyEnabled(method, settings);
-  }
-  return getAssignedDepositMethods(country, settings).includes(method) &&
+  return method === "cloudpay" &&
+    isPhilippinesCountryCode(country) &&
     isDepositProviderGloballyEnabled(method, settings);
 }
 
@@ -608,6 +559,37 @@ export async function registerRoutes(
       console.error("[security] IP block check failed:", error);
       next();
     }
+  });
+
+  const disabledPaymentInitiationPaths = new Set([
+    "/api/deposits",
+    "/api/ashtechpay/collect",
+    "/api/sendavapay/create",
+    "/api/sendavapay/initiate",
+    "/api/sendavapay/submit-otp",
+    "/api/sendavapay/retry",
+    "/api/clapay/initiate",
+    "/api/admin/payment-numbers",
+    "/api/admin/channels",
+  ]);
+  app.use((req, res, next) => {
+    const path = req.path;
+    const isDisabledPaymentInitiation =
+      (req.method === "POST" && disabledPaymentInitiationPaths.has(path)) ||
+      ((req.method === "PUT" || req.method === "PATCH") &&
+        (/^\/api\/admin\/payment-numbers\/\d+$/.test(path) ||
+          /^\/api\/admin\/channels\/\d+$/.test(path))) ||
+      (req.method === "POST" && /^\/api\/admin\/withdrawals\/\d+\/inpay$/.test(path)) ||
+      (req.method === "POST" &&
+        (/^\/api\/admin\/withdrawals\/\d+\/approve$/.test(path) ||
+          /^\/api\/banker\/withdrawals\/\d+\/approve$/.test(path)));
+
+    if (isDisabledPaymentInitiation) {
+      return res.status(410).json({
+        message: "This payment route is no longer available. Use the current deposit flow.",
+      });
+    }
+    next();
   });
 
   // Auth routes
@@ -979,72 +961,7 @@ export async function registerRoutes(
   });
 
   // Payment Channels
-  app.get("/api/payment-channels", requireAuth, async (req, res) => {
-    try {
-      const [channels, settings] = await Promise.all([
-        storage.getPaymentChannels(),
-        storage.getSettings(),
-      ]);
-
-      const soleaspayEnabled = settings.soleaspayEnabled === "true";
-      const soleaspayChannelName = settings.soleaspayChannelName || "SoleaPay";
-      const sendavapayEnabled = settings.sendavapayEnabled === "true";
-      const sendavapayChannelName = settings.sendavapayChannelName || "SendavaPay";
-      // Build virtual gateway channels when enabled in settings
-      const virtualChannels: any[] = [];
-      if (sendavapayEnabled) {
-        virtualChannels.push({
-          id: -2,
-          name: sendavapayChannelName,
-          redirectUrl: "",
-          isApi: true,
-          isActive: true,
-          gateway: "sendavapay",
-        });
-      }
-      if (soleaspayEnabled) {
-        virtualChannels.push({
-          id: -1,
-          name: soleaspayChannelName,
-          redirectUrl: "",
-          isApi: true,
-          isActive: true,
-          gateway: "soleaspay",
-        });
-      }
-      const westpayEnabled = settings.westpayEnabled === "true";
-      const westpayChannelName = settings.westpayChannelName || "WestPay";
-      if (westpayEnabled) {
-        virtualChannels.push({
-          id: -3,
-          name: westpayChannelName,
-          redirectUrl: "",
-          isApi: true,
-          isActive: true,
-          gateway: "westpay",
-        });
-      }
-      const inpayEnabled = settings.inpayEnabled === "true";
-      const inpayChannelName = settings.inpayChannelName || "InPay";
-      if (inpayEnabled) {
-        virtualChannels.push({
-          id: -4,
-          name: inpayChannelName,
-          redirectUrl: "",
-          isApi: true,
-          isActive: true,
-          gateway: "inpay",
-        });
-      }
-
-      // Manual channels created by admin (no gateway auto-processing)
-      const manualChannels = channels.map((ch) => ({ ...ch, gateway: null }));
-
-      res.json([...virtualChannels, ...manualChannels]);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  app.get("/api/payment-channels", requireAuth, (_req, res) => res.json([]));
 
   // Get Soleaspay supported services
   app.get("/api/soleaspay/services", requireAuth, async (req, res) => {
@@ -1162,21 +1079,7 @@ export async function registerRoutes(
   });
 
   // Payment Numbers (public — filtered by country)
-  app.get("/api/payment-numbers", requireAuth, async (req, res) => {
-    try {
-      const country = typeof req.query.country === "string" ? req.query.country.trim().toUpperCase() : "";
-      if (country) {
-        const settings = await storage.getSettings();
-        if (!isDepositMethodConfigured(country, "manual", settings)) return res.json([]);
-        const nums = await storage.getPaymentNumbersByCountry(country);
-        return res.json(nums);
-      }
-      const nums = await storage.getPaymentNumbers();
-      res.json(nums.filter(n => n.isActive));
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  app.get("/api/payment-numbers", requireAuth, (_req, res) => res.json([]));
 
   // Admin Payment Numbers CRUD
   app.get("/api/admin/payment-numbers", requireAdmin, async (req, res) => {
@@ -2563,6 +2466,16 @@ export async function registerRoutes(
       if (!walletCountry) {
           return res.status(400).json({ message: "This wallet's country is no longer available for withdrawals." });
       }
+      if (
+        !isPhilippinesCountryCode(user.country) ||
+        !isPhilippinesCountryCode(wallet.country) ||
+        wallet.country.trim().toUpperCase() !== user.country.trim().toUpperCase() ||
+        !resolveCloudPayBankCode(wallet.paymentMethod)
+      ) {
+        return res.status(400).json({
+          message: "New withdrawals are available only to supported Philippines bank or e-wallet accounts.",
+        });
+      }
       let configuredMethods: string[] = [];
       try {
         const parsedMethods: unknown = JSON.parse(walletCountry.operators);
@@ -2650,7 +2563,10 @@ export async function registerRoutes(
   app.get("/api/wallets", requireAuth, async (req, res) => {
     try {
       const wallets = await storage.getWallets(req.session.userId!);
-      res.json(wallets);
+      res.json(wallets.filter((wallet) =>
+        isPhilippinesCountryCode(wallet.country) &&
+        resolveCloudPayBankCode(wallet.paymentMethod) !== undefined
+      ));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -2668,6 +2584,18 @@ export async function registerRoutes(
       );
       if (!walletCountry) {
         return res.status(400).json({ message: "Country unavailable for withdrawals." });
+      }
+      const user = await storage.getUser(req.session.userId!);
+      if (
+        !user ||
+        !isPhilippinesCountryCode(user.country) ||
+        !isPhilippinesCountryCode(parsedWallet.data.country) ||
+        parsedWallet.data.country.trim().toUpperCase() !== user.country.trim().toUpperCase() ||
+        !resolveCloudPayBankCode(parsedWallet.data.paymentMethod)
+      ) {
+        return res.status(400).json({
+          message: "Only supported Philippines bank or e-wallet accounts can be added.",
+        });
       }
       let configuredMethods: string[] = [];
       try {
@@ -3071,7 +2999,21 @@ export async function registerRoutes(
 
   app.post("/api/admin/withdrawals/:id/reject", requireAdmin, async (req, res) => {
     try {
-      const withdrawal = await storage.updateWithdrawal(parseInt(req.params.id), {
+      const withdrawalId = Number(req.params.id);
+      if (!Number.isSafeInteger(withdrawalId) || withdrawalId <= 0) {
+        return res.status(400).json({ message: "Invalid withdrawal ID" });
+      }
+      const current = (await storage.getWithdrawals()).find((item) => item.id === withdrawalId);
+      if (!current) return res.status(404).json({ message: "Withdrawal not found" });
+      if (
+        current.status !== "pending" ||
+        current.cloudpayOrderId ||
+        current.inpayOutTradeNo ||
+        current.inpayOrderNumber
+      ) {
+        return res.status(409).json({ message: "Only unsent pending withdrawals can be rejected here." });
+      }
+      const withdrawal = await storage.updateWithdrawal(withdrawalId, {
         status: "rejected",
         processedAt: new Date(),
         processedBy: req.session.userId,
@@ -3113,7 +3055,8 @@ export async function registerRoutes(
         return res.status(400).json({ message: "CloudPay is not enabled and configured for Philippines withdrawals" });
       }
       validateCloudPayConfig();
-      if (!resolveCloudPayBankCode(withdrawal.paymentMethod)) {
+      const cloudPayBankCode = resolveCloudPayBankCode(withdrawal.paymentMethod);
+      if (!cloudPayBankCode) {
         return res.status(400).json({ message: "This withdrawal method is not supported by CloudPay" });
       }
 
@@ -3126,7 +3069,7 @@ export async function registerRoutes(
       await cloudPayCreatePayout({
         orderId,
         amount: withdrawal.netAmount,
-        bankCode: withdrawal.paymentMethod,
+        bankCode: cloudPayBankCode,
         accountNumber: withdrawal.accountNumber,
         accountName: withdrawal.accountName,
       });
@@ -3581,26 +3524,12 @@ export async function registerRoutes(
     try {
       const settings = await storage.getSettings();
       const countries = await storage.getCountries();
-      const explicitRouting = parseDepositMethodsByCountry(settings.depositMethodsByCountry);
-      const routing = explicitRouting || {};
-      if (!explicitRouting) {
-        const paymentNumbers = await storage.getPaymentNumbers();
-        for (const country of countries) {
-          const code = country.code.trim().toUpperCase();
-          routing[code] = DEPOSIT_METHOD_IDS.filter((method) => {
-            if (method === "manual") {
-              return paymentNumbers.some((number) =>
-                number.isActive && number.country.toUpperCase() === code
-              );
-            }
-            return isLegacyDepositMethodAssigned(method, code, settings);
-          });
-        }
-      } else {
-        for (const country of countries) {
-          const code = country.code.trim().toUpperCase();
-          routing[code] ||= [];
-        }
+      const routing: Record<string, DepositMethodId[]> = {};
+      for (const country of countries) {
+        const code = country.code.trim().toUpperCase();
+        routing[code] = isPhilippinesCountryCode(code) && settings.cloudpayEnabled === "true"
+          ? ["cloudpay"]
+          : [];
       }
       res.json({
         ...adminSettings(settings),
@@ -3699,6 +3628,14 @@ export async function registerRoutes(
         if (!normalizedRouting) {
           return res.status(400).json({ message: "Deposit-method configuration is empty" });
         }
+        const nonCloudPayRoutes = Object.entries(normalizedRouting)
+          .filter(([, methods]) => methods.some((method) => method !== "cloudpay"))
+          .map(([code]) => code);
+        if (nonCloudPayRoutes.length > 0) {
+          return res.status(400).json({
+            message: "Only CloudPay/Galaxy can be routed for new deposits.",
+          });
+        }
         const countryCodes = new Set(
           (await storage.getCountries()).map((country) => country.code.trim().toUpperCase()),
         );
@@ -3723,6 +3660,9 @@ export async function registerRoutes(
           ? JSON.stringify(normalizedRouting)
           : value as string;
         await storage.setSetting(key, serializedValue, req.session.userId);
+      }
+      for (const key of DISABLED_DEPOSIT_SETTING_KEYS) {
+        await storage.setSetting(key, "false", req.session.userId);
       }
       await storage.logAdminAction(req.session.userId!, "update_settings", null, "Settings updated");
       res.json({ success: true });
@@ -3947,7 +3887,7 @@ export async function registerRoutes(
       const country = String(req.body.country || "").trim().toUpperCase();
       const activeCountries = await storage.getActiveCountries();
       if (!isPhilippinesCountryCode(country) || !isPhilippinesCountryCode(user.country)) {
-        return res.status(403).json({ message: "CloudPay is available only to Philippines accounts." });
+        return res.status(403).json({ message: "Deposits are currently available only to Philippines accounts." });
       }
       if (!activeCountries.some((entry) => entry.code.toUpperCase() === country) || country !== user.country.toUpperCase()) {
         return res.status(400).json({ message: "Country unavailable" });
@@ -4051,7 +3991,7 @@ export async function registerRoutes(
           message: "The request status is uncertain. Do not retry the payment; verification will continue automatically.",
         });
       }
-      return res.status(502).json({ message: error.message || "Unable to initiate the CloudPay payment" });
+      return res.status(502).json({ message: "Unable to start the bank/e-wallet payment right now." });
     }
   });
 
@@ -4064,7 +4004,7 @@ export async function registerRoutes(
       const deposit = await storage.getDeposit(depositId);
       if (!deposit) return res.status(404).json({ message: "Deposit not found" });
       if (deposit.userId !== req.session.userId) return res.status(403).json({ message: "Access denied" });
-      if (!deposit.cloudpayOrderId) return res.status(400).json({ message: "This deposit is not from CloudPay" });
+      if (!deposit.cloudpayOrderId) return res.status(400).json({ message: "Payment status is unavailable for this deposit." });
       if (deposit.status === "approved" || deposit.status === "rejected") {
         return res.json({ status: deposit.status });
       }
@@ -4072,7 +4012,7 @@ export async function registerRoutes(
       const verification = await cloudPayQuery(deposit.cloudpayOrderId);
       if (verification.status !== "pending") {
         if (!verification.amount || !cloudPayAmountMatches(verification.amount, deposit.amount)) {
-          return res.status(409).json({ message: "CloudPay could not confirm the deposit amount" });
+          return res.status(409).json({ message: "The payment amount could not be confirmed." });
         }
         const updated = await finalizeCloudPayDeposit(deposit.id, verification.status);
         return res.json({ status: updated?.status || deposit.status, providerStatus: verification.providerStatus });
@@ -4080,7 +4020,7 @@ export async function registerRoutes(
       return res.json({ status: deposit.status, providerStatus: verification.providerStatus });
     } catch (error: any) {
       console.error("[cloudpay] deposit status error:", error);
-      return res.status(502).json({ message: "Unable to verify the CloudPay deposit right now" });
+      return res.status(502).json({ message: "Unable to verify the payment right now." });
     }
   });
 
@@ -4367,30 +4307,22 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Country is unavailable" });
       }
       const settings = await storage.getSettings();
-      const providers: Array<{ provider: "ashtech" | "sendavapay" | "clapay" | "cloudpay"; name: string }> = [];
-      for (const provider of ["ashtech", "sendavapay", "clapay", "cloudpay"] as const) {
-        if (
-          isDepositMethodConfigured(country, provider, settings) &&
-          (provider !== "clapay" || isClapayConfigured()) &&
-          (provider !== "cloudpay" || (isPhilippinesCountryCode(country) && isCloudPayConfigured()))
-        ) {
-          providers.push({ provider, name: getDepositMethodName(provider, settings) });
-        }
+      const providers: Array<{ provider: "cloudpay"; name: string }> = [];
+      if (
+        isDepositMethodConfigured(country, "cloudpay", settings) &&
+        isCloudPayConfigured()
+      ) {
+        providers.push({ provider: "cloudpay", name: getDepositMethodName("cloudpay", settings) });
       }
       const requestedProvider = typeof req.query.provider === "string"
         ? req.query.provider.trim().toLowerCase()
         : "";
       if (requestedProvider) {
-        if (
-          requestedProvider !== "ashtech" &&
-          requestedProvider !== "sendavapay" &&
-          requestedProvider !== "clapay" &&
-          requestedProvider !== "cloudpay"
-        ) {
-      return res.status(400).json({ message: "Invalid deposit provider" });
+        if (requestedProvider !== "cloudpay") {
+          return res.status(403).json({ message: "Only the configured bank/e-wallet checkout is available." });
         }
         if (!providers.some(({ provider }) => provider === requestedProvider)) {
-      return res.status(403).json({ message: "This provider is not configured for this country" });
+          return res.status(403).json({ message: "This payment method is not configured for this country." });
         }
         const selected = providers.find(({ provider }) => provider === requestedProvider)!;
         return res.json({ ...selected, providers: [selected] });
@@ -4398,7 +4330,7 @@ export async function registerRoutes(
       if (providers.length > 0) {
         return res.json({ ...providers[0], providers });
       }
-      return res.status(503).json({ message: "No automatic provider is available for this country" });
+      return res.status(503).json({ message: "The bank/e-wallet checkout is currently unavailable." });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -4583,7 +4515,21 @@ export async function registerRoutes(
 
   app.post("/api/banker/withdrawals/:id/reject", requireBanker, async (req, res) => {
     try {
-      const withdrawal = await storage.updateWithdrawal(parseInt(req.params.id), {
+      const withdrawalId = Number(req.params.id);
+      if (!Number.isSafeInteger(withdrawalId) || withdrawalId <= 0) {
+        return res.status(400).json({ message: "Invalid withdrawal ID" });
+      }
+      const current = (await storage.getWithdrawals()).find((item) => item.id === withdrawalId);
+      if (!current) return res.status(404).json({ message: "Withdrawal not found" });
+      if (
+        current.status !== "pending" ||
+        current.cloudpayOrderId ||
+        current.inpayOutTradeNo ||
+        current.inpayOrderNumber
+      ) {
+        return res.status(409).json({ message: "Only unsent pending withdrawals can be rejected here." });
+      }
+      const withdrawal = await storage.updateWithdrawal(withdrawalId, {
         status: "rejected",
         processedAt: new Date(),
         processedBy: req.session.userId,
