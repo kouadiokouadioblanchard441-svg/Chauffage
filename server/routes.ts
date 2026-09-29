@@ -163,6 +163,11 @@ function updateBlockedIpsCache(values: string[]) {
 // --- end brute-force protection ---
 
 const WITHDRAWAL_PREPAYMENT_RATE = 25;
+const PHILIPPINES_COUNTRY_CODE = "PH";
+
+function isPhilippinesCountryCode(value: unknown): boolean {
+  return typeof value === "string" && value.trim().toUpperCase() === PHILIPPINES_COUNTRY_CODE;
+}
 
 async function creditApprovedDeposit(deposit: {
   id: number;
@@ -546,8 +551,12 @@ export async function registerRoutes(
   app.post("/api/auth/register", async (req, res) => {
     try {
       const data = registerSchema.parse(req.body);
+      const countryCode = data.country.trim().toUpperCase();
       const activeCountries = await storage.getActiveCountries();
-      if (!activeCountries.some(country => country.code === data.country)) {
+      if (
+        !isPhilippinesCountryCode(countryCode) ||
+        !activeCountries.some(country => country.code.toUpperCase() === countryCode)
+      ) {
         return res.status(400).json({ message: "Country unavailable" });
       }
       
@@ -569,7 +578,7 @@ export async function registerRoutes(
       const user = await storage.createUser({
         fullName: data.fullName,
         phone: data.phone,
-        country: data.country,
+        country: countryCode,
         password: data.password,
         referredBy,
       });
@@ -1195,6 +1204,16 @@ export async function registerRoutes(
       
       if (!user) {
         return res.status(401).json({ message: "Non authentifie" });
+      }
+
+      const requestedCountry = typeof country === "string" ? country.trim().toUpperCase() : "";
+      const accountCountry = user.country.trim().toUpperCase();
+      if (
+        !isPhilippinesCountryCode(requestedCountry) ||
+        !isPhilippinesCountryCode(accountCountry) ||
+        requestedCountry !== accountCountry
+      ) {
+        return res.status(403).json({ message: "Deposits are currently available only in the Philippines." });
       }
 
       const settings = await storage.getSettings();
@@ -3670,7 +3689,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
   app.get("/api/countries", async (req, res) => {
     try {
       const activeCountries = await storage.getActiveCountries();
-      res.json(activeCountries);
+      res.json(activeCountries.filter(country => isPhilippinesCountryCode(country.code)));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -3739,7 +3758,10 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const country = String(req.params.country || "").trim().toUpperCase();
       const activeCountries = await storage.getActiveCountries();
-      if (!activeCountries.some((entry) => entry.code.toUpperCase() === country)) {
+      if (
+        !isPhilippinesCountryCode(country) ||
+        !activeCountries.some((entry) => entry.code.toUpperCase() === country)
+      ) {
         return res.status(404).json({ message: "Country unavailable" });
       }
       const settings = await storage.getSettings();
@@ -3949,7 +3971,10 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const country = String(req.params.country || "").trim().toUpperCase();
       const active = await storage.getActiveCountries();
-      if (!active.some(c => c.code.toUpperCase() === country)) {
+      if (
+        !isPhilippinesCountryCode(country) ||
+        !active.some(c => c.code.toUpperCase() === country)
+      ) {
         return res.status(404).json({ message: "Country is unavailable" });
       }
       const settings = await storage.getSettings();
@@ -3988,7 +4013,10 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const country = String(req.params.country || "").trim().toUpperCase();
       const activeCountries = await storage.getActiveCountries();
-      if (!activeCountries.some((entry) => entry.code.toUpperCase() === country)) {
+      if (
+        !isPhilippinesCountryCode(country) ||
+        !activeCountries.some((entry) => entry.code.toUpperCase() === country)
+      ) {
         return res.status(404).json({ message: "Country is unavailable" });
       }
       const settings = await storage.getSettings();

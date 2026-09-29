@@ -103,6 +103,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
 
   if (!user) return null;
 
+  const countryUnavailable = user.country.trim().toUpperCase() !== "PH";
   const paymentMethods = getPaymentMethodsForCountry(user.country);
   const activeChannels = channels?.filter(c => c.isActive) || [];
   const presetAmounts = [2000, 5000, 10000, 20000, 50000, 100000];
@@ -116,7 +117,11 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
           </DialogTitle>
         </DialogHeader>
 
-        {step === "amount" ? (
+        {countryUnavailable ? (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="status">
+            Deposits are currently available only for accounts in the Philippines.
+          </div>
+        ) : step === "amount" ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Minimum: {formatCurrency(2000, user.country)}
