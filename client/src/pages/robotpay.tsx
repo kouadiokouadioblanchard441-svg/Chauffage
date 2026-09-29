@@ -9,7 +9,7 @@ import { getCountriesForDisplay, type ApiCountry } from "@/lib/countries";
 import { sanitizeDepositDisplayText } from "@/lib/deposit-display";
 import type { PaymentNumber } from "@shared/schema";
 
-type Provider = "ashtech" | "sendavapay" | "soleaspay" | "clapay";
+type Provider = "ashtech" | "sendavapay" | "soleaspay" | "clapay" | "cloudpay";
 type Operator = { id?: string; name?: string; operator?: string; slug?: string; code?: string; requiresOtp?: boolean; status?: string; provider?: Provider; manualNumber?: PaymentNumber };
 type ProviderInfo = { provider: Provider; name: string; providers?: Array<{ provider: Provider; name: string }> };
 type SoleaspayServiceResponse = {
@@ -56,7 +56,7 @@ export default function RobotPayPage() {
   const requestedProvider = (params.get("provider") || "").toLowerCase();
   const isSoleaspayFlow = requestedProvider === "soleaspay";
   const isManualFlow = requestedProvider === "manual";
-  const forcedProvider = requestedProvider === "ashtech" || requestedProvider === "sendavapay" || requestedProvider === "clapay"
+  const forcedProvider = requestedProvider === "ashtech" || requestedProvider === "sendavapay" || requestedProvider === "clapay" || requestedProvider === "cloudpay"
     ? requestedProvider
     : "";
   const feePaymentId = Number(params.get("feePaymentId") || 0) || undefined;
@@ -67,13 +67,20 @@ export default function RobotPayPage() {
   const clapayReturnDepositId = Number.isSafeInteger(parsedClapayReturnDepositId) && parsedClapayReturnDepositId > 0
     ? parsedClapayReturnDepositId
     : null;
+  const parsedCloudPayReturnDepositId = forcedProvider === "cloudpay"
+    ? Number(params.get("cloudpayDepositId") || 0)
+    : 0;
+  const cloudPayReturnDepositId = Number.isSafeInteger(parsedCloudPayReturnDepositId) && parsedCloudPayReturnDepositId > 0
+    ? parsedCloudPayReturnDepositId
+    : null;
+  const returnedDepositId = clapayReturnDepositId || cloudPayReturnDepositId;
   const isWithdrawalFeePayment = Boolean(feePaymentId);
   // 0 = operator, 1 = phone, 2 = confirmation, 3 = success
-  const [step, setStep] = useState(clapayReturnDepositId ? 2 : 0);
+  const [step, setStep] = useState(returnedDepositId ? 2 : 0);
   const [phone, setPhone] = useState("");
   const [clapayOperatorOtp, setClapayOperatorOtp] = useState("");
   const [operator, setOperator] = useState<Operator | null>(null);
-  const [depositId, setDepositId] = useState<number | null>(clapayReturnDepositId);
+  const [depositId, setDepositId] = useState<number | null>(returnedDepositId);
   const [transactionReference] = useState(() => `deposit-${Math.floor(10000 + Math.random() * 90000)}`);
   const [paymentToken, setPaymentToken] = useState("");
   const [otpToken, setOtpToken] = useState("");
@@ -82,10 +89,11 @@ export default function RobotPayPage() {
   const [ashtechOtpRequired, setAshtechOtpRequired] = useState(false);
   const [ussd, setUssd] = useState("");
   const [message, setMessage] = useState(
-    clapayReturnDepositId ? "Return received. Verifying payment with Clapay…" : "",
+    returnedDepositId ? "Return received. Verifying payment…" : "",
   );
   const [redirectUrl, setRedirectUrl] = useState("");
-  const [status, setStatus] = useState(clapayReturnDepositId ? "processing" : "pending");
+  const [cloudPayQrCode, setCloudPayQrCode] = useState("");
+  const [status, setStatus] = useState(returnedDepositId ? "processing" : "pending");
   const [manualTransactionReference, setManualTransactionReference] = useState("");
   const [manualSubmitted, setManualSubmitted] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
@@ -197,9 +205,26 @@ export default function RobotPayPage() {
     requiresOtp: item.requiresOtp,
     provider: "clapay",
   }));
+  const { data: cloudPayBanksData, isLoading: cloudPayBanksLoading } = useQuery<{
+    banks: Array<{ id: string; name: string; provider: "cloudpay" }>;
+  }>({
+    queryKey: ["/api/cloudpay/banks", country],
+    queryFn: async () => {
+      const res = await fetch(`/api/cloudpay/banks/${encodeURIComponent(country)}`, { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Unable to load payment methods."));
+      return data;
+    },
+    enabled: !!providerInfo && availableProviders.some((item) => item.provider === "cloudpay") && !!country,
+  });
+  const cloudPayOperators: Operator[] = (cloudPayBanksData?.banks || []).map((bank) => ({
+    id: bank.id,
+    name: bank.name,
+    provider: "cloudpay",
+  }));
   const automaticOperators: Operator[] = isSoleaspayFlow
     ? soleaspayOperators
-    : [...ashtechOperators, ...sendavaOperators, ...clapayOperators];
+    : [...ashtechOperators, ...sendavaOperators, ...clapayOperators, ...cloudPayOperators];
   const operators: Operator[] = isManualFlow
     ? manualNumbers.map(number => ({
         id: `manual-${number.id}`,
@@ -221,7 +246,7 @@ export default function RobotPayPage() {
           ];
   const loadingOperators = isSoleaspayFlow
     ? soleaspayServicesLoading
-     : manualNumbersLoading || providerLoading || sendavaLoading || ashtechLoading || clapayLoading;
+      : manualNumbersLoading || providerLoading || sendavaLoading || ashtechLoading || clapayLoading || cloudPayBanksLoading;
   const sendavaMutation = useMutation({
     mutationFn: async () => {
        if (!operator?.id) throw new Error("Select an operator");
@@ -297,6 +322,36 @@ export default function RobotPayPage() {
       setDepositId(data.depositId);
       setRedirectUrl(data.redirectUrl || "");
        setMessage(sanitizeDepositDisplayText(data.message, "Confirm the payment on your phone."));
+      setStatus("processing");
+      setStep(2);
+      queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
+    },
+    onError: (error: any) => toast({
+      title: "Payment unavailable",
+      description: sanitizeDepositDisplayText(error.message, "The payment could not be initiated."),
+      variant: "destructive",
+    }),
+  });
+  const cloudPayMutation = useMutation({
+    mutationFn: async () => {
+      if (!operator?.id) throw new Error("Select a bank or e-wallet");
+      const res = await apiRequest("POST", "/api/cloudpay/initiate", {
+        amount,
+        country,
+        bankCode: operator.id,
+        phone: paymentPhone,
+        feePaymentId,
+        withdrawalAmount,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Unable to initiate the payment."));
+      return data as { depositId: number; redirectUrl?: string; qrCode?: string; message?: string };
+    },
+    onSuccess: (data) => {
+      setDepositId(data.depositId);
+      setRedirectUrl(data.redirectUrl || "");
+      setCloudPayQrCode(data.qrCode || "");
+      setMessage(sanitizeDepositDisplayText(data.message, "Complete the payment using the bank or e-wallet instructions."));
       setStatus("processing");
       setStep(2);
       queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
@@ -390,6 +445,8 @@ export default function RobotPayPage() {
             ? `/api/deposits/${depositId}/verify`
             : activeProvider === "clapay"
               ? `/api/deposits/${depositId}/clapay-status`
+              : activeProvider === "cloudpay"
+                ? `/api/deposits/${depositId}/cloudpay-status`
               : `/api/deposits/${depositId}/sendavapay-status`;
         const res = await fetch(url, { credentials: "include" });
         const data = await res.json();
@@ -399,7 +456,7 @@ export default function RobotPayPage() {
           setStep(3);
           clearInterval(timer);
           queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
-          if (activeProvider === "soleaspay" || activeProvider === "clapay") refreshUser();
+          if (activeProvider === "soleaspay" || activeProvider === "clapay" || activeProvider === "cloudpay") refreshUser();
         }
         if (data.status === "rejected") {
           clearInterval(timer);
@@ -430,6 +487,7 @@ export default function RobotPayPage() {
     else if (activeProvider === "ashtech") ashtechMutation.mutate(undefined);
     else if (activeProvider === "soleaspay") soleaspayMutation.mutate();
     else if (activeProvider === "clapay") clapayMutation.mutate();
+    else if (activeProvider === "cloudpay") cloudPayMutation.mutate();
     else sendavaMutation.mutate();
   };
   const submitOtp = async () => {
@@ -442,7 +500,7 @@ export default function RobotPayPage() {
     if (!res.ok) { toast({ title: "Invalid OTP", variant: "destructive" }); return; }
     setStep(2); setStatus("processing");
   };
-  const busy = sendavaMutation.isPending || ashtechMutation.isPending || soleaspayMutation.isPending || clapayMutation.isPending || manualMutation.isPending;
+  const busy = sendavaMutation.isPending || ashtechMutation.isPending || soleaspayMutation.isPending || clapayMutation.isPending || cloudPayMutation.isPending || manualMutation.isPending;
 
   useEffect(() => {
     const timer = window.setInterval(() => setClockNow(Date.now()), 1000);
@@ -666,17 +724,25 @@ export default function RobotPayPage() {
           )}
           {step === 2 && (
             <div className="space-y-5 text-center">
-              {redirectUrl ? (
+              {(redirectUrl || cloudPayQrCode) ? (
                 <>
                   <p className="text-gray-700">{message || "Open the secure page to complete your payment."}</p>
-                  <a
-                    href={redirectUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] py-3 font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827]"
-                  >
-                    Open payment page
-                  </a>
+                  {cloudPayQrCode && (
+                    <div className="mx-auto flex w-full max-w-xs justify-center rounded-xl border bg-white p-3">
+                      <img src={cloudPayQrCode} alt="Payment QR code" className="max-h-64 w-full object-contain" />
+                    </div>
+                  )}
+                  {redirectUrl && (
+                    <a
+                      href={redirectUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] py-3 font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827]"
+                    >
+                      Open payment page
+                    </a>
+                  )}
+                  <p className="text-xs text-gray-500">Keep this page open; payment status updates automatically.</p>
                 </>
               ) : (otpToken || ashtechOtpRequired) ? (
                 <>

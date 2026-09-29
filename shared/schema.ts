@@ -112,6 +112,7 @@ export const deposits = pgTable("deposits", {
   westpayReference: text("westpay_reference"),
   ashtechTransactionId: text("ashtech_transaction_id"),
   ashtechReference: text("ashtech_reference"),
+  cloudpayOrderId: text("cloudpay_order_id"),
   withdrawalFeePaymentId: integer("withdrawal_fee_payment_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   processedAt: timestamp("processed_at"),
@@ -132,6 +133,7 @@ export const withdrawals = pgTable("withdrawals", {
   status: text("status").notNull().default("pending"),
   inpayOrderNumber: text("inpay_order_number"),
   inpayOutTradeNo: text("inpay_out_trade_no"),
+  cloudpayOrderId: text("cloudpay_order_id"),
   omnipayId: text("omnipay_id"),
   omnipayReference: text("omnipay_reference"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -387,9 +389,22 @@ export const withdrawalSchema = z.object({
 
 export const walletSchema = z.object({
   accountName: z.string().trim().min(2, "Account name is required").max(100, "Name is too long"),
-  accountNumber: phoneNumberSchema,
+  accountNumber: z.string().trim().min(8, "Account number is required").max(50, "Account number is too long"),
   paymentMethod: z.string().trim().min(2, "Payment method is required").max(60, "Invalid payment method"),
   country: z.string().trim().regex(/^[A-Z]{2,3}$/, "Invalid country"),
+}).superRefine((wallet, context) => {
+  const accountPattern = wallet.country.toUpperCase() === "PH"
+    ? /^\+?[0-9]{8,20}$/
+    : /^\+?[0-9]{8,15}$/;
+  if (!accountPattern.test(wallet.accountNumber)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["accountNumber"],
+      message: wallet.country.toUpperCase() === "PH"
+        ? "Enter an 8 to 20 digit account or wallet number"
+        : "Invalid phone number",
+    });
+  }
 });
 
 export const giftCodeSchema = z.object({

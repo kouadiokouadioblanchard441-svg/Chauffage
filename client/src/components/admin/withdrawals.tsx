@@ -33,6 +33,9 @@ export default function AdminWithdrawals() {
       return res.json();
     },
   });
+  const { data: adminSettings } = useQuery<Record<string, string>>({
+    queryKey: ["/api/admin/settings"],
+  });
 
   const withdrawals = allWithdrawals?.filter(w =>
     statusFilter === "all" ? true : w.status === statusFilter
@@ -86,12 +89,59 @@ export default function AdminWithdrawals() {
     onSettled: () => setProcessingId(null),
   });
 
+  const cloudPayMutation = useMutation({
+    mutationFn: async (id: number) => {
+      setProcessingId(id);
+      const res = await fetch(`/api/admin/withdrawals/${id}/cloudpay`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || `Sending withdrawal to CloudPay failed (code ${res.status})`);
+      return data as { uncertain?: boolean };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({
+        title: data.uncertain ? "CloudPay request needs status check" : "Withdrawal sent to CloudPay",
+        description: data.uncertain ? "Do not send it again. Check the provider status before taking another action." : undefined,
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Unable to send withdrawal to CloudPay", description: error.message, variant: "destructive" });
+    },
+    onSettled: () => setProcessingId(null),
+  });
+
+  const cloudPayStatusMutation = useMutation({
+    mutationFn: async (id: number) => {
+      setProcessingId(id);
+      const res = await fetch(`/api/admin/withdrawals/${id}/cloudpay-status`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || `CloudPay status check failed (code ${res.status})`);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
+      toast({ title: `CloudPay status: ${data.status}` });
+    },
+    onError: (error: any) => {
+      toast({ title: "Unable to check CloudPay status", description: error.message, variant: "destructive" });
+    },
+    onSettled: () => setProcessingId(null),
+  });
+
   const filteredWithdrawals = withdrawals?.filter(w =>
     w.accountNumber.includes(filter) ||
     w.user.phone.includes(filter) ||
     w.user.fullName.toLowerCase().includes(filter.toLowerCase()) ||
     ((w as any).inpayOutTradeNo && (w as any).inpayOutTradeNo.toLowerCase().includes(filter.toLowerCase())) ||
-    ((w as any).inpayOrderNumber && (w as any).inpayOrderNumber.toLowerCase().includes(filter.toLowerCase()))
+    ((w as any).inpayOrderNumber && (w as any).inpayOrderNumber.toLowerCase().includes(filter.toLowerCase())) ||
+    ((w as any).cloudpayOrderId && (w as any).cloudpayOrderId.toLowerCase().includes(filter.toLowerCase()))
   ) || [];
 
   return (
@@ -206,10 +256,16 @@ export default function AdminWithdrawals() {
                       <p className="font-mono font-medium text-foreground">{(withdrawal as any).inpayOrderNumber}</p>
                     </div>
                   )}
+                  {(withdrawal as any).cloudpayOrderId && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">CloudPay order reference</p>
+                      <p className="font-mono font-medium text-foreground">{(withdrawal as any).cloudpayOrderId}</p>
+                    </div>
+                  )}
                 </div>
 
                 {withdrawal.status === "pending" && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -222,6 +278,22 @@ export default function AdminWithdrawals() {
                         ? <Loader2 className="w-4 h-4 animate-spin" />
                         : <><Send className="w-4 h-4 mr-1" /> Send to InPay</>}
                     </Button>
+                    {withdrawal.country.toUpperCase() === "PH" &&
+                      adminSettings?.cloudpayEnabled === "true" &&
+                      adminSettings?.cloudpayConfigured === "true" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => cloudPayMutation.mutate(withdrawal.id)}
+                          disabled={processingId === withdrawal.id}
+                          data-testid={`button-send-cloudpay-${withdrawal.id}`}
+                        >
+                          {processingId === withdrawal.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <><Send className="w-4 h-4 mr-1" /> Send to CloudPay</>}
+                        </Button>
+                      )}
                     <Button
                       size="sm"
                       className="flex-1"
@@ -241,6 +313,20 @@ export default function AdminWithdrawals() {
                        <X className="w-4 h-4 mr-1" /> Reject
                     </Button>
                   </div>
+                )}
+                {withdrawal.status === "processing" && withdrawal.cloudpayOrderId && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => cloudPayStatusMutation.mutate(withdrawal.id)}
+                    disabled={processingId === withdrawal.id}
+                    data-testid={`button-check-cloudpay-${withdrawal.id}`}
+                  >
+                    {processingId === withdrawal.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : "Check CloudPay status"}
+                  </Button>
                 )}
               </CardContent>
             </Card>

@@ -1,4 +1,5 @@
 import { getWithdrawalMethods } from "@shared/withdrawal-methods";
+import { CLOUDPAY_BANKS } from "@shared/cloudpay-banks";
 
 // The API remains authoritative. These bootstrap entries are used only when its
 // request fails so public country pickers do not become unusable during an outage.
@@ -93,7 +94,15 @@ export function getCountryByCode(code: string, apiCountries?: ApiCountry[]) {
 
 export function getPaymentMethodsForCountry(code: string, apiCountries?: ApiCountry[]): string[] {
   const country = getCountryByCode(code, apiCountries);
-  return country ? [...country.paymentMethods] : [];
+  if (!country) return [];
+  if (country.code.toUpperCase() === "PH") {
+    const methods = [
+      ...country.paymentMethods,
+      ...CLOUDPAY_BANKS.map((bank) => bank.name),
+    ];
+    return methods.filter((method, index) => methods.indexOf(method) === index);
+  }
+  return [...country.paymentMethods];
 }
 
 export function getWithdrawalMethodsForCountry(code: string, apiCountries?: ApiCountry[]): string[] {

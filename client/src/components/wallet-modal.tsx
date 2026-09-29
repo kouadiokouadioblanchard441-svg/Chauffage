@@ -18,7 +18,7 @@ import type { WithdrawalWallet } from "@shared/schema";
 
 const walletSchema = z.object({
   accountName: z.string().min(2, "Account name is required"),
-  accountNumber: z.string().min(8, "Number is required"),
+  accountNumber: z.string().trim().min(8, "Number is required").max(20, "Number is too long").regex(/^\+?[0-9]{8,20}$/, "Enter an account or wallet number using 8 to 20 digits"),
   paymentMethod: z.string().min(2, "Payment method is required"),
 });
 

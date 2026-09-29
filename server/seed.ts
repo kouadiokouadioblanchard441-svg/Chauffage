@@ -28,6 +28,22 @@ export async function seed() {
     ALTER TABLE "deposits" ADD COLUMN IF NOT EXISTS "withdrawal_fee_payment_id" integer
   `).catch(() => undefined);
   await db.execute(sql`
+    ALTER TABLE "deposits" ADD COLUMN IF NOT EXISTS "cloudpay_order_id" text
+  `);
+  await db.execute(sql`
+    ALTER TABLE "withdrawals" ADD COLUMN IF NOT EXISTS "cloudpay_order_id" text
+  `);
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "deposits_cloudpay_order_id_unique"
+      ON "deposits" ("cloudpay_order_id")
+      WHERE "cloudpay_order_id" IS NOT NULL
+  `);
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "withdrawals_cloudpay_order_id_unique"
+      ON "withdrawals" ("cloudpay_order_id")
+      WHERE "cloudpay_order_id" IS NOT NULL
+  `);
+  await db.execute(sql`
     CREATE TABLE IF NOT EXISTS "withdrawal_fee_payments" (
       "id" serial PRIMARY KEY,
       "user_id" integer NOT NULL REFERENCES "users"("id"),

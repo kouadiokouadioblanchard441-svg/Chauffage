@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Save, Link, Clock, Users, Zap } from "lucide-react";
 
 type AdminCountry = { code: string; name: string; isActive: boolean };
-type DepositMethodId = "manual" | "soleaspay" | "ashtech" | "sendavapay" | "westpay" | "inpay" | "clapay";
+type DepositMethodId = "manual" | "soleaspay" | "ashtech" | "sendavapay" | "westpay" | "inpay" | "clapay" | "cloudpay";
 
 const DEPOSIT_METHOD_OPTIONS: Array<{ value: DepositMethodId; label: string }> = [
   { value: "manual", label: "Manual payment" },
@@ -25,6 +25,7 @@ const DEPOSIT_METHOD_OPTIONS: Array<{ value: DepositMethodId; label: string }> =
   { value: "westpay", label: "WestPay" },
   { value: "inpay", label: "InPay" },
   { value: "clapay", label: "Clapay" },
+  { value: "cloudpay", label: "CloudPay / Galaxy" },
 ];
 
 function getInitialDepositRouting(
@@ -70,6 +71,9 @@ function getInitialDepositRouting(
     }
     if (settings.inpayEnabled === "true" && countryAllowed(settings.inpayCountries, normalizedCode)) {
       methods.push("inpay");
+    }
+    if (settings.cloudpayEnabled === "true" && normalizedCode === "PH") {
+      methods.push("cloudpay");
     }
     if (paymentNumbers.some((number) => number.isActive && number.country.toUpperCase() === normalizedCode)) {
       methods.push("manual");
@@ -127,6 +131,7 @@ const settingsSchema = z.object({
   inpayChannelName: z.string().min(1, "Name is required"),
   clapayEnabled: z.boolean(),
   clapayChannelName: z.string().min(1, "Name is required"),
+  cloudpayEnabled: z.boolean(),
 });
 
 type SettingsForm = z.infer<typeof settingsSchema>;
@@ -194,6 +199,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
       inpayChannelName: "InPay",
       clapayEnabled: false,
       clapayChannelName: "Clapay",
+       cloudpayEnabled: false,
     },
   });
 
@@ -240,6 +246,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
         inpayChannelName: settings.inpayChannelName || "InPay",
         clapayEnabled: settings.clapayEnabled === "true",
         clapayChannelName: settings.clapayChannelName || "Clapay",
+        cloudpayEnabled: settings.cloudpayEnabled === "true",
       });
       if (!countriesLoading && !paymentNumbersLoading) {
         setDepositMethodsByCountry(getInitialDepositRouting(settings, countries, paymentNumbers));
@@ -263,6 +270,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
         ashtechEnabled: String(data.ashtechEnabled),
         inpayEnabled: String(data.inpayEnabled),
         clapayEnabled: String(data.clapayEnabled),
+        cloudpayEnabled: String(data.cloudpayEnabled),
       };
       const response = await apiRequest("POST", "/api/admin/settings", serialized);
       if (!response.ok) {
@@ -331,7 +339,9 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {DEPOSIT_METHOD_OPTIONS.map((method) => (
+                      {DEPOSIT_METHOD_OPTIONS
+                        .filter((method) => method.value !== "cloudpay" || code === "PH")
+                        .map((method) => (
                         <label key={method.value} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
                           <input
                             type="checkbox"
@@ -963,6 +973,42 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               <p>Signed webhook required: configure <code>CLAPAY_WEBHOOK_SECRET</code> and <code>CLAPAY_WEBHOOK_UNIQUE_KEY</code> from the Clapay dashboard. The public base URL comes from <code>PUBLIC_APP_URL</code> or the HTTPS host supplied by Plesk; the callback is <code>/api/clapay/webhook</code> and the return opens <code>/robotpay</code>.</p>
               <p>By default, only the server status <code>SUCCESSFUL</code> credits a deposit; <code>FAILED</code> and <code>SIGNATURE_DESTROYED</code> reject it. Other statuses remain pending. The <code>CLAPAY_STATUS_SUCCESS_VALUES</code> and <code>CLAPAY_STATUS_FAILURE_VALUES</code> variables can replace these values according to the merchant agreement. The webhook and browser return alone never confirm a payment.</p>
               <p>To customize the initiation template, available markers are <code>{"{{amount}}"}</code>, <code>{"{{country}}"}</code>, <code>{"{{operator}}"}</code>, <code>{"{{operatorId}}"}</code>, <code>{"{{operatorName}}"}</code>, <code>{"{{operatorOtp}}"}</code> (optional), <code>{"{{phone}}"}</code>, <code>{"{{accountNumber}}"}</code>, <code>{"{{accountName}}"}</code>, <code>{"{{accountFirstName}}"}</code>, <code>{"{{accountLastName}}"}</code>, <code>{"{{accountEmail}}"}</code>, <code>{"{{reference}}"}</code>, <code>{"{{depositId}}"}</code>, <code>{"{{callbackUrl}}"}</code>, <code>{"{{returnUrl}}"}</code>, and <code>{"{{signature}}"}</code>. Do not put credentials in these templates.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── CloudPay / Galaxy ── */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Zap className="w-5 h-5 text-orange-600" />
+              CloudPay / Galaxy — Philippines
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-xl border p-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Enable CloudPay / Galaxy</p>
+                <p className="text-xs text-gray-500">Enables Philippines deposits and admin-submitted withdrawals after approval.</p>
+              </div>
+              <FormField control={form.control} name="cloudpayEnabled" render={({ field }) => (
+                <FormItem className="flex items-center gap-2 space-y-0">
+                  <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
+                  <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                </FormItem>
+              )} />
+            </div>
+            <div className={`rounded-xl border p-3 text-xs space-y-1 ${
+              settings?.cloudpayConfigured === "true"
+                ? "border-green-100 bg-green-50 text-green-900"
+                : "border-amber-200 bg-amber-50 text-amber-900"
+            }`}>
+              <p className="font-semibold">
+                {settings?.cloudpayConfigured === "true" ? "Server configuration is complete" : "Server configuration is incomplete"}
+              </p>
+              <p>Set <code>CLOUDPAY_MERCHANT_ID</code> and a newly issued <code>CLOUDPAY_SIGNING_SECRET</code> in Replit Secrets. Do not reuse the key previously posted in chat or paste secrets into this settings page. If production runs on Plesk, configure its secret environment separately after key rotation.</p>
+              <p>Also set <code>CLOUDPAY_PAYMENT_TYPE</code> to the merchant-approved value and confirm the merchant account accepts PHP by setting <code>CLOUDPAY_AMOUNT_CURRENCY=PHP</code>. The app blocks CloudPay until this currency confirmation is present.</p>
+              <p><code>CLOUDPAY_API_BASE_URL</code> is optional and defaults to the documented host. Configure the callback URL as <code>/api/webhooks/cloudpay</code>. Customer checkout uses bank/e-wallet names; provider selection remains administrator-controlled.</p>
             </div>
           </CardContent>
         </Card>

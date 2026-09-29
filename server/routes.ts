@@ -1,10 +1,12 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
+import multer from "multer";
 import { storage } from "./storage";
 import bcrypt from "bcrypt";
 import { registerSchema, loginSchema, depositSchema, walletSchema, phoneNumberSchema } from "@shared/schema";
 import { getWithdrawalMethods, isAllowedWithdrawalMethod } from "@shared/withdrawal-methods";
+import { CLOUDPAY_BANKS, getCloudPayBank, resolveCloudPayBankCode } from "@shared/cloudpay-banks";
 import { z } from "zod";
 import ConnectPgSimple from "connect-pg-simple";
 import { 
@@ -66,6 +68,19 @@ import {
   isClapayConfigured,
   verifyClapayWebhookSignature,
 } from "./clapay";
+import {
+  CloudPayError,
+  type CloudPayStatus,
+  cloudPayAmountMatches,
+  cloudPayCreateDeposit,
+  cloudPayCreatePayout,
+  cloudPayQuery,
+  getCloudPayMerchantId,
+  getCloudPaySigningSecret,
+  isCloudPayConfigured,
+  validateCloudPayConfig,
+  verifyCloudPaySignature,
+} from "./cloudpay";
 import {
   formatTelegramValue,
   sendTelegramInpayError,
@@ -261,6 +276,7 @@ const DEPOSIT_METHOD_IDS = [
   "westpay",
   "inpay",
   "clapay",
+  "cloudpay",
 ] as const;
 type DepositMethodId = typeof DEPOSIT_METHOD_IDS[number];
 const DEPOSIT_METHOD_ID_SET = new Set<string>(DEPOSIT_METHOD_IDS);
@@ -280,6 +296,7 @@ const PUBLIC_SETTING_KEYS = new Set([
   "ashtechEnabled", "ashtechChannelName", "ashtechCountries",
   "inpayEnabled", "inpayChannelName", "inpayCountries",
   "clapayEnabled", "clapayChannelName",
+  "cloudpayEnabled",
   "depositMethodsByCountry",
 ]);
 const ADMIN_SETTING_KEYS = new Set([
@@ -361,6 +378,9 @@ function isLegacyDepositMethodAssigned(
       // Clapay is deliberately excluded from derived legacy routing. It only
       // becomes available after an administrator saves an explicit country map.
       return false;
+    case "cloudpay":
+      // CloudPay is PH-only and requires an explicit country routing choice.
+      return false;
   }
 }
 
@@ -388,6 +408,7 @@ function isDepositProviderGloballyEnabled(
     westpay: "westpayEnabled",
     inpay: "inpayEnabled",
     clapay: "clapayEnabled",
+    cloudpay: "cloudpayEnabled",
   };
   return settings[settingKey[method]] === "true";
 }
@@ -418,6 +439,7 @@ function getDepositMethodName(
     westpay: "westpayChannelName",
     inpay: "inpayChannelName",
     clapay: "clapayChannelName",
+    cloudpay: "cloudpayChannelName",
   };
   const defaultName: Record<Exclude<DepositMethodId, "manual">, string> = {
     soleaspay: "SoleaPay",
@@ -426,7 +448,9 @@ function getDepositMethodName(
     westpay: "WestPay",
     inpay: "InPay",
     clapay: "Clapay",
+    cloudpay: "Bank / e-wallet transfer",
   };
+  if (method === "cloudpay") return defaultName.cloudpay;
   return settings[settingKey[method]] || defaultName[method];
 }
 
@@ -453,6 +477,45 @@ function validatePhone(value: unknown, fieldName: string): string {
     throw new Error(`Invalid ${fieldName}`);
   }
   return result.data;
+}
+
+async function refundRejectedWithdrawal(
+  withdrawal: { id: number; userId: number; amount: number },
+  provider = "InPay",
+) {
+  const user = await storage.getUser(withdrawal.userId);
+  if (!user) return;
+  await storage.updateUser(user.id, {
+    balance: (parseFloat(user.balance) + withdrawal.amount).toFixed(2),
+  });
+  await storage.createTransaction({
+    userId: user.id,
+    type: "withdrawal_refund",
+    amount: withdrawal.amount.toString(),
+    description: `${provider} withdrawal refund #${withdrawal.id}`,
+  });
+}
+
+async function finalizeCloudPayDeposit(depositId: number, status: CloudPayStatus) {
+  if (status === "approved") {
+    const claimed = await storage.claimDepositFinalization(depositId, "approved");
+    if (claimed) await creditApprovedDeposit(claimed);
+  } else if (status === "rejected") {
+    await storage.claimDepositFinalization(depositId, "rejected");
+  }
+  return storage.getDeposit(depositId);
+}
+
+async function finalizeCloudPayWithdrawal(withdrawalId: number, status: CloudPayStatus) {
+  if (status === "approved" || status === "rejected") {
+    const claimed = await storage.claimWithdrawalFinalization(withdrawalId, status);
+    if (claimed) {
+      if (status === "rejected") await refundRejectedWithdrawal(claimed, "CloudPay");
+      return claimed;
+    }
+  }
+  const withdrawals = await storage.getWithdrawals();
+  return withdrawals.find((withdrawal) => withdrawal.id === withdrawalId);
 }
 
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -1577,19 +1640,6 @@ export async function registerRoutes(
                 await storage.processDepositReferralCommissions(deposit.userId, deposit.amount);
               }
 
-async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number; amount: number }) {
-  const user = await storage.getUser(withdrawal.userId);
-  if (!user) return;
-  await storage.updateUser(user.id, {
-    balance: (parseFloat(user.balance) + withdrawal.amount).toFixed(2),
-  });
-  await storage.createTransaction({
-    userId: user.id,
-    type: "withdrawal_refund",
-    amount: withdrawal.amount.toString(),
-    description: `InPay withdrawal refund #${withdrawal.id}`,
-  });
-}
             }
           }
 
@@ -3041,6 +3091,114 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     }
   });
 
+  app.post("/api/admin/withdrawals/:id/cloudpay", requireAdmin, async (req, res) => {
+    const withdrawalId = Number(req.params.id);
+    let orderId = "";
+    let providerRequestStarted = false;
+    let providerAccepted = false;
+    let withdrawalUserId: number | undefined;
+    try {
+      if (!Number.isSafeInteger(withdrawalId) || withdrawalId <= 0) {
+        return res.status(400).json({ message: "Invalid withdrawal ID" });
+      }
+      const withdrawal = (await storage.getWithdrawals()).find((item) => item.id === withdrawalId);
+      if (!withdrawal) return res.status(404).json({ message: "Withdrawal not found" });
+      if (withdrawal.status !== "pending") {
+        return res.status(409).json({ message: "This withdrawal has already been processed or sent" });
+      }
+      withdrawalUserId = withdrawal.userId;
+      const country = withdrawal.country.trim().toUpperCase();
+      const settings = await storage.getSettings();
+      if (!isPhilippinesCountryCode(country) || settings.cloudpayEnabled !== "true" || !isCloudPayConfigured()) {
+        return res.status(400).json({ message: "CloudPay is not enabled and configured for Philippines withdrawals" });
+      }
+      validateCloudPayConfig();
+      if (!resolveCloudPayBankCode(withdrawal.paymentMethod)) {
+        return res.status(400).json({ message: "This withdrawal method is not supported by CloudPay" });
+      }
+
+      orderId = `CPW-${withdrawal.id}-${Date.now()}`;
+      await storage.updateWithdrawal(withdrawal.id, {
+        status: "processing",
+        cloudpayOrderId: orderId,
+      });
+      providerRequestStarted = true;
+      await cloudPayCreatePayout({
+        orderId,
+        amount: withdrawal.netAmount,
+        bankCode: withdrawal.paymentMethod,
+        accountNumber: withdrawal.accountNumber,
+        accountName: withdrawal.accountName,
+      });
+      providerAccepted = true;
+      const updated = (await storage.getWithdrawals()).find((item) => item.id === withdrawal.id);
+      await storage.logAdminAction(
+        req.session.userId!,
+        "send_withdrawal_to_cloudpay",
+        withdrawal.userId,
+        `Withdrawal ${withdrawal.id} sent to CloudPay/Galaxy`,
+      );
+      return res.json({ success: true, status: updated?.status || "processing", orderId });
+    } catch (error: any) {
+      const uncertain = providerAccepted ||
+        (providerRequestStarted && error instanceof CloudPayError && error.requestMayHaveReachedProvider);
+      if (orderId && !uncertain) {
+        await storage.releaseWithdrawalProcessing(withdrawalId, orderId).catch(() => undefined);
+      }
+      console.error("[cloudpay] payout error:", error);
+      notifyTelegramPaymentError({
+        operation: "CloudPay withdrawal payout",
+        error,
+        recordId: withdrawalId,
+        userId: withdrawalUserId,
+        paymentMethod: "CloudPay",
+      });
+      if (orderId && uncertain) {
+        await storage.logAdminAction(
+          req.session.userId!,
+          "send_withdrawal_to_cloudpay_uncertain",
+          withdrawalUserId || null,
+          `Withdrawal ${withdrawalId} has an uncertain CloudPay/Galaxy request; reconcile by provider order ID`,
+        ).catch(() => undefined);
+        return res.status(202).json({
+          orderId,
+          uncertain: true,
+          message: "The request status is uncertain. Do not send it again; check the provider status.",
+        });
+      }
+      return res.status(502).json({ message: error.message || "CloudPay payout failed" });
+    }
+  });
+
+  app.post("/api/admin/withdrawals/:id/cloudpay-status", requireAdmin, async (req, res) => {
+    try {
+      const withdrawalId = Number(req.params.id);
+      if (!Number.isSafeInteger(withdrawalId) || withdrawalId <= 0) {
+        return res.status(400).json({ message: "Invalid withdrawal ID" });
+      }
+      const withdrawal = (await storage.getWithdrawals()).find((item) => item.id === withdrawalId);
+      if (!withdrawal) return res.status(404).json({ message: "Withdrawal not found" });
+      if (!withdrawal.cloudpayOrderId) {
+        return res.status(400).json({ message: "This withdrawal has no CloudPay order reference" });
+      }
+      if (withdrawal.status === "approved" || withdrawal.status === "rejected") {
+        return res.json({ status: withdrawal.status });
+      }
+      const verification = await cloudPayQuery(withdrawal.cloudpayOrderId);
+      if (verification.status !== "pending") {
+        if (!verification.amount || !cloudPayAmountMatches(verification.amount, withdrawal.netAmount)) {
+          return res.status(409).json({ message: "CloudPay could not confirm the payout amount" });
+        }
+        const updated = await finalizeCloudPayWithdrawal(withdrawal.id, verification.status);
+        return res.json({ status: updated?.status || withdrawal.status, providerStatus: verification.providerStatus });
+      }
+      return res.json({ status: withdrawal.status, providerStatus: verification.providerStatus });
+    } catch (error: any) {
+      console.error("[cloudpay] payout status error:", error);
+      return res.status(502).json({ message: "Unable to verify the CloudPay payout right now" });
+    }
+  });
+
   app.post("/api/admin/withdrawals/:id/inpay", requireAdmin, async (req, res) => {
     try {
       const withdrawalId = parseInt(req.params.id);
@@ -3446,6 +3604,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       }
       res.json({
         ...adminSettings(settings),
+        cloudpayConfigured: String(isCloudPayConfigured()),
         depositMethodsByCountry: JSON.stringify(routing),
       });
     } catch (error: any) {
@@ -3547,6 +3706,14 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         if (unknownCountries.length > 0) {
           return res.status(400).json({
             message: `Unknown routing countries: ${unknownCountries.join(", ")}`,
+          });
+        }
+        const nonPhilippinesCloudPayRoutes = Object.entries(normalizedRouting)
+          .filter(([code, methods]) => code !== "PH" && methods.includes("cloudpay"))
+          .map(([code]) => code);
+        if (nonPhilippinesCloudPayRoutes.length > 0) {
+          return res.status(400).json({
+            message: `CloudPay/Galaxy can only be routed to PH, not: ${nonPhilippinesCloudPayRoutes.join(", ")}`,
           });
         }
       }
@@ -3692,6 +3859,228 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       res.json(activeCountries.filter(country => isPhilippinesCountryCode(country.code)));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  const cloudPayMultipartParser = multer({
+    limits: { fields: 20, fieldSize: 2048, files: 0 },
+  }).none();
+
+  app.post(
+    "/api/webhooks/cloudpay",
+    (req, res, next) => cloudPayMultipartParser(req, res, (error) => {
+      if (error) return res.status(400).send("FAIL");
+      next();
+    }),
+    async (req, res) => {
+      try {
+        if (!isCloudPayConfigured()) return res.status(503).send("FAIL");
+        const payload = (req.body || {}) as Record<string, string>;
+        const signature = String(payload.sign || "");
+        const signingSecret = getCloudPaySigningSecret();
+        if (
+          !verifyCloudPaySignature(payload, signature, signingSecret) ||
+          String(payload.merchant || "") !== getCloudPayMerchantId()
+        ) {
+          return res.status(401).send("FAIL");
+        }
+
+        const orderId = String(payload.order_id || "").trim();
+        if (!orderId) return res.status(400).send("FAIL");
+
+        if (orderId.startsWith("CPD-")) {
+          const deposit = await storage.getDepositByCloudPayOrderId(orderId);
+          if (!deposit || deposit.status === "approved" || deposit.status === "rejected") {
+            return res.status(200).send("SUCCESS");
+          }
+          const callbackAmount = payload.amount;
+          if (!isPhilippinesCountryCode(deposit.country) || !cloudPayAmountMatches(callbackAmount, deposit.amount)) {
+            return res.status(409).send("FAIL");
+          }
+          const verification = await cloudPayQuery(orderId);
+          const verifiedAmount = verification.amount ?? callbackAmount;
+          if (!cloudPayAmountMatches(verifiedAmount, deposit.amount)) {
+            return res.status(409).send("FAIL");
+          }
+          await finalizeCloudPayDeposit(deposit.id, verification.status);
+          return res.status(200).send("SUCCESS");
+        }
+
+        if (orderId.startsWith("CPW-")) {
+          const withdrawal = await storage.getWithdrawalByCloudPayOrderId(orderId);
+          if (!withdrawal || withdrawal.status === "approved" || withdrawal.status === "rejected") {
+            return res.status(200).send("SUCCESS");
+          }
+          const callbackAmount = payload.amount;
+          if (
+            !isPhilippinesCountryCode(withdrawal.country) ||
+            !cloudPayAmountMatches(callbackAmount, withdrawal.netAmount)
+          ) {
+            return res.status(409).send("FAIL");
+          }
+          const verification = await cloudPayQuery(orderId);
+          const verifiedAmount = verification.amount ?? callbackAmount;
+          if (!cloudPayAmountMatches(verifiedAmount, withdrawal.netAmount)) {
+            return res.status(409).send("FAIL");
+          }
+          await finalizeCloudPayWithdrawal(withdrawal.id, verification.status);
+          return res.status(200).send("SUCCESS");
+        }
+
+        return res.status(200).send("SUCCESS");
+      } catch (error: any) {
+        console.error("[cloudpay webhook] verification error:", error);
+        return res.status(502).send("FAIL");
+      }
+    },
+  );
+
+  app.post("/api/cloudpay/initiate", requireAuth, async (req, res) => {
+    let depositId: number | undefined;
+    let providerRequestStarted = false;
+    let providerAccepted = false;
+    let orderId = "";
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
+
+      const country = String(req.body.country || "").trim().toUpperCase();
+      const activeCountries = await storage.getActiveCountries();
+      if (!isPhilippinesCountryCode(country) || !isPhilippinesCountryCode(user.country)) {
+        return res.status(403).json({ message: "CloudPay is available only to Philippines accounts." });
+      }
+      if (!activeCountries.some((entry) => entry.code.toUpperCase() === country) || country !== user.country.toUpperCase()) {
+        return res.status(400).json({ message: "Country unavailable" });
+      }
+
+      const settings = await storage.getSettings();
+      if (!isDepositMethodConfigured(country, "cloudpay", settings)) {
+        return res.status(403).json({ message: "This payment method is unavailable" });
+      }
+      validateCloudPayConfig();
+
+      const amount = Number(req.body.amount);
+      if (!Number.isSafeInteger(amount) || amount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+      const feePaymentId = req.body.feePaymentId === undefined || req.body.feePaymentId === null
+        ? undefined
+        : Number(req.body.feePaymentId);
+      const withdrawalAmountValue = Number(req.body.withdrawalAmount);
+      const withdrawalAmount = Number.isFinite(withdrawalAmountValue) && withdrawalAmountValue > 0
+        ? withdrawalAmountValue
+        : undefined;
+      const withdrawalFeePayment = feePaymentId === undefined
+        ? undefined
+        : await validateWithdrawalFeePayment(user.id, feePaymentId, amount);
+      const minDeposit = Math.max(3500, parseInt(settings.minDeposit || "3500", 10));
+      if (!withdrawalFeePayment && amount < minDeposit) {
+        return res.status(400).json({ message: `Minimum amount: ${minDeposit.toLocaleString()} PHP` });
+      }
+
+      const bankCode = resolveCloudPayBankCode(String(req.body.bankCode || ""));
+      const bank = bankCode ? getCloudPayBank(bankCode) : undefined;
+      if (!bankCode || !bank) return res.status(400).json({ message: "Select a supported bank or e-wallet" });
+      const parsedPhone = phoneNumberSchema.safeParse(String(req.body.phone || "").trim());
+      if (!parsedPhone.success) return res.status(400).json({ message: "Enter a valid Philippines phone number" });
+
+      const deposit = await storage.createDeposit({
+        userId: user.id,
+        amount,
+        accountName: user.fullName,
+        accountNumber: parsedPhone.data,
+        country,
+        paymentMethod: bank.name,
+        status: "processing",
+        withdrawalFeePaymentId: withdrawalFeePayment?.id,
+      });
+      depositId = deposit.id;
+      orderId = `CPD-${deposit.id}-${Date.now()}`;
+      await storage.updateDeposit(deposit.id, { cloudpayOrderId: orderId });
+
+      const publicBaseUrl = new URL(getPublicBaseUrl(req));
+      if (publicBaseUrl.protocol !== "https:") {
+        throw new Error("The public app URL must use HTTPS for CloudPay callbacks.");
+      }
+      const callbackUrl = new URL("/api/webhooks/cloudpay", publicBaseUrl).toString();
+      const returnUrl = new URL("/robotpay", publicBaseUrl);
+      returnUrl.searchParams.set("amount", String(amount));
+      returnUrl.searchParams.set("country", country);
+      returnUrl.searchParams.set("provider", "cloudpay");
+      returnUrl.searchParams.set("cloudpayDepositId", String(deposit.id));
+      if (feePaymentId !== undefined) returnUrl.searchParams.set("feePaymentId", String(feePaymentId));
+      if (withdrawalAmount !== undefined) returnUrl.searchParams.set("withdrawalAmount", String(withdrawalAmount));
+
+      providerRequestStarted = true;
+      const payment = await cloudPayCreateDeposit({
+        orderId,
+        amount,
+        bankCode,
+        customerAccount: parsedPhone.data,
+        notifyUrl: callbackUrl,
+        returnUrl: returnUrl.toString(),
+      });
+      providerAccepted = true;
+      return res.json({
+        depositId: deposit.id,
+        orderId,
+        redirectUrl: payment.redirectUrl,
+        qrCode: payment.qrCode,
+        message: payment.message,
+      });
+    } catch (error: any) {
+      const uncertain = providerAccepted ||
+        (providerRequestStarted && error instanceof CloudPayError && error.requestMayHaveReachedProvider);
+      if (depositId && !uncertain) {
+        await storage.claimDepositFinalization(depositId, "rejected").catch(() => undefined);
+      }
+      console.error("[cloudpay] deposit initiation error:", error);
+      notifyTelegramPaymentError({
+        operation: "CloudPay deposit initiation",
+        error,
+        recordId: depositId,
+        userId: req.session.userId,
+        amount: req.body?.amount,
+        country: req.body?.country,
+        paymentMethod: "CloudPay",
+      });
+      if (depositId && uncertain) {
+        return res.status(202).json({
+          depositId,
+          orderId,
+          message: "The request status is uncertain. Do not retry the payment; verification will continue automatically.",
+        });
+      }
+      return res.status(502).json({ message: error.message || "Unable to initiate the CloudPay payment" });
+    }
+  });
+
+  app.get("/api/deposits/:id/cloudpay-status", requireAuth, async (req, res) => {
+    try {
+      const depositId = Number(req.params.id);
+      if (!Number.isSafeInteger(depositId) || depositId <= 0) {
+        return res.status(400).json({ message: "Invalid deposit ID" });
+      }
+      const deposit = await storage.getDeposit(depositId);
+      if (!deposit) return res.status(404).json({ message: "Deposit not found" });
+      if (deposit.userId !== req.session.userId) return res.status(403).json({ message: "Access denied" });
+      if (!deposit.cloudpayOrderId) return res.status(400).json({ message: "This deposit is not from CloudPay" });
+      if (deposit.status === "approved" || deposit.status === "rejected") {
+        return res.json({ status: deposit.status });
+      }
+
+      const verification = await cloudPayQuery(deposit.cloudpayOrderId);
+      if (verification.status !== "pending") {
+        if (!verification.amount || !cloudPayAmountMatches(verification.amount, deposit.amount)) {
+          return res.status(409).json({ message: "CloudPay could not confirm the deposit amount" });
+        }
+        const updated = await finalizeCloudPayDeposit(deposit.id, verification.status);
+        return res.json({ status: updated?.status || deposit.status, providerStatus: verification.providerStatus });
+      }
+      return res.json({ status: deposit.status, providerStatus: verification.providerStatus });
+    } catch (error: any) {
+      console.error("[cloudpay] deposit status error:", error);
+      return res.status(502).json({ message: "Unable to verify the CloudPay deposit right now" });
     }
   });
 
@@ -3978,11 +4367,12 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         return res.status(404).json({ message: "Country is unavailable" });
       }
       const settings = await storage.getSettings();
-      const providers: Array<{ provider: "ashtech" | "sendavapay" | "clapay"; name: string }> = [];
-      for (const provider of ["ashtech", "sendavapay", "clapay"] as const) {
+      const providers: Array<{ provider: "ashtech" | "sendavapay" | "clapay" | "cloudpay"; name: string }> = [];
+      for (const provider of ["ashtech", "sendavapay", "clapay", "cloudpay"] as const) {
         if (
           isDepositMethodConfigured(country, provider, settings) &&
-          (provider !== "clapay" || isClapayConfigured())
+          (provider !== "clapay" || isClapayConfigured()) &&
+          (provider !== "cloudpay" || (isPhilippinesCountryCode(country) && isCloudPayConfigured()))
         ) {
           providers.push({ provider, name: getDepositMethodName(provider, settings) });
         }
@@ -3991,7 +4381,12 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         ? req.query.provider.trim().toLowerCase()
         : "";
       if (requestedProvider) {
-        if (requestedProvider !== "ashtech" && requestedProvider !== "sendavapay" && requestedProvider !== "clapay") {
+        if (
+          requestedProvider !== "ashtech" &&
+          requestedProvider !== "sendavapay" &&
+          requestedProvider !== "clapay" &&
+          requestedProvider !== "cloudpay"
+        ) {
       return res.status(400).json({ message: "Invalid deposit provider" });
         }
         if (!providers.some(({ provider }) => provider === requestedProvider)) {
@@ -4025,6 +4420,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         .filter((method) => isDepositProviderGloballyEnabled(method, settings))
         .filter((method) => method !== "manual" || manualNumbers.length > 0)
         .filter((method) => method !== "clapay" || isClapayConfigured())
+        .filter((method) => method !== "cloudpay" || (isPhilippinesCountryCode(country) && isCloudPayConfigured()))
         .map((provider) => ({ provider, name: getDepositMethodName(provider, settings) }));
       res.json({
         country,
@@ -4033,6 +4429,25 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Unable to load deposit methods" });
+    }
+  });
+
+  app.get("/api/cloudpay/banks/:country", requireAuth, async (req, res) => {
+    try {
+      const country = String(req.params.country || "").trim().toUpperCase();
+      const activeCountries = await storage.getActiveCountries();
+      if (!isPhilippinesCountryCode(country) || !activeCountries.some((entry) => entry.code.toUpperCase() === country)) {
+        return res.status(404).json({ message: "Country unavailable" });
+      }
+      const settings = await storage.getSettings();
+      if (!isDepositMethodConfigured(country, "cloudpay", settings) || !isCloudPayConfigured()) {
+        return res.status(403).json({ message: "This payment method is unavailable" });
+      }
+      return res.json({
+        banks: CLOUDPAY_BANKS.map(({ code, name }) => ({ id: code, name, provider: "cloudpay" })),
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: error.message || "Unable to load payment methods" });
     }
   });
 

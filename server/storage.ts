@@ -68,8 +68,10 @@ export interface IStorage {
   getDepositByWestpayReference(reference: string): Promise<Deposit | undefined>;
   getDepositByAshtechReference(reference: string): Promise<Deposit | undefined>;
   getDepositByAshtechTransactionId(transactionId: string): Promise<Deposit | undefined>;
+  getDepositByCloudPayOrderId(orderId: string): Promise<Deposit | undefined>;
   getPendingAshtechDeposits(): Promise<Deposit[]>;
   claimDepositApproval(id: number): Promise<Deposit | undefined>;
+  claimDepositFinalization(id: number, status: "approved" | "rejected"): Promise<Deposit | undefined>;
   claimAdminDepositApproval(id: number, processedBy: number): Promise<Deposit | undefined>;
   getDeposits(status?: string): Promise<(Deposit & { user: User })[]>;
   getUserDeposits(userId: number): Promise<Deposit[]>;
@@ -87,8 +89,10 @@ export interface IStorage {
   getWithdrawals(status?: string): Promise<(Withdrawal & { user: User })[]>;
   getUserWithdrawals(userId: number): Promise<Withdrawal[]>;
   getWithdrawalByInpayOutTradeNo(reference: string): Promise<Withdrawal | undefined>;
+  getWithdrawalByCloudPayOrderId(orderId: string): Promise<Withdrawal | undefined>;
   updateWithdrawal(id: number, data: Partial<Withdrawal>): Promise<Withdrawal>;
   claimWithdrawalFinalization(id: number, status: "approved" | "rejected"): Promise<Withdrawal | undefined>;
+  releaseWithdrawalProcessing(id: number, cloudpayOrderId: string): Promise<Withdrawal | undefined>;
   getUserWithdrawalCountToday(userId: number): Promise<number>;
   
   // Wallets
@@ -584,7 +588,7 @@ export class DatabaseStorage implements IStorage {
       status: deposit.status,
       country: deposit.country,
       paymentMethod: deposit.paymentMethod,
-      reference: deposit.reference || deposit.inpayOutTradeNo || deposit.westpayReference || deposit.ashtechReference || deposit.sendavapayReference,
+      reference: deposit.reference || deposit.cloudpayOrderId || deposit.inpayOutTradeNo || deposit.westpayReference || deposit.ashtechReference || deposit.sendavapayReference,
       isWithdrawalFeePayment: Boolean(deposit.withdrawalFeePaymentId),
     });
     return deposit;
@@ -620,6 +624,11 @@ export class DatabaseStorage implements IStorage {
     return deposit;
   }
 
+  async getDepositByCloudPayOrderId(orderId: string): Promise<Deposit | undefined> {
+    const [deposit] = await db.select().from(deposits).where(eq(deposits.cloudpayOrderId, orderId));
+    return deposit;
+  }
+
   async getPendingAshtechDeposits(): Promise<Deposit[]> {
     return db.select().from(deposits).where(and(
       sql`${deposits.ashtechTransactionId} IS NOT NULL`,
@@ -628,8 +637,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async claimDepositApproval(id: number): Promise<Deposit | undefined> {
+    return this.claimDepositFinalization(id, "approved");
+  }
+
+  async claimDepositFinalization(
+    id: number,
+    status: "approved" | "rejected",
+  ): Promise<Deposit | undefined> {
     const [deposit] = await db.update(deposits)
-      .set({ status: "approved", processedAt: new Date() })
+      .set({ status, processedAt: new Date() })
       .where(and(
         eq(deposits.id, id),
         sql`${deposits.status} NOT IN ('approved', 'rejected')`,
@@ -864,7 +880,7 @@ export class DatabaseStorage implements IStorage {
       status: withdrawal.status,
       country: withdrawal.country,
       paymentMethod: withdrawal.paymentMethod,
-      reference: withdrawal.inpayOutTradeNo,
+      reference: withdrawal.cloudpayOrderId || withdrawal.inpayOutTradeNo,
     });
     return withdrawal;
   }
@@ -894,6 +910,11 @@ export class DatabaseStorage implements IStorage {
     return withdrawal;
   }
 
+  async getWithdrawalByCloudPayOrderId(orderId: string): Promise<Withdrawal | undefined> {
+    const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.cloudpayOrderId, orderId));
+    return withdrawal;
+  }
+
   async updateWithdrawal(id: number, data: Partial<Withdrawal>): Promise<Withdrawal> {
     const previous = data.status !== undefined ? await this.getWithdrawalById(id) : undefined;
     const [withdrawal] = await db.update(withdrawals).set(data).where(eq(withdrawals.id, id)).returning();
@@ -908,7 +929,7 @@ export class DatabaseStorage implements IStorage {
         status: withdrawal.status,
         country: withdrawal.country,
         paymentMethod: withdrawal.paymentMethod,
-        reference: withdrawal.inpayOutTradeNo,
+        reference: withdrawal.cloudpayOrderId || withdrawal.inpayOutTradeNo,
       });
     }
     return withdrawal;
@@ -941,7 +962,36 @@ export class DatabaseStorage implements IStorage {
         status: withdrawal.status,
         country: withdrawal.country,
         paymentMethod: withdrawal.paymentMethod,
-        reference: withdrawal.inpayOutTradeNo,
+        reference: withdrawal.cloudpayOrderId || withdrawal.inpayOutTradeNo,
+      });
+    }
+    return withdrawal;
+  }
+
+  async releaseWithdrawalProcessing(
+    id: number,
+    cloudpayOrderId: string,
+  ): Promise<Withdrawal | undefined> {
+    const [withdrawal] = await db.update(withdrawals)
+      .set({ status: "pending" })
+      .where(and(
+        eq(withdrawals.id, id),
+        eq(withdrawals.cloudpayOrderId, cloudpayOrderId),
+        eq(withdrawals.status, "processing"),
+      ))
+      .returning();
+    if (withdrawal) {
+      notifyTelegramPaymentEvent({
+        kind: "withdrawal",
+        phase: "status",
+        id: withdrawal.id,
+        userId: withdrawal.userId,
+        amount: withdrawal.amount,
+        netAmount: withdrawal.netAmount,
+        status: withdrawal.status,
+        country: withdrawal.country,
+        paymentMethod: withdrawal.paymentMethod,
+        reference: withdrawal.cloudpayOrderId || withdrawal.inpayOutTradeNo,
       });
     }
     return withdrawal;

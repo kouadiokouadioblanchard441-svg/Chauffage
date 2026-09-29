@@ -22,6 +22,7 @@ const depositSchema = z.object({
 });
 
 type DepositForm = z.infer<typeof depositSchema>;
+type DepositProviderInfo = { provider: string; providers?: Array<{ provider: string }> };
 
 interface DepositModalProps {
   open: boolean;
@@ -36,6 +37,22 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
 
   const { data: channels } = useQuery<PaymentChannel[]>({
     queryKey: ["/api/payment-channels"],
+    enabled: open,
+  });
+  const { data: automaticProviderInfo } = useQuery<DepositProviderInfo | null>({
+    queryKey: ["/api/deposit/provider", user?.country],
+    queryFn: async () => {
+      const response = await fetch(`/api/deposit/provider/${encodeURIComponent(user!.country)}`, {
+        credentials: "include",
+      });
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: open && user?.country.trim().toUpperCase() === "PH",
+    retry: false,
+  });
+  const { data: platformSettings } = useQuery<Record<string, string>>({
+    queryKey: ["/api/settings"],
     enabled: open,
   });
 
@@ -106,6 +123,11 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
   const countryUnavailable = user.country.trim().toUpperCase() !== "PH";
   const paymentMethods = getPaymentMethodsForCountry(user.country);
   const activeChannels = channels?.filter(c => c.isActive) || [];
+  const automaticProviders = automaticProviderInfo?.providers ||
+    (automaticProviderInfo ? [{ provider: automaticProviderInfo.provider }] : []);
+  const soleCloudPayProvider = automaticProviders.length === 1 &&
+    automaticProviders[0]?.provider === "cloudpay";
+  const cloudPayMinimum = Math.max(3500, parseInt(platformSettings?.minDeposit || "3500", 10));
   const presetAmounts = [2000, 5000, 10000, 20000, 50000, 100000];
 
   return (
@@ -162,6 +184,31 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
                   {formatCurrency(selectedAmount || 0, user.country)}
                 </p>
               </div>
+
+              {soleCloudPayProvider && selectedAmount && (
+                <div className="space-y-2">
+                  {selectedAmount < cloudPayMinimum && (
+                    <p className="text-xs text-muted-foreground">
+                      Online bank/e-wallet checkout minimum: {formatCurrency(cloudPayMinimum, user.country)}.
+                    </p>
+                  )}
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={selectedAmount < cloudPayMinimum}
+                    onClick={() => {
+                      const query = new URLSearchParams({
+                        amount: String(selectedAmount),
+                        country: user.country.toUpperCase(),
+                        provider: "cloudpay",
+                      });
+                      window.location.href = `/robotpay?${query.toString()}`;
+                    }}
+                  >
+                    Continue with bank or e-wallet
+                  </Button>
+                </div>
+              )}
 
               <FormField
                 control={form.control}
