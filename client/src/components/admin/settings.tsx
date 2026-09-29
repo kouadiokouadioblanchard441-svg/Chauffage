@@ -90,43 +90,43 @@ const settingsSchema = z.object({
   supportLink: z.string().min(5, "Link is required"),
   supportType: z.string().min(1, "Network is required"),
   supportLabel: z.string().min(1, "Label is required"),
-  support2Link: z.string().min(5, "Lien requis"),
+  support2Link: z.string().min(5, "Link is required"),
   support2Type: z.string().min(1, "Network is required"),
-  support2Label: z.string().min(1, "Label requis"),
-  channelLink: z.string().min(5, "Lien requis"),
+  support2Label: z.string().min(1, "Label is required"),
+  channelLink: z.string().min(5, "Link is required"),
   channelType: z.string().min(1, "Network is required"),
-  channelLabel: z.string().min(1, "Label requis"),
-  groupLink: z.string().min(5, "Lien requis"),
+  channelLabel: z.string().min(1, "Label is required"),
+  groupLink: z.string().min(5, "Link is required"),
   groupType: z.string().min(1, "Network is required"),
-  groupLabel: z.string().min(1, "Label requis"),
-  popupButtonLabel: z.string().min(1, "Label requis"),
+  groupLabel: z.string().min(1, "Label is required"),
+  popupButtonLabel: z.string().min(1, "Label is required"),
   supportEnabled: z.boolean(),
   support2Enabled: z.boolean(),
   channelEnabled: z.boolean(),
   groupEnabled: z.boolean(),
-  signupBonus: z.string().min(1, "Bonus requis"),
-  minDeposit: z.string().min(1, "Montant requis"),
-  minWithdrawal: z.string().min(1, "Montant requis"),
-  withdrawalFees: z.string().min(1, "Frais requis"),
-  maxWithdrawalsPerDay: z.string().min(1, "Requis"),
-  withdrawalStartHour: z.string().min(1, "Heure requise"),
-  withdrawalEndHour: z.string().min(1, "Heure requise"),
+  signupBonus: z.string().min(1, "Bonus is required"),
+  minDeposit: z.string().min(1, "Amount is required"),
+  minWithdrawal: z.string().min(1, "Amount is required"),
+  withdrawalFees: z.string().min(1, "Fees are required"),
+  maxWithdrawalsPerDay: z.string().min(1, "Required"),
+  withdrawalStartHour: z.string().min(1, "Start hour is required"),
+  withdrawalEndHour: z.string().min(1, "End hour is required"),
   withdrawalPrepaymentEnabled: z.boolean(),
-  level1Commission: z.string().min(1, "Commission requise"),
-  level2Commission: z.string().min(1, "Commission requise"),
-  level3Commission: z.string().min(1, "Commission requise"),
+  level1Commission: z.string().min(1, "Commission is required"),
+  level2Commission: z.string().min(1, "Commission is required"),
+  level3Commission: z.string().min(1, "Commission is required"),
   sendavapayEnabled: z.boolean(),
-  sendavapayChannelName: z.string().min(1, "Nom requis"),
+  sendavapayChannelName: z.string().min(1, "Name is required"),
   soleaspayEnabled: z.boolean(),
-  soleaspayChannelName: z.string().min(1, "Nom requis"),
+  soleaspayChannelName: z.string().min(1, "Name is required"),
   westpayEnabled: z.boolean(),
-  westpayChannelName: z.string().min(1, "Nom requis"),
+  westpayChannelName: z.string().min(1, "Name is required"),
   ashtechEnabled: z.boolean(),
-  ashtechChannelName: z.string().min(1, "Nom requis"),
+  ashtechChannelName: z.string().min(1, "Name is required"),
   inpayEnabled: z.boolean(),
-  inpayChannelName: z.string().min(1, "Nom requis"),
+  inpayChannelName: z.string().min(1, "Name is required"),
   clapayEnabled: z.boolean(),
-  clapayChannelName: z.string().min(1, "Nom requis"),
+  clapayChannelName: z.string().min(1, "Name is required"),
 });
 
 type SettingsForm = z.infer<typeof settingsSchema>;
@@ -159,7 +159,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
        supportLabel: "Customer support",
       support2Link: "https://t.me/sybotx",
       support2Type: "telegram",
-      support2Label: "Service client 2",
+       support2Label: "Customer support 2",
       channelLink: "https://t.me/sybotx",
       channelType: "telegram",
        channelLabel: "Official channel",
@@ -205,7 +205,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
          supportLabel: settings.supportLabel || "Customer support",
         support2Link: settings.support2Link || "https://t.me/sybotx",
         support2Type: settings.support2Type || "telegram",
-        support2Label: settings.support2Label || "Service client 2",
+         support2Label: settings.support2Label || "Customer support 2",
         channelLink: settings.channelLink || "https://t.me/sybotx",
         channelType: settings.channelType || "telegram",
          channelLabel: settings.channelLabel || "Official channel",
@@ -288,14 +288,14 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
     mutationFn: async (country: string) => {
       const response = await apiRequest("GET", `/api/admin/inpay/balance/${country}`);
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Solde InPay indisponible");
+      if (!response.ok) throw new Error(data.message || "InPay balance unavailable");
       return { country, balance: data.balance as string };
     },
     onSuccess: ({ country, balance }) => {
       setInpayBalances((current) => ({ ...current, [country]: balance }));
     },
     onError: (error: any) => {
-      toast({ title: "Solde InPay indisponible", description: error.message, variant: "destructive" });
+      toast({ title: "InPay balance unavailable", description: error.message, variant: "destructive" });
     },
   });
 
@@ -387,7 +387,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
                 <FormField control={form.control} name="supportLabel" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Display label</FormLabel>
-                    <FormControl><Input {...field} placeholder="Service client" /></FormControl>
+                    <FormControl><Input {...field} placeholder="Customer support" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -408,7 +408,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               </div>
               <FormField control={form.control} name="supportLink" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Lien URL</FormLabel>
+                  <FormLabel>URL link</FormLabel>
                   <FormControl><Input {...field} placeholder="https://t.me/..." /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -432,7 +432,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
                 <FormField control={form.control} name="support2Label" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Display label</FormLabel>
-                    <FormControl><Input {...field} placeholder="Service client 2" /></FormControl>
+                    <FormControl><Input {...field} placeholder="Customer support 2" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -453,7 +453,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               </div>
               <FormField control={form.control} name="support2Link" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Lien URL</FormLabel>
+                  <FormLabel>URL link</FormLabel>
                   <FormControl><Input {...field} placeholder="https://t.me/..." /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -466,7 +466,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Link 3 — Official channel</p>
                 <FormField control={form.control} name="channelEnabled" render={({ field }) => (
                   <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                    <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
@@ -476,17 +476,17 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               <div className="grid grid-cols-2 gap-2">
                 <FormField control={form.control} name="channelLabel" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Libellé affiché</FormLabel>
-                    <FormControl><Input {...field} placeholder="Chaîne officielle" /></FormControl>
+                    <FormLabel>Display label</FormLabel>
+                    <FormControl><Input {...field} placeholder="Official channel" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="channelType" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Réseau social</FormLabel>
+                    <FormLabel>Social network</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Réseau..." /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Network..." /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {NETWORKS.map(n => <SelectItem key={n.value} value={n.value}>{n.label}</SelectItem>)}
@@ -498,7 +498,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               </div>
               <FormField control={form.control} name="channelLink" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Lien URL</FormLabel>
+                  <FormLabel>URL link</FormLabel>
                   <FormControl><Input {...field} placeholder="https://t.me/..." /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -511,7 +511,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Link 4 — Discussion group</p>
                 <FormField control={form.control} name="groupEnabled" render={({ field }) => (
                   <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                    <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
@@ -521,17 +521,17 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               <div className="grid grid-cols-2 gap-2">
                 <FormField control={form.control} name="groupLabel" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Libellé affiché</FormLabel>
+                  <FormLabel>Display label</FormLabel>
                     <FormControl><Input {...field} placeholder="Groupe de discussion" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="groupType" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Réseau social</FormLabel>
+                  <FormLabel>Social network</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Réseau..." /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Network..." /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {NETWORKS.map(n => <SelectItem key={n.value} value={n.value}>{n.label}</SelectItem>)}
@@ -543,7 +543,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               </div>
               <FormField control={form.control} name="groupLink" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Lien URL</FormLabel>
+                  <FormLabel>URL link</FormLabel>
                   <FormControl><Input {...field} placeholder="https://t.me/..." /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -561,16 +561,16 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               </p>
               <FormField control={form.control} name="popupButtonLabel" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Texte du bouton <span className="text-red-500">(popup dashboard)</span></FormLabel>
-                  <FormControl><Input {...field} placeholder="Ex: Cliquez ici pour rejoindre le groupe Telegram" /></FormControl>
+                  <FormLabel>Button text <span className="text-red-500">(dashboard popup)</span></FormLabel>
+                  <FormControl><Input {...field} placeholder="E.g.: Click here to join the Telegram group" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="groupLink" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Lien du bouton <span className="text-red-500">(popup dashboard)</span></FormLabel>
+                  <FormLabel>Button link <span className="text-red-500">(dashboard popup)</span></FormLabel>
                   <FormControl><Input {...field} placeholder="https://t.me/..." /></FormControl>
-                  <FormDescription>Ce lien est aussi utilisé dans le popup de bienvenue du tableau de bord.</FormDescription>
+                  <FormDescription>This link is also used in the dashboard welcome popup.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -579,7 +579,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           </CardContent>
         </Card>
 
-        {/* ── Retraits & Bonus ── */}
+         {/* ── Withdrawals & Bonuses ── */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -617,9 +617,9 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             <FormField control={form.control} name="withdrawalPrepaymentEnabled" render={({ field }) => (
               <FormItem className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-1 pr-4">
-                  <FormLabel>Prépaiement de 25 % avant retrait</FormLabel>
+                  <FormLabel>25% prepayment before withdrawal</FormLabel>
                   <FormDescription>
-                    Lorsque cette option est activée, l'utilisateur doit payer 25 % du retrait avant de pouvoir l'envoyer.
+                    When enabled, the user must pay 25% of the withdrawal before submitting it.
                   </FormDescription>
                 </div>
                 <FormControl>
@@ -631,14 +631,14 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="withdrawalFees" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Frais de retrait (%)</FormLabel>
+                  <FormLabel>Withdrawal fees (%)</FormLabel>
                   <FormControl><Input {...field} type="number" min="0" max="100" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="maxWithdrawalsPerDay" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Max retraits / jour</FormLabel>
+                  <FormLabel>Max withdrawals / day</FormLabel>
                   <FormControl><Input {...field} type="number" min="1" max="10" /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -648,14 +648,14 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="withdrawalStartHour" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Heure début retraits</FormLabel>
+                  <FormLabel>Withdrawal start hour</FormLabel>
                   <FormControl><Input {...field} type="number" min="0" max="23" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="withdrawalEndHour" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Heure fin retraits</FormLabel>
+                  <FormLabel>Withdrawal end hour</FormLabel>
                   <FormControl><Input {...field} type="number" min="0" max="23" /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -669,28 +669,28 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              Commissions de parrainage
+              Referral commissions
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
               <FormField control={form.control} name="level1Commission" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Niveau 1 (%)</FormLabel>
+                  <FormLabel>Level 1 (%)</FormLabel>
                   <FormControl><Input {...field} type="number" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="level2Commission" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Niveau 2 (%)</FormLabel>
+                  <FormLabel>Level 2 (%)</FormLabel>
                   <FormControl><Input {...field} type="number" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="level3Commission" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Niveau 3 (%)</FormLabel>
+                  <FormLabel>Level 3 (%)</FormLabel>
                   <FormControl><Input {...field} type="number" /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -704,18 +704,18 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="w-5 h-5 text-orange-500" />
-              SendavaPay — Paiement automatique
+              SendavaPay — Automatic payment
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Activer SendavaPay</p>
-                <p className="text-xs text-gray-500">Affiche l'option de paiement automatique Mobile Money</p>
+                <p className="text-sm font-semibold text-gray-800">Enable SendavaPay</p>
+                <p className="text-xs text-gray-500">Show the automatic Mobile Money payment option</p>
               </div>
               <FormField control={form.control} name="sendavapayEnabled" render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                  <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
@@ -724,17 +724,17 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             </div>
             <FormField control={form.control} name="sendavapayChannelName" render={({ field }) => (
               <FormItem>
-                <FormLabel>Nom du canal affiché</FormLabel>
+                <FormLabel>Displayed channel name</FormLabel>
                 <FormControl><Input {...field} placeholder="SendavaPay" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-xs text-orange-700 space-y-1">
-              <p className="font-semibold">Variables requises dans Plesk :</p>
-              <p><code className="bg-orange-100 px-1 rounded">SENDAVAPAY_API_BASE_URL</code> — URL API fournie par SendavaPay</p>
-              <p><code className="bg-orange-100 px-1 rounded">SENDAVAPAY_API_KEY</code> — clé SDK (commence par <code className="bg-orange-100 px-1 rounded">sdk_</code>)</p>
-              <p><code className="bg-orange-100 px-1 rounded">SENDAVAPAY_WEBHOOK_SECRET</code> — secret de signature du webhook</p>
-              <p>Définissez <code className="bg-orange-100 px-1 rounded">PUBLIC_APP_URL</code> en HTTPS et configurez l'URL webhook : <code className="bg-orange-100 px-1 rounded">/api/webhooks/sendavapay</code></p>
+              <p className="font-semibold">Required Plesk variables:</p>
+              <p><code className="bg-orange-100 px-1 rounded">SENDAVAPAY_API_BASE_URL</code> — SendavaPay API URL</p>
+              <p><code className="bg-orange-100 px-1 rounded">SENDAVAPAY_API_KEY</code> — SDK key (starts with <code className="bg-orange-100 px-1 rounded">sdk_</code>)</p>
+              <p><code className="bg-orange-100 px-1 rounded">SENDAVAPAY_WEBHOOK_SECRET</code> — webhook signing secret</p>
+              <p>Set <code className="bg-orange-100 px-1 rounded">PUBLIC_APP_URL</code> to HTTPS and configure the webhook URL: <code className="bg-orange-100 px-1 rounded">/api/webhooks/sendavapay</code></p>
             </div>
           </CardContent>
         </Card>
@@ -744,35 +744,35 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="w-5 h-5 text-purple-600" />
-              SoleaPay — Dépôts Mobile Money
+              SoleaPay — Mobile Money deposits
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Activer SoleaPay</p>
-                <p className="text-xs text-gray-500">Dépôts directs avec confirmation par vérification du paiement</p>
+                <p className="text-sm font-semibold text-gray-800">Enable SoleaPay</p>
+                <p className="text-xs text-gray-500">Direct deposits with payment verification</p>
               </div>
               <FormField control={form.control} name="soleaspayEnabled" render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                  <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                   <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 </FormItem>
               )} />
             </div>
             <FormField control={form.control} name="soleaspayChannelName" render={({ field }) => (
               <FormItem>
-                <FormLabel>Nom du canal affiché</FormLabel>
+                <FormLabel>Displayed channel name</FormLabel>
                 <FormControl><Input {...field} placeholder="SoleaPay" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <div className="rounded-xl bg-purple-50 border border-purple-100 p-3 text-xs text-purple-800 space-y-1">
-              <p className="font-semibold">Variables d’environnement Plesk :</p>
-              <p><code className="bg-purple-100 px-1 rounded">SOLEASPAY_API_BASE_URL</code> — URL API SoleaPay fournie par le prestataire.</p>
-              <p><code className="bg-purple-100 px-1 rounded">SOLEASPAY_API_KEY</code> — clé API SoleaPay.</p>
-              <p>Définissez aussi <code className="bg-purple-100 px-1 rounded">PUBLIC_APP_URL</code> sur l’URL HTTPS publique de l’application.</p>
-              <p>Les retraits SoleaPay ne sont pas raccordés. URL de vérification : <code className="bg-purple-100 px-1 rounded">/api/deposits/:id/verify</code>.</p>
+              <p className="font-semibold">Plesk environment variables:</p>
+              <p><code className="bg-purple-100 px-1 rounded">SOLEASPAY_API_BASE_URL</code> — SoleaPay API URL provided by the provider.</p>
+              <p><code className="bg-purple-100 px-1 rounded">SOLEASPAY_API_KEY</code> — SoleaPay API key.</p>
+              <p>Also set <code className="bg-purple-100 px-1 rounded">PUBLIC_APP_URL</code> to the app's public HTTPS URL.</p>
+              <p>SoleaPay withdrawals are not connected. Verification URL: <code className="bg-purple-100 px-1 rounded">/api/deposits/:id/verify</code>.</p>
             </div>
           </CardContent>
         </Card>
@@ -782,18 +782,18 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="w-5 h-5 text-orange-500" />
-              WestPay — Page de paiement hébergée
+              WestPay — Hosted payment page
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Activer WestPay</p>
-                <p className="text-xs text-gray-500">Affiche l'option de paiement WestPay (Mobile Money par redirection)</p>
+                <p className="text-sm font-semibold text-gray-800">Enable WestPay</p>
+                <p className="text-xs text-gray-500">Shows the WestPay payment option (Mobile Money by redirect)</p>
               </div>
               <FormField control={form.control} name="westpayEnabled" render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                  <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
@@ -802,20 +802,20 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
             </div>
             <FormField control={form.control} name="westpayChannelName" render={({ field }) => (
               <FormItem>
-                <FormLabel>Nom du canal affiché</FormLabel>
+                <FormLabel>Displayed channel name</FormLabel>
                 <FormControl><Input {...field} placeholder="WestPay" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-xs text-orange-700 space-y-1">
-              <p className="font-semibold">Variables requises dans Plesk :</p>
-              <p>• <code className="bg-orange-100 px-1 rounded">WESTPAY_API_BASE_URL</code> — URL de l’API marchande</p>
-              <p>• <code className="bg-orange-100 px-1 rounded">WESTPAY_CHECKOUT_BASE_URL</code> — URL de la page de paiement hébergée</p>
-              <p>• <code className="bg-orange-100 px-1 rounded">WESTPAY_MERCHANT_SLUG</code> — votre identifiant marchand WestPay</p>
-              <p>• <code className="bg-orange-100 px-1 rounded">WESTPAY_WEBHOOK_SECRET</code> — vérification des confirmations de paiement</p>
-              <p>• Pour les retraits : <code className="bg-orange-100 px-1 rounded">WESTPAY_API_KEY_&lt;PAYS&gt;</code></p>
-              <p>• URL webhook à configurer dans votre compte WestPay : <code className="bg-orange-100 px-1 rounded">/api/webhooks/westpay</code></p>
-              <p className="font-semibold text-red-600 mt-1">Ne saisissez jamais ces valeurs dans ce formulaire ou en base de données.</p>
+              <p className="font-semibold">Required Plesk variables:</p>
+              <p>• <code className="bg-orange-100 px-1 rounded">WESTPAY_API_BASE_URL</code> — merchant API URL</p>
+              <p>• <code className="bg-orange-100 px-1 rounded">WESTPAY_CHECKOUT_BASE_URL</code> — hosted payment page URL</p>
+              <p>• <code className="bg-orange-100 px-1 rounded">WESTPAY_MERCHANT_SLUG</code> — your WestPay merchant identifier</p>
+              <p>• <code className="bg-orange-100 px-1 rounded">WESTPAY_WEBHOOK_SECRET</code> — payment confirmation verification</p>
+              <p>• For withdrawals: <code className="bg-orange-100 px-1 rounded">WESTPAY_API_KEY_&lt;COUNTRY&gt;</code></p>
+              <p>• Webhook URL to configure in your WestPay account: <code className="bg-orange-100 px-1 rounded">/api/webhooks/westpay</code></p>
+              <p className="font-semibold text-red-600 mt-1">Never enter these values in this form or in the database.</p>
             </div>
           </CardContent>
         </Card>
@@ -825,31 +825,31 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="w-5 h-5 text-blue-600" />
-              InPay — Paiements et retraits par pays
+              InPay — Country payments and withdrawals
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Activer InPay</p>
-                <p className="text-xs text-gray-500">Redirection de paiement et envoi des retraits vers InPay</p>
+                <p className="text-sm font-semibold text-gray-800">Enable InPay</p>
+                <p className="text-xs text-gray-500">Payment redirect and withdrawal submission through InPay</p>
               </div>
               <FormField control={form.control} name="inpayEnabled" render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                  <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                   <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 </FormItem>
               )} />
             </div>
             <FormField control={form.control} name="inpayChannelName" render={({ field }) => (
               <FormItem>
-                <FormLabel>Nom du canal affiché</FormLabel>
+                <FormLabel>Displayed channel name</FormLabel>
                 <FormControl><Input {...field} placeholder="InPay" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-gray-800">Soldes par pays</p>
+               <p className="text-sm font-semibold text-gray-800">Balances by country</p>
               {countries.map(({ code, name }) => {
                 const country = code.toUpperCase();
                 return (
@@ -858,7 +858,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
                       {name} ({country})
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Identifiants chargés depuis Plesk : <code>INPAY_MERCHANT_ID_{country}</code> et <code>INPAY_API_KEY_{country}</code>
+                      Credentials loaded from Plesk: <code>INPAY_MERCHANT_ID_{country}</code> and <code>INPAY_API_KEY_{country}</code>
                     </p>
                     <div className="flex justify-end">
                       <Button
@@ -869,23 +869,23 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
                       >
                         {inpayBalanceMutation.isPending && inpayBalanceMutation.variables === country
                           ? <Loader2 className="w-4 h-4 animate-spin" />
-                          : "Solde"}
+                         : "Balance"}
                       </Button>
                     </div>
                     {inpayBalances[country] !== undefined && (
-                      <p className="text-xs text-blue-700">Solde InPay : {inpayBalances[country]}</p>
+                       <p className="text-xs text-blue-700">InPay balance: {inpayBalances[country]}</p>
                     )}
                   </div>
                 );
               })}
             </div>
             <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-800 space-y-1">
-              <p className="font-semibold">Variables d’environnement Plesk InPay :</p>
-              <p>• <code className="bg-blue-100 px-1 rounded">INPAY_API_BASE_URL</code> — URL de base fournie par InPay</p>
-              <p>• <code className="bg-blue-100 px-1 rounded">INPAY_MERCHANT_ID_&lt;PAYS&gt;</code> — identifiant marchand pour chaque pays activé</p>
-              <p>• <code className="bg-blue-100 px-1 rounded">INPAY_API_KEY_&lt;PAYS&gt;</code> — clé API pour chaque pays activé</p>
+              <p className="font-semibold">Plesk InPay environment variables:</p>
+              <p>• <code className="bg-blue-100 px-1 rounded">INPAY_API_BASE_URL</code> — base URL provided by InPay</p>
+              <p>• <code className="bg-blue-100 px-1 rounded">INPAY_MERCHANT_ID_&lt;COUNTRY&gt;</code> — merchant ID for each enabled country</p>
+              <p>• <code className="bg-blue-100 px-1 rounded">INPAY_API_KEY_&lt;COUNTRY&gt;</code> — API key for each enabled country</p>
               <p>• URL webhook InPay : <code className="bg-blue-100 px-1 rounded">/api/webhooks/inpay</code></p>
-              <p>Les identifiants marchands et toutes les clés API sont lus uniquement depuis les variables Plesk, jamais depuis les paramètres administrateur.</p>
+              <p>Merchant IDs and all API keys are read only from Plesk variables, never from admin settings.</p>
             </div>
           </CardContent>
         </Card>
@@ -895,34 +895,34 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="w-5 h-5 text-green-600" />
-              AshtechPay — Mobile Money, OTP & Wave
+               AshtechPay — Mobile Money, OTP & Wave
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Activer AshtechPay</p>
-                <p className="text-xs text-gray-500">Affiche le paiement direct par USSD, OTP SMS et Wave</p>
+                <p className="text-sm font-semibold text-gray-800">Enable AshtechPay</p>
+                <p className="text-xs text-gray-500">Shows direct payment by USSD, SMS OTP, and Wave</p>
               </div>
               <FormField control={form.control} name="ashtechEnabled" render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                  <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                   <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 </FormItem>
               )} />
             </div>
             <FormField control={form.control} name="ashtechChannelName" render={({ field }) => (
               <FormItem>
-                <FormLabel>Nom du canal affiché</FormLabel>
+                <FormLabel>Displayed channel name</FormLabel>
                 <FormControl><Input {...field} placeholder="AshtechPay" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <div className="rounded-xl bg-green-50 border border-green-100 p-3 text-xs text-green-800 space-y-1">
-              <p className="font-semibold">Variables d’environnement Plesk :</p>
-              <p>Ajoutez <code className="bg-green-100 px-1 rounded">ASHTECHPAY_API_BASE_URL</code>, <code className="bg-green-100 px-1 rounded">ASHTECHPAY_API_KEY</code> et <code className="bg-green-100 px-1 rounded">ASHTECHPAY_WEBHOOK_SECRET</code> sur le serveur.</p>
-              <p>La clé API n'est jamais enregistrée dans les paramètres ni affichée dans ce formulaire.</p>
-              <p>URL de notification à configurer chez AshtechPay : <code className="bg-green-100 px-1 rounded">/api/webhooks/ashtechpay</code>. Le statut est confirmé par interrogation sécurisée de l'API.</p>
+              <p className="font-semibold">Plesk environment variables:</p>
+              <p>Add <code className="bg-green-100 px-1 rounded">ASHTECHPAY_API_BASE_URL</code>, <code className="bg-green-100 px-1 rounded">ASHTECHPAY_API_KEY</code>, and <code className="bg-green-100 px-1 rounded">ASHTECHPAY_WEBHOOK_SECRET</code> to the server.</p>
+              <p>The API key is never stored in settings or displayed in this form.</p>
+              <p>Notification URL to configure at AshtechPay: <code className="bg-green-100 px-1 rounded">/api/webhooks/ashtechpay</code>. Status is confirmed by securely querying the API.</p>
             </div>
           </CardContent>
         </Card>
@@ -932,37 +932,37 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="w-5 h-5 text-indigo-600" />
-              Clapay — Dépôts Mobile Money
+               Clapay — Mobile Money deposits
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Activer Clapay</p>
-                <p className="text-xs text-gray-500">Affiche Clapay uniquement dans les pays cochés dans le routage ci-dessus.</p>
+                <p className="text-sm font-semibold text-gray-800">Enable Clapay</p>
+                <p className="text-xs text-gray-500">Shows Clapay only in countries selected in the routing above.</p>
               </div>
               <FormField control={form.control} name="clapayEnabled" render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormLabel className="text-xs text-gray-500">{field.value ? "Actif" : "Désactivé"}</FormLabel>
+                  <FormLabel className="text-xs text-gray-500">{field.value ? "Active" : "Disabled"}</FormLabel>
                   <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 </FormItem>
               )} />
             </div>
             <FormField control={form.control} name="clapayChannelName" render={({ field }) => (
               <FormItem>
-                <FormLabel>Nom du canal affiché</FormLabel>
+                <FormLabel>Displayed channel name</FormLabel>
                 <FormControl><Input {...field} placeholder="Clapay" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-900 space-y-1">
-              <p className="font-semibold">Configuration Clapay dans les variables d’environnement Plesk</p>
-              <p>Base officielle : <code>https://nw-api.clapay.app/nowallet/api/v3</code> (ou <code>/nowallet/api</code>). Définissez <code>CLAPAY_API_KEY</code>; <code>CLAPAY_API_BASE_URL</code> est facultative et utilise la base V3 par défaut.</p>
-              <p>Authentification documentée : <code>Authorization: Bearer</code>. Les overrides <code>CLAPAY_API_KEY_HEADER</code> et <code>CLAPAY_API_KEY_PREFIX</code> sont facultatifs.</p>
-              <p>Routes par défaut : <code>POST init/payment</code>, <code>POST check/status/payment</code> avec <code>{"{{signature}}"}</code>, et <code>GET operators/data?country=CI</code>. La requête de paiement utilise <code>MERCHANT</code>, <code>API</code> et le code opérateur Clapay. Les modèles et chemins peuvent être surchargés par les variables <code>CLAPAY_INITIATE_*</code>, <code>CLAPAY_STATUS_*</code> et <code>CLAPAY_OPERATORS_*</code>.</p>
-              <p>Webhook signé requis : configurez <code>CLAPAY_WEBHOOK_SECRET</code> et <code>CLAPAY_WEBHOOK_UNIQUE_KEY</code> depuis le tableau de bord Clapay. L’URL de base publique vient de <code>PUBLIC_APP_URL</code> ou de l’hôte HTTPS transmis par Plesk; le callback est <code>/api/clapay/webhook</code> et le retour rouvre <code>/robotpay</code>.</p>
-              <p>Par défaut, seul le statut serveur <code>SUCCESSFUL</code> crédite un dépôt; <code>FAILED</code> et <code>SIGNATURE_DESTROYED</code> le refusent. Les autres statuts restent en attente. Les variables <code>CLAPAY_STATUS_SUCCESS_VALUES</code> et <code>CLAPAY_STATUS_FAILURE_VALUES</code> peuvent remplacer ces valeurs selon le contrat marchand. Le webhook et le retour navigateur ne suffisent jamais à confirmer un paiement.</p>
-              <p>Pour personnaliser le modèle d’initiation, les marqueurs disponibles sont <code>{"{{amount}}"}</code>, <code>{"{{country}}"}</code>, <code>{"{{operator}}"}</code>, <code>{"{{operatorId}}"}</code>, <code>{"{{operatorName}}"}</code>, <code>{"{{operatorOtp}}"}</code> (facultatif), <code>{"{{phone}}"}</code>, <code>{"{{accountNumber}}"}</code>, <code>{"{{accountName}}"}</code>, <code>{"{{accountFirstName}}"}</code>, <code>{"{{accountLastName}}"}</code>, <code>{"{{accountEmail}}"}</code>, <code>{"{{reference}}"}</code>, <code>{"{{depositId}}"}</code>, <code>{"{{callbackUrl}}"}</code>, <code>{"{{returnUrl}}"}</code> et <code>{"{{signature}}"}</code>. Ne mettez pas les identifiants dans ces modèles.</p>
+              <p className="font-semibold">Clapay configuration in Plesk environment variables</p>
+              <p>Official base: <code>https://nw-api.clapay.app/nowallet/api/v3</code> (or <code>/nowallet/api</code>). Set <code>CLAPAY_API_KEY</code>; <code>CLAPAY_API_BASE_URL</code> is optional and uses the V3 base by default.</p>
+              <p>Documented authentication: <code>Authorization: Bearer</code>. The <code>CLAPAY_API_KEY_HEADER</code> and <code>CLAPAY_API_KEY_PREFIX</code> overrides are optional.</p>
+              <p>Default routes: <code>POST init/payment</code>, <code>POST check/status/payment</code> with <code>{"{{signature}}"}</code>, and <code>GET operators/data?country=CI</code>. The payment request uses <code>MERCHANT</code>, <code>API</code>, and the Clapay operator code. Templates and paths can be overridden by <code>CLAPAY_INITIATE_*</code>, <code>CLAPAY_STATUS_*</code>, and <code>CLAPAY_OPERATORS_*</code> variables.</p>
+              <p>Signed webhook required: configure <code>CLAPAY_WEBHOOK_SECRET</code> and <code>CLAPAY_WEBHOOK_UNIQUE_KEY</code> from the Clapay dashboard. The public base URL comes from <code>PUBLIC_APP_URL</code> or the HTTPS host supplied by Plesk; the callback is <code>/api/clapay/webhook</code> and the return opens <code>/robotpay</code>.</p>
+              <p>By default, only the server status <code>SUCCESSFUL</code> credits a deposit; <code>FAILED</code> and <code>SIGNATURE_DESTROYED</code> reject it. Other statuses remain pending. The <code>CLAPAY_STATUS_SUCCESS_VALUES</code> and <code>CLAPAY_STATUS_FAILURE_VALUES</code> variables can replace these values according to the merchant agreement. The webhook and browser return alone never confirm a payment.</p>
+              <p>To customize the initiation template, available markers are <code>{"{{amount}}"}</code>, <code>{"{{country}}"}</code>, <code>{"{{operator}}"}</code>, <code>{"{{operatorId}}"}</code>, <code>{"{{operatorName}}"}</code>, <code>{"{{operatorOtp}}"}</code> (optional), <code>{"{{phone}}"}</code>, <code>{"{{accountNumber}}"}</code>, <code>{"{{accountName}}"}</code>, <code>{"{{accountFirstName}}"}</code>, <code>{"{{accountLastName}}"}</code>, <code>{"{{accountEmail}}"}</code>, <code>{"{{reference}}"}</code>, <code>{"{{depositId}}"}</code>, <code>{"{{callbackUrl}}"}</code>, <code>{"{{returnUrl}}"}</code>, and <code>{"{{signature}}"}</code>. Do not put credentials in these templates.</p>
             </div>
           </CardContent>
         </Card>
@@ -972,13 +972,13 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="w-5 h-5 text-gray-500" />
-              OmniPay — Non raccordé
+               OmniPay — Not connected
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 space-y-1">
-              <p className="font-semibold">Visible, mais pas opérationnel</p>
-              <p>Le module OmniPay est présent dans le projet, mais aucun parcours de dépôt ou de retrait ne l'appelle. Il n'y a donc pas de bouton d'activation pour éviter d'afficher une option qui ne peut pas traiter les paiements.</p>
+               <p className="font-semibold">Visible, but not operational</p>
+               <p>The OmniPay module is present in the project, but no deposit or withdrawal flow uses it. There is no activation button to avoid showing an option that cannot process payments.</p>
             </div>
           </CardContent>
         </Card>
@@ -989,7 +989,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
           ) : (
             <>
               <Save className="w-4 h-4 mr-2" />
-              Enregistrer les paramètres
+               Save settings
             </>
           )}
         </Button>

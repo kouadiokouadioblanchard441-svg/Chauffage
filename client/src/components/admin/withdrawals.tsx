@@ -140,10 +140,10 @@ export default function AdminWithdrawals() {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-foreground">{withdrawal.user.fullName}</p>
-                      {withdrawal.user.isPromoter && <Badge className="text-xs">Promoteur</Badge>}
+                      {withdrawal.user.isPromoter && <Badge className="text-xs">Promoter</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground">{withdrawal.user.phone}</p>
-                    <p className="text-sm text-muted-foreground">Pays: {withdrawal.user.country}</p>
+                    <p className="text-sm text-muted-foreground">Country: {withdrawal.user.country}</p>
                   </div>
                   <Badge variant={
                     withdrawal.status === "pending" ? "secondary" :
@@ -151,12 +151,12 @@ export default function AdminWithdrawals() {
                     withdrawal.status === "approved" ? "default" : "destructive"
                   }>
                     {withdrawal.status === "pending"
-                      ? "En attente"
+                      ? "Pending"
                       : withdrawal.status === "processing"
                         ? "En traitement"
                         : withdrawal.status === "approved"
-                          ? "Approuvé"
-                          : "Rejeté"}
+                           ? "Approved"
+                           : "Rejected"}
                   </Badge>
                 </div>
 
@@ -178,11 +178,11 @@ export default function AdminWithdrawals() {
                     <p className="font-medium text-foreground">{withdrawal.paymentMethod}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-muted-foreground">Numéro de réception</p>
+                    <p className="text-muted-foreground">Receiving number</p>
                     <p className="font-medium text-foreground">{withdrawal.accountNumber} - {withdrawal.accountName}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-muted-foreground">Date et heure</p>
+                    <p className="text-muted-foreground">Date and time</p>
                     <p className="font-medium text-foreground">
                        {new Date(withdrawal.createdAt).toLocaleDateString("en-PH", {
                         day: "2-digit",
@@ -196,13 +196,13 @@ export default function AdminWithdrawals() {
                   </div>
                   {(withdrawal as any).inpayOutTradeNo && (
                     <div className="col-span-2">
-                      <p className="text-muted-foreground">Référence marchand InPay</p>
+                     <p className="text-muted-foreground">InPay merchant reference</p>
                       <p className="font-mono font-medium text-foreground">{(withdrawal as any).inpayOutTradeNo}</p>
                     </div>
                   )}
                   {(withdrawal as any).inpayOrderNumber && (
                     <div className="col-span-2">
-                      <p className="text-muted-foreground">N° commande InPay</p>
+                      <p className="text-muted-foreground">InPay order number</p>
                       <p className="font-mono font-medium text-foreground">{(withdrawal as any).inpayOrderNumber}</p>
                     </div>
                   )}
@@ -220,7 +220,7 @@ export default function AdminWithdrawals() {
                     >
                       {processingId === withdrawal.id
                         ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : <><Send className="w-4 h-4 mr-1" /> Envoyer à InPay</>}
+                        : <><Send className="w-4 h-4 mr-1" /> Send to InPay</>}
                     </Button>
                     <Button
                       size="sm"
@@ -229,7 +229,7 @@ export default function AdminWithdrawals() {
                       disabled={processingId === withdrawal.id}
                       data-testid={`button-approve-${withdrawal.id}`}
                     >
-                      {processingId === withdrawal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" /> Valider</>}
+                      {processingId === withdrawal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" /> Approve</>}
                     </Button>
                     <Button
                       size="sm"
@@ -238,7 +238,7 @@ export default function AdminWithdrawals() {
                       disabled={processingId === withdrawal.id}
                       data-testid={`button-reject-${withdrawal.id}`}
                     >
-                      <X className="w-4 h-4 mr-1" /> Rejeter
+                       <X className="w-4 h-4 mr-1" /> Reject
                     </Button>
                   </div>
                 )}

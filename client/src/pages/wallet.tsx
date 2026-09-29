@@ -795,7 +795,7 @@ export default function WalletPage() {
   const paymentMethods = getWithdrawalMethodsForCountry(selectedCountry, apiCountries);
   const activeCountries = apiCountries
     .filter((country) => country.isActive)
-    .sort((first, second) => first.name.localeCompare(second.name, "fr"));
+    .sort((first, second) => first.name.localeCompare(second.name, "en-PH"));
   const backLink = selectMode ? "/withdrawal" : "/account";
   const showWalletOverview = selectMode || wallets === undefined || wallets.length > 0;
 
@@ -901,7 +901,7 @@ export default function WalletPage() {
               className="country-picker"
               role="dialog"
               aria-modal="true"
-              aria-label="Choisir un pays"
+               aria-label="Choose a country"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="country-picker-header">
@@ -971,7 +971,7 @@ export default function WalletPage() {
                 <button
                   className="country-picker-close"
                   onClick={() => { setBankSearch(""); setShowBankSheet(false); }}
-                  aria-label="Fermer"
+                    aria-label="Close"
                 >
                   <X aria-hidden="true" />
                 </button>
@@ -1020,7 +1020,7 @@ export default function WalletPage() {
       <div className="wallet-shell">
         <header className="wallet-topbar">
           <Link href={backLink}>
-            <button className="wallet-back" data-testid="button-back" aria-label="Retour">
+            <button className="wallet-back" data-testid="button-back" aria-label="Back">
               <ChevronLeft size={19} />
             </button>
           </Link>
@@ -1035,7 +1035,7 @@ export default function WalletPage() {
               onClick={() => setShowForm(true)}
               className="wallet-top-action"
               data-testid="button-add-wallet-icon"
-              aria-label="Ajouter une carte"
+              aria-label="Add a payment account"
             >
               <Plus size={19} />
             </button>
@@ -1051,7 +1051,7 @@ export default function WalletPage() {
             data-testid="button-add-wallet"
           >
             <Plus size={18} />
-            Ajouter un compte
+            Add an account
           </button>
         </div>
 
@@ -1096,7 +1096,7 @@ export default function WalletPage() {
                                   alt=""
                                   aria-hidden="true"
                                 />
-                                <span>{wallet.country || "Compte de retrait"} · {wallet.paymentMethod}</span>
+                                <span>{wallet.country || "Withdrawal account"} · {wallet.paymentMethod}</span>
                               </span>
                             </div>
                           </div>
@@ -1123,10 +1123,10 @@ export default function WalletPage() {
                               disabled={deleteMutation.isPending}
                               className="wallet-icon-action"
                               data-testid={`button-delete-wallet-${wallet.id}`}
-                              aria-label="Supprimer ce compte"
+                              aria-label="Delete this account"
                             >
                               <Trash2 size={16} />
-                              Supprimer
+                              Delete
                             </button>
                           </div>
                         )}
@@ -1137,7 +1137,7 @@ export default function WalletPage() {
                   <div className="wallet-empty">
                     <img src={emptyIllustration} alt="" />
                     <p>No payment accounts saved</p>
-                    <p>Ajoutez un compte pour effectuer vos retraits.</p>
+                    <p>Add an account to make withdrawals.</p>
                   </div>
                 )}
               </section>

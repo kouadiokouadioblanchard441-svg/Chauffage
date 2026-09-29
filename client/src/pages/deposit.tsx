@@ -237,7 +237,7 @@ export default function DepositPage() {
   const apiCountries = getCountriesForDisplay(loadedCountries, countriesError);
 
   const countryInfo = apiCountries.find(c => c.code === country && c.isActive);
-  const currency = countryInfo?.currency || "FCFA";
+  const currency = "PHP";
 
   const { data: platformSettings } = useQuery<Record<string, string>>({
     queryKey: ["/api/settings"],
@@ -250,7 +250,7 @@ export default function DepositPage() {
           credentials: "include",
         });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.message || "Impossible de charger les moyens de dépôt");
+        if (!response.ok) throw new Error(result.message || "Unable to load deposit methods");
         return result;
       },
       enabled: !!country,
@@ -285,7 +285,7 @@ export default function DepositPage() {
     queryKey: ["/api/payment-numbers", country],
     queryFn: async () => {
       const res = await fetch(`/api/payment-numbers?country=${country}`, { credentials: "include" });
-       if (!res.ok) throw new Error("Impossible de charger les numéros de paiement");
+       if (!res.ok) throw new Error("Unable to load payment numbers");
       return res.json();
     },
     enabled: !!country,
@@ -296,7 +296,7 @@ export default function DepositPage() {
     queryKey: ["/api/sendavapay/operators", svCountry],
     queryFn: async () => {
       const res = await fetch(`/api/sendavapay/operators/${svCountry}`, { credentials: "include" });
-       if (!res.ok) throw new Error("Impossible de charger les opérateurs SendavaPay");
+       if (!res.ok) throw new Error("Unable to load SendavaPay operators");
       return res.json();
     },
     enabled: step === "sv-operator" && !!svCountry,
@@ -307,7 +307,7 @@ export default function DepositPage() {
     queryKey: ["/api/ashtechpay/countries"],
     queryFn: async () => {
       const res = await fetch("/api/ashtechpay/countries", { credentials: "include" });
-      if (!res.ok) throw new Error("Impossible de charger les opérateurs");
+      if (!res.ok) throw new Error("Unable to load operators");
       return res.json();
     },
     enabled: step === "ashtech-operator" && ashtechAvailable,
@@ -330,7 +330,7 @@ export default function DepositPage() {
         if (data.status === "approved") {
           clearInterval(interval);
           setSvPolling(false);
-          toast({ title: "Paiement confirmé !", description: "Votre solde a été crédité." });
+          toast({ title: "Payment confirmed!", description: "Your balance has been credited." });
           refreshUser();
           queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
           // reset
@@ -345,7 +345,7 @@ export default function DepositPage() {
         } else if (data.status === "rejected") {
           clearInterval(interval);
           setSvPolling(false);
-          toast({ title: "Paiement échoué", description: "Le paiement a été refusé ou annulé.", variant: "destructive" });
+          toast({ title: "Payment failed", description: "The payment was declined or cancelled.", variant: "destructive" });
           setStep("sv-operator");
         }
       } catch (e) {
@@ -365,7 +365,7 @@ export default function DepositPage() {
         if (data.status === "approved") {
           clearInterval(interval);
           setAshtechPolling(false);
-          toast({ title: "Paiement confirmé !", description: "Votre solde a été crédité." });
+          toast({ title: "Payment confirmed!", description: "Your balance has been credited." });
           refreshUser();
           queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
           setStep("amount");
@@ -375,7 +375,7 @@ export default function DepositPage() {
         } else if (data.status === "rejected") {
           clearInterval(interval);
           setAshtechPolling(false);
-          toast({ title: "Paiement échoué", description: "Le paiement a été refusé ou annulé.", variant: "destructive" });
+          toast({ title: "Payment failed", description: "The payment was declined or cancelled.", variant: "destructive" });
           setStep("ashtech-operator");
         }
       } catch {
@@ -406,8 +406,8 @@ export default function DepositPage() {
         setSoleaspayStatus("pending");
         setSoleaspayMessage(
           returnStatus === "success"
-            ? "Retour du paiement reçu. Vérification en cours..."
-            : "Retour du paiement reçu. Vérification de l'état final...",
+            ? "Payment return received. Verification in progress..."
+            : "Payment return received. Checking the final status...",
         );
         setSoleaspayPolling(true);
         setStep("soleaspay-waiting");
@@ -419,8 +419,8 @@ export default function DepositPage() {
 
     if (!resumed) {
       toast({
-        title: "Retour du paiement reçu",
-        description: "Consultez l'historique des dépôts pour vérifier le statut du paiement.",
+        title: "Payment return received",
+        description: "Check your deposit history to verify the payment status.",
       });
     }
 
@@ -440,7 +440,7 @@ export default function DepositPage() {
       try {
         const res = await fetch(`/api/deposits/${soleaspayDepositId}/verify`, { credentials: "include" });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Vérification SoleaPay impossible");
+        if (!res.ok) throw new Error(data.message || "Unable to verify SoleaPay payment");
         if (data.status) setSoleaspayStatus(data.status);
         if (data.status === "approved" || data.status === "rejected") {
           clearInterval(interval);
@@ -451,7 +451,7 @@ export default function DepositPage() {
             // The server-side payment status remains authoritative.
           }
           if (data.status === "approved") {
-            toast({ title: "Paiement confirmé !", description: "Votre solde a été crédité." });
+            toast({ title: "Payment confirmed!", description: "Your balance has been credited." });
             refreshUser();
             queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
           }
@@ -471,9 +471,9 @@ export default function DepositPage() {
       await navigator.clipboard.writeText(value);
       setCopiedId(number.id);
       setTimeout(() => setCopiedId(null), 2000);
-      toast({ title: number.paymentLink ? "Lien copié !" : "Numéro copié !", description: `${value} copié` });
+       toast({ title: number.paymentLink ? "Link copied!" : "Number copied!", description: `${value} copied` });
     } catch {
-      toast({ title: number.paymentLink || "Numéro: " + number.phone, description: number.paymentLink ? "Ouvrez le lien pour payer" : "Copiez ce numéro manuellement" });
+       toast({ title: number.paymentLink || "Number: " + number.phone, description: number.paymentLink ? "Open the link to pay" : "Copy this number manually" });
     }
   };
 
@@ -481,7 +481,7 @@ export default function DepositPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Fichier trop grand", description: "Maximum 5 Mo", variant: "destructive" });
+      toast({ title: "File too large", description: "Maximum 5 MB", variant: "destructive" });
       return;
     }
     setScreenshotName(file.name);
@@ -492,7 +492,7 @@ export default function DepositPage() {
 
   const depositMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedNumber) throw new Error("Aucun numéro sélectionné");
+      if (!selectedNumber) throw new Error("No number selected");
       const res = await apiRequest("POST", "/api/deposits", {
         amount: Number(amount),
         accountName: user?.fullName || "",
@@ -501,7 +501,7 @@ export default function DepositPage() {
         country,
         paymentNumberId: selectedNumber.id,
         channelName: selectedNumber.paymentLink
-          ? `${selectedNumber.operatorName} - Lien de paiement`
+          ? `${selectedNumber.operatorName} - Payment link`
           : `${selectedNumber.operatorName} - ${selectedNumber.phone}`,
         screenshot: screenshot || null,
         paymentMessage: paymentMessage || null,
@@ -509,12 +509,12 @@ export default function DepositPage() {
       });
       if (!res.ok) {
         const d = await res.json();
-        throw new Error(d.message || "Dépôt non enregistré");
+        throw new Error(d.message || "Deposit was not recorded");
       }
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Demande envoyée !", description: "Votre dépôt est en attente de validation" });
+      toast({ title: "Request sent!", description: "Your deposit is awaiting validation." });
       queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
       refreshUser();
       setStep("amount");
@@ -526,7 +526,7 @@ export default function DepositPage() {
       setPaymentMessage("");
       setReference("");
     },
-    onError: (e: any) => toast({ title: "Dépôt non enregistré", description: sanitizeDepositDisplayText(e.message, "Impossible d’enregistrer le dépôt."), variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Deposit not recorded", description: sanitizeDepositDisplayText(e.message, "Unable to record the deposit."), variant: "destructive" }),
   });
 
   // WestPay: create deposit + get redirect URL
@@ -543,7 +543,7 @@ export default function DepositPage() {
       // clean URL
       window.history.replaceState({}, "", "/deposit");
       if (s === "success") {
-        toast({ title: "Paiement en cours de confirmation", description: "Votre dépôt sera crédité dès confirmation." });
+        toast({ title: "Payment confirmation in progress", description: "Your deposit will be credited once confirmed." });
         queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
       }
     }
@@ -561,7 +561,7 @@ export default function DepositPage() {
       });
       if (!res.ok) {
         const d = await res.json();
-        throw new Error(d.message || "Dépôt non enregistré");
+        throw new Error(d.message || "Deposit not recorded");
       }
       return res.json();
     },
@@ -570,7 +570,7 @@ export default function DepositPage() {
         window.location.href = data.westpayUrl;
       }
     },
-    onError: (e: any) => toast({ title: "Dépôt non enregistré", description: sanitizeDepositDisplayText(e.message, "Impossible d’enregistrer le dépôt."), variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Deposit not recorded", description: sanitizeDepositDisplayText(e.message, "Unable to record the deposit."), variant: "destructive" }),
   });
 
   const inpayInitiateMutation = useMutation({
@@ -585,7 +585,7 @@ export default function DepositPage() {
       });
       if (!res.ok) {
         const d = await res.json();
-        throw new Error(d.message || "Dépôt non enregistré");
+        throw new Error(d.message || "Deposit not recorded");
       }
       return res.json();
     },
@@ -594,12 +594,12 @@ export default function DepositPage() {
         window.location.href = data.inpayUrl;
       }
     },
-    onError: (e: any) => toast({ title: "Dépôt non enregistré", description: sanitizeDepositDisplayText(e.message, "Impossible d’enregistrer le dépôt."), variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Deposit not recorded", description: sanitizeDepositDisplayText(e.message, "Unable to record the deposit."), variant: "destructive" }),
   });
 
   const ashtechCollectMutation = useMutation({
     mutationFn: async (otp?: string) => {
-      if (!ashtechOperator || !ashtechPhone.trim()) throw new Error("Sélectionnez un opérateur et saisissez votre numéro");
+      if (!ashtechOperator || !ashtechPhone.trim()) throw new Error("Select an operator and enter your number");
       const res = await apiRequest("POST", "/api/ashtechpay/collect", {
         amount: Number(amount),
         country: ashtechCountry,
@@ -610,7 +610,7 @@ export default function DepositPage() {
       });
       if (!res.ok) {
         const d = await res.json();
-        throw new Error(d.message || "Dépôt non enregistré");
+        throw new Error(d.message || "Deposit not recorded");
       }
       return res.json();
     },
@@ -633,19 +633,19 @@ export default function DepositPage() {
       if (e.data?.requiresOtp) {
         setAshtechDepositId(e.data.depositId || ashtechDepositId);
         setAshtechUssdCode(e.data.ussdCode || "");
-        setAshtechMessage(sanitizeDepositDisplayText(e.message, "Composez le code indiqué puis saisissez le code OTP."));
+        setAshtechMessage(sanitizeDepositDisplayText(e.message, "Dial the indicated code, then enter your OTP."));
         setAshtechOtp("");
         setStep("ashtech-otp");
         return;
       }
-      toast({ title: "Dépôt non enregistré", description: sanitizeDepositDisplayText(e.message, "Impossible d’enregistrer le dépôt."), variant: "destructive" });
+      toast({ title: "Deposit not recorded", description: sanitizeDepositDisplayText(e.message, "Unable to record the deposit."), variant: "destructive" });
     },
   });
 
   // SendavaPay: create + initiate
   const svInitiateMutation = useMutation({
     mutationFn: async () => {
-      if (!svOperator) throw new Error("Sélectionnez un opérateur");
+      if (!svOperator) throw new Error("Select an operator");
       // Step 1: create payment on backend
       const createRes = await apiRequest("POST", "/api/sendavapay/create", {
         amount: Number(amount),
@@ -656,7 +656,7 @@ export default function DepositPage() {
       });
       if (!createRes.ok) {
         const d = await createRes.json();
-        throw new Error(d.message || "Création du paiement impossible");
+        throw new Error(d.message || "Unable to create payment");
       }
       const createData = await createRes.json();
       setSvDepositId(createData.depositId);
@@ -672,7 +672,7 @@ export default function DepositPage() {
       });
       if (!initRes.ok) {
         const d = await initRes.json();
-        throw new Error(d.message || "Initiation du paiement impossible");
+        throw new Error(d.message || "Unable to initiate payment");
       }
       return initRes.json();
     },
@@ -698,23 +698,23 @@ export default function DepositPage() {
         setSvPolling(true);
         setStep("sv-waiting");
       } else {
-        toast({ title: "Paiement impossible", description: sanitizeDepositDisplayText(data.error || data.message, "Le paiement n'a pas pu être initié."), variant: "destructive" });
+        toast({ title: "Payment unavailable", description: sanitizeDepositDisplayText(data.error || data.message, "The payment could not be initiated."), variant: "destructive" });
       }
     },
-    onError: (e: any) => toast({ title: "Paiement impossible", description: sanitizeDepositDisplayText(e.message, "Le paiement n'a pas pu être initié."), variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Payment unavailable", description: sanitizeDepositDisplayText(e.message, "The payment could not be initiated."), variant: "destructive" }),
   });
 
   // SendavaPay: retry failed payment
   const svRetryMutation = useMutation({
     mutationFn: async () => {
-      if (!svPaymentToken) throw new Error("Token de paiement manquant");
+      if (!svPaymentToken) throw new Error("Payment token is missing");
       const res = await apiRequest("POST", "/api/sendavapay/retry", {
         paymentToken: svPaymentToken,
         depositId: svDepositId,
       });
       if (!res.ok) {
         const d = await res.json();
-        throw new Error(d.message || "Nouvelle tentative impossible");
+        throw new Error(d.message || "Retry unavailable");
       }
       return res.json();
     },
@@ -725,9 +725,9 @@ export default function DepositPage() {
       setSvStatus("");
       setSvPolling(false);
       setStep("sv-operator");
-      toast({ title: "Prêt à réessayer", description: "Sélectionnez un opérateur et relancez le paiement." });
+      toast({ title: "Ready to retry", description: "Select an operator and restart the payment." });
     },
-    onError: (e: any) => toast({ title: "Nouvelle tentative impossible", description: sanitizeDepositDisplayText(e.message, "Réessayez dans quelques instants."), variant: "destructive" }),
+     onError: (e: any) => toast({ title: "Retry unavailable", description: sanitizeDepositDisplayText(e.message, "Please try again in a moment."), variant: "destructive" }),
   });
 
   // SendavaPay: submit OTP
@@ -739,7 +739,7 @@ export default function DepositPage() {
       });
       if (!res.ok) {
         const d = await res.json();
-        throw new Error(d.message || "Validation du code OTP impossible");
+         throw new Error(d.message || "OTP verification failed");
       }
       return res.json();
     },
@@ -747,13 +747,13 @@ export default function DepositPage() {
       setSvPolling(true);
       setStep("sv-waiting");
     },
-    onError: (e: any) => toast({ title: "Validation du code OTP impossible", description: sanitizeDepositDisplayText(e.message, "Vérifiez le code puis réessayez."), variant: "destructive" }),
+     onError: (e: any) => toast({ title: "OTP verification failed", description: sanitizeDepositDisplayText(e.message, "Check the code and try again."), variant: "destructive" }),
   });
 
   const handleAmountNext = () => {
     if (!amount || Number(amount) < MIN_DEPOSIT) {
       toast({
-        title: "Montant invalide",
+        title: "Invalid amount",
         description: `Le minimum est de ${MIN_DEPOSIT.toLocaleString()} ${currency}`,
         variant: "destructive",
       });
@@ -764,8 +764,8 @@ export default function DepositPage() {
       (!Number.isInteger(Number(amount)) || Number(amount) % 5 !== 0)
     ) {
       toast({
-        title: "Montant invalide",
-        description: "Utilisez un montant entier multiple de 5 : 300, 305, 310…",
+        title: "Invalid amount",
+        description: "Enter a whole amount in multiples of 5: 300, 305, 310…",
         variant: "destructive",
       });
       return;
@@ -776,15 +776,15 @@ export default function DepositPage() {
 
   const openRobotPay = () => {
     if (!depositCountry) {
-      toast({ title: "Pays requis", description: "Sélectionnez le pays du paiement.", variant: "destructive" });
+      toast({ title: "Country required", description: "Select the payment country.", variant: "destructive" });
       return;
     }
     if (!selectedDepositMethod || !depositMethodIds.has(selectedDepositMethod)) {
       toast({
-        title: "Moyen de dépôt requis",
+        title: "Deposit method required",
         description: depositMethodsLoading
-          ? "Chargement des moyens disponibles..."
-          : "Aucun moyen de dépôt n’est configuré pour ce pays.",
+          ? "Loading available payment methods..."
+          : "No deposit method is configured for this country.",
         variant: "destructive",
       });
       return;
@@ -805,8 +805,8 @@ export default function DepositPage() {
     if (selectedDepositMethod === "inpay") {
       if (!Number.isInteger(Number(amount)) || Number(amount) % 5 !== 0) {
         toast({
-          title: "Montant invalide",
-          description: "Utilisez un montant entier multiple de 5 : 300, 305, 310…",
+          title: "Invalid amount",
+          description: "Enter a whole amount in multiples of 5: 300, 305, 310…",
           variant: "destructive",
         });
         return;
@@ -833,11 +833,11 @@ export default function DepositPage() {
 
   const handleSubmit = () => {
     if (!senderPhone.trim()) {
-      toast({ title: "Numéro requis", description: "Entrez le numéro depuis lequel vous avez payé", variant: "destructive" });
+      toast({ title: "Number required", description: "Enter the number you paid from.", variant: "destructive" });
       return;
     }
     if (!screenshot) {
-      toast({ title: "Capture requise", description: "Veuillez joindre la capture d'écran du paiement", variant: "destructive" });
+      toast({ title: "Screenshot required", description: "Please attach a payment screenshot.", variant: "destructive" });
       return;
     }
     depositMutation.mutate();
@@ -1128,25 +1128,25 @@ export default function DepositPage() {
       `}</style>
 
       <div className="recharge-screen">
-        <section className="recharge-hero" aria-label="Dépôt">
+        <section className="recharge-hero" aria-label="Deposit">
           <div className="recharge-hero-art">
             <img src={chargepointPromo} alt="" />
           </div>
           <h1 className="recharge-title">
             <img className="recharge-title-logo" src={chargepointLogo} alt="" />
-            <span>Dépôt</span>
+            <span>Deposit</span>
           </h1>
           <Link href="/history">
-            <button className="history-button" aria-label="Historique des transactions">
+            <button className="history-button" aria-label="Transaction history">
               <span className="history-icon" aria-hidden="true" />
             </button>
           </Link>
           <Link href="/account">
-            <button className="recharge-back" aria-label="Retour" />
+            <button className="recharge-back" aria-label="Back" />
           </Link>
         </section>
 
-        <section className="amount-panel" aria-label="Montant de recharge">
+        <section className="amount-panel" aria-label="Deposit amount">
           <div className="preset-row">
             {depositPresets.map((preset) => (
               <button
@@ -1159,40 +1159,40 @@ export default function DepositPage() {
             ))}
           </div>
 
-          <p className="amount-label">Veuillez saisir le montant de recharge</p>
+          <p className="amount-label">Enter the deposit amount</p>
           <label className="amount-input">
             <input
               type="number"
               inputMode="numeric"
               value={amount}
               onChange={(event) => setAmount(event.target.value ? Number(event.target.value) : "")}
-              aria-label="Montant de recharge"
+              aria-label="Deposit amount"
             />
             <span className="currency">{currency}</span>
           </label>
         </section>
 
-        <section className="country-panel" aria-label="Pays du paiement">
-          <label htmlFor="deposit-country">Pays du paiement</label>
+        <section className="country-panel" aria-label="Payment country">
+          <label htmlFor="deposit-country">Payment country</label>
           <select
             id="deposit-country"
             value={depositCountry}
             onChange={(event) => setDepositCountry(event.target.value)}
           >
-            <option value="">Sélectionnez un pays</option>
+            <option value="">Select a country</option>
             {activeDepositCountries.map((item) => (
               <option key={item.code} value={item.code}>{item.name} ({item.currency})</option>
             ))}
           </select>
-          {countriesError && <p className="mt-2 text-xs text-amber-700">Liste locale temporaire affichée.</p>}
+          {countriesError && <p className="mt-2 text-xs text-amber-700">Showing a temporary local list.</p>}
           {depositCountry && !depositMethodsLoading &&
             (depositMethodsError || depositMethods.length === 0 || depositMethods.length > 1) && (
               <p role="alert" className="mt-2 text-sm text-red-700">
                 {depositMethodsError
-                  ? "Impossible de vérifier les options de paiement pour ce pays."
+                  ? "Unable to check payment options for this country."
                   : depositMethods.length > 1
-                    ? "Plusieurs options de paiement sont configurées pour ce pays. Contactez le service client."
-                    : "Aucune option de paiement n’est disponible pour ce pays."}
+                  ? "Multiple payment options are configured for this country. Contact customer service."
+                    : "No payment option is available for this country."}
               </p>
             )}
         </section>
@@ -1208,15 +1208,15 @@ export default function DepositPage() {
             wpInitiateMutation.isPending
           }
         >
-          Recharger maintenant
+          Top up now
         </button>
 
-        <section className="instructions" aria-label="Instructions de recharge">
-          <h2 className="instructions-title">Instructions de Recharge :</h2>
-          <p className="instruction"><strong>Montant minimum de recharge :</strong> {MIN_DEPOSIT.toLocaleString("fr-FR")} {currency}</p>
-          <p className="instruction"><strong>Vérifiez attentivement vos informations de compte</strong> lors du virement pour que votre paiement soit traité correctement</p>
-          <p className="instruction"><strong>Chaque commande possède ses propres informations de paiement</strong> ; ne réutilisez pas les informations précédentes pour un second paiement</p>
-          <p className="instruction"><strong>Après un virement réussi,</strong> veuillez patienter 10 à 30 minutes.</p>
+        <section className="instructions" aria-label="Deposit instructions">
+          <h2 className="instructions-title">Top-up instructions:</h2>
+          <p className="instruction"><strong>Minimum deposit:</strong> {MIN_DEPOSIT.toLocaleString("en-PH")} {currency}</p>
+          <p className="instruction"><strong>Check your account details carefully</strong> during the transfer so your payment can be processed correctly.</p>
+          <p className="instruction"><strong>Each order has its own payment details</strong>; do not reuse previous details for a second payment.</p>
+          <p className="instruction"><strong>After a successful transfer,</strong> please wait 10 to 30 minutes.</p>
         </section>
       </div>
     </main>
@@ -1229,7 +1229,7 @@ export default function DepositPage() {
       <header className="deposit-step-header">
         <button className="deposit-step-back" onClick={() => setStep("amount")}>
           <ChevronLeft className="w-5 h-5" />
-          <span className="font-semibold text-base">Confirmer le paiement</span>
+          <span className="font-semibold text-base">Confirm payment</span>
         </button>
       </header>
 
@@ -1243,7 +1243,7 @@ export default function DepositPage() {
             </div>
           )}
           <div className="flex-1">
-            <p className="text-xs text-gray-500">{selectedNumber.paymentLink ? "Lien de paiement" : "Numéro destinataire"}</p>
+            <p className="text-xs text-gray-500">{selectedNumber.paymentLink ? "Payment link" : "Recipient number"}</p>
             {selectedNumber.paymentLink ? (
               <a
                 href={selectedNumber.paymentLink}
@@ -1251,7 +1251,7 @@ export default function DepositPage() {
                 rel="noreferrer"
                 className="mt-1 flex items-center gap-1 text-sm font-bold text-[#E85D00] underline"
               >
-                <ExternalLink className="h-4 w-4" /> Ouvrir le lien de paiement
+                <ExternalLink className="h-4 w-4" /> Open payment link
               </a>
             ) : (
               <p className="font-bold text-[#E85D00] text-sm">{selectedNumber.operatorName} — {selectedNumber.phone}</p>
@@ -1259,49 +1259,49 @@ export default function DepositPage() {
             <p className="text-xs text-gray-500">{selectedNumber.ownerName}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-500">Montant</p>
+            <p className="text-xs text-gray-500">Amount</p>
             <p className="font-bold text-gray-800">{Number(amount).toLocaleString()} {currency}</p>
           </div>
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Votre numéro payeur</p>
+          <p className="text-sm font-semibold text-gray-800 mb-2">Your payer number</p>
             <div className="deposit-step-field flex items-center overflow-hidden">
             <Phone className="w-4 h-4 text-gray-400 ml-4" />
             <input
               type="tel"
               value={senderPhone}
               onChange={(e) => setSenderPhone(e.target.value)}
-              placeholder="Numéro depuis lequel vous avez payé"
+              placeholder="Number you paid from"
               className="flex-1 px-3 py-4 text-sm text-gray-700 outline-none bg-transparent"
             />
           </div>
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Référence / ID transaction <span className="text-gray-400 font-normal">(optionnel)</span></p>
+          <p className="text-sm font-semibold text-gray-800 mb-2">Transaction reference / ID <span className="text-gray-400 font-normal">(optional)</span></p>
           <input
             type="text"
             value={reference}
             onChange={(e) => setReference(e.target.value)}
-            placeholder="Numéro de référence de la transaction"
+            placeholder="Transaction reference number"
             className="deposit-step-field w-full px-4 py-4 text-sm text-gray-700 outline-none"
           />
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Message reçu après paiement <span className="text-gray-400 font-normal">(optionnel)</span></p>
+          <p className="text-sm font-semibold text-gray-800 mb-2">Message received after payment <span className="text-gray-400 font-normal">(optional)</span></p>
           <textarea
             value={paymentMessage}
             onChange={(e) => setPaymentMessage(e.target.value)}
-            placeholder="Collez ici le SMS ou message de confirmation reçu..."
+            placeholder="Paste the SMS or confirmation message here..."
             rows={3}
             className="deposit-step-field w-full px-4 py-3 text-sm text-gray-700 outline-none resize-none"
           />
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Capture d'écran du paiement <span className="text-red-500">*</span></p>
+          <p className="text-sm font-semibold text-gray-800 mb-2">Payment screenshot <span className="text-red-500">*</span></p>
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -1312,7 +1312,7 @@ export default function DepositPage() {
             {screenshot ? (
               <><CheckCircle className="w-8 h-8 text-[#FF7A14]" /><p className="text-sm font-medium text-[#E85D00]">{screenshotName}</p><p className="text-xs text-gray-400">Appuyez pour changer</p></>
             ) : (
-              <><ImageIcon className="w-8 h-8 text-gray-400" /><p className="text-sm font-medium text-gray-600">Appuyez pour ajouter la capture</p><p className="text-xs text-gray-400">JPG, PNG — max 5 Mo</p></>
+              <><ImageIcon className="w-8 h-8 text-gray-400" /><p className="text-sm font-medium text-gray-600">Tap to add a screenshot</p><p className="text-xs text-gray-400">JPG, PNG — max 5 MB</p></>
             )}
           </button>
           {screenshot && (
@@ -1331,7 +1331,7 @@ export default function DepositPage() {
           {depositMutation.isPending ? (
             <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Envoi en cours...</span>
           ) : (
-            <span className="flex items-center justify-center gap-2"><Upload className="w-5 h-5" /> Soumettre ma demande</span>
+            <span className="flex items-center justify-center gap-2"><Upload className="w-5 h-5" /> Submit my request</span>
           )}
         </button>
       </div>
@@ -1345,7 +1345,7 @@ export default function DepositPage() {
       <header className="deposit-step-header">
         <button className="deposit-step-back" onClick={() => setStep("amount")}>
           <ChevronLeft className="w-5 h-5" />
-          <span className="font-semibold text-base">Paiement Mobile Money</span>
+          <span className="font-semibold text-base">Mobile Money payment</span>
         </button>
       </header>
 
@@ -1353,26 +1353,26 @@ export default function DepositPage() {
         {/* Amount recap */}
         <div className="deposit-step-summary mx-0 p-4 flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-500">Montant à déposer</p>
+            <p className="text-xs text-gray-500">Amount to deposit</p>
             <p className="text-xl font-bold text-[#E85D00]">{Number(amount).toLocaleString()} {currency}</p>
           </div>
-          <button onClick={() => setStep("amount")} className="text-xs text-[#E85D00] underline">Modifier</button>
+          <button onClick={() => setStep("amount")} className="text-xs text-[#E85D00] underline">Edit</button>
         </div>
 
         {/* Info card */}
         <div className="deposit-step-card p-4 space-y-2">
           <div className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-[#FF7A14]" />
-            <p className="font-semibold text-gray-900 text-sm">Comment ça marche ?</p>
+            <p className="font-semibold text-gray-900 text-sm">How it works</p>
           </div>
           <p className="text-xs text-gray-600 leading-relaxed">
-            1. Cliquez sur <strong>Continuer le paiement</strong> — vous serez redirigé vers la page de paiement sécurisée.
+            1. Click <strong>Continue payment</strong> — you will be redirected to the secure payment page.
           </p>
           <p className="text-xs text-gray-600 leading-relaxed">
-            2. Entrez votre numéro Mobile Money et validez le paiement USSD depuis votre téléphone.
+            2. Enter your Mobile Money number and approve the USSD payment on your phone.
           </p>
           <p className="text-xs text-gray-600 leading-relaxed">
-            3. Après paiement, vous serez automatiquement redirigé ici. Votre solde est crédité après confirmation.
+            3. After payment, you will be redirected here automatically. Your balance is credited after confirmation.
           </p>
         </div>
 
@@ -1385,12 +1385,12 @@ export default function DepositPage() {
           {wpInitiateMutation.isPending ? (
             <><Loader2 className="w-5 h-5 animate-spin" /> Redirection en cours...</>
           ) : (
-            <><ExternalLink className="w-5 h-5" /> Continuer le paiement</>
+            <><ExternalLink className="w-5 h-5" /> Continue payment</>
           )}
         </button>
 
         <p className="text-xs text-center text-gray-400">
-          Paiement sécurisé — USSD Mobile Money
+          Secure payment — USSD Mobile Money
         </p>
       </div>
     </div>
@@ -1403,17 +1403,17 @@ export default function DepositPage() {
       <header className="deposit-step-header">
         <button className="deposit-step-back" onClick={() => setStep("amount")}>
           <ChevronLeft className="w-5 h-5" />
-          <span className="font-semibold text-base">Paiement Mobile Money</span>
+          <span className="font-semibold text-base">Mobile Money payment</span>
         </button>
-        <Link href="/history"><button className="deposit-step-history">Historique</button></Link>
+        <Link href="/history"><button className="deposit-step-history">History</button></Link>
       </header>
       <div className="deposit-step-summary mx-4 mt-4 p-4 flex items-center justify-between">
-        <div><p className="text-xs text-gray-500">Montant à déposer</p><p className="text-xl font-bold text-[#E85D00]">{Number(amount).toLocaleString()} {currency}</p></div>
-        <button onClick={() => setStep("amount")} className="text-xs text-[#E85D00] underline">Modifier</button>
+         <div><p className="text-xs text-gray-500">Deposit amount</p><p className="text-xl font-bold text-[#E85D00]">{Number(amount).toLocaleString()} {currency}</p></div>
+        <button onClick={() => setStep("amount")} className="text-xs text-[#E85D00] underline">Edit</button>
       </div>
       <div className="deposit-step-content space-y-4 pb-10">
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Pays</p>
+           <p className="text-sm font-semibold text-gray-800 mb-2">Country</p>
           {ashtechCountriesLoading ? <Loader2 className="w-6 h-6 animate-spin text-[#FF7A14] mx-auto" /> : (
             <select value={ashtechCountry} onChange={(e) => { setAshtechCountry(e.target.value); setAshtechOperator(""); }}
               className="deposit-step-field w-full px-4 py-4 text-sm text-gray-700 outline-none appearance-none">
@@ -1422,19 +1422,19 @@ export default function DepositPage() {
           )}
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Numéro Mobile Money</p>
+           <p className="text-sm font-semibold text-gray-800 mb-2">Mobile Money number</p>
           <div className="deposit-step-field flex items-center overflow-hidden">
             <Phone className="w-4 h-4 text-gray-400 ml-4 flex-shrink-0" />
             <input type="tel" inputMode="numeric" value={ashtechPhone} onChange={(e) => setAshtechPhone(e.target.value)}
-              placeholder="Votre numéro Mobile Money" className="flex-1 px-3 py-4 text-sm text-gray-700 outline-none bg-transparent" />
+              placeholder="Your Mobile Money number" className="flex-1 px-3 py-4 text-sm text-gray-700 outline-none bg-transparent" />
           </div>
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Opérateur Mobile Money</p>
-          {ashtechOperators.length === 0 ? <p className="text-sm text-gray-400 text-center py-5">Aucun opérateur disponible pour ce pays</p> : (
+           <p className="text-sm font-semibold text-gray-800 mb-2">Mobile Money operator</p>
+           {ashtechOperators.length === 0 ? <p className="text-sm text-gray-400 text-center py-5">No operator is available for this country</p> : (
             <div className="space-y-2">
               {ashtechOperators.map((operator, index) => {
-                const name = typeof operator === "string" ? operator : (operator.name || operator.code || `Opérateur ${index + 1}`);
+                 const name = typeof operator === "string" ? operator : (operator.name || operator.code || `Operator ${index + 1}`);
                 return <button key={`${name}-${index}`} onClick={() => setAshtechOperator(name)}
                   className={`deposit-step-operator w-full flex items-center justify-between px-4 py-4 ${ashtechOperator === name ? "deposit-step-operator-selected" : ""}`}>
                   <span className="font-semibold text-gray-900 text-sm">{name}</span>
@@ -1446,7 +1446,7 @@ export default function DepositPage() {
         </div>
         <button onClick={() => ashtechCollectMutation.mutate(undefined)} disabled={!ashtechOperator || !ashtechPhone.trim() || ashtechCollectMutation.isPending}
           className="deposit-step-primary w-full py-5 disabled:opacity-40" style={{ background: TON_GRADIENT }}>
-          {ashtechCollectMutation.isPending ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Initiation en cours...</span> : "Initier le paiement"}
+          {ashtechCollectMutation.isPending ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Starting...</span> : "Start payment"}
         </button>
       </div>
     </div>
@@ -1461,19 +1461,19 @@ export default function DepositPage() {
       </header>
       <div className="deposit-step-content space-y-5 pb-10">
         <div className="deposit-step-card deposit-step-card-orange p-4">
-          <p className="font-bold text-gray-900 text-sm mb-2">Code à composer</p>
+          <p className="font-bold text-gray-900 text-sm mb-2">Dial code</p>
           {ashtechUssdCode && <p className="deposit-step-otp px-4 py-3 text-center font-mono font-black text-2xl text-[#E85D00] tracking-widest">{ashtechUssdCode}</p>}
           <p className="text-sm text-gray-600 mt-3">
             {ashtechUssdCode
-              ? "Composez ce code sur votre téléphone pour obtenir le code OTP, puis saisissez-le ci-dessous."
-              : "Un code OTP vous a été envoyé. Saisissez-le ci-dessous."}
+              ? "Dial this code on your phone to receive the OTP, then enter it below."
+              : "An OTP has been sent to you. Enter it below."}
           </p>
         </div>
         <input type="text" inputMode="numeric" value={ashtechOtp} onChange={(e) => setAshtechOtp(e.target.value)} maxLength={8}
-          placeholder="Code OTP reçu par SMS" className="deposit-step-otp w-full px-4 py-4 text-center text-2xl tracking-widest font-black text-gray-800 outline-none focus:border-[#FF7A14]" />
+          placeholder="OTP code received by SMS" className="deposit-step-otp w-full px-4 py-4 text-center text-2xl tracking-widest font-black text-gray-800 outline-none focus:border-[#FF7A14]" />
         <button onClick={() => ashtechCollectMutation.mutate(ashtechOtp)} disabled={!ashtechOtp.trim() || ashtechCollectMutation.isPending}
           className="deposit-step-primary w-full py-5 disabled:opacity-40" style={{ background: TON_GRADIENT }}>
-          {ashtechCollectMutation.isPending ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Vérification...</span> : "Valider le code OTP"}
+          {ashtechCollectMutation.isPending ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Verifying...</span> : "Verify OTP code"}
         </button>
       </div>
     </div>
@@ -1484,14 +1484,14 @@ export default function DepositPage() {
     <div className="deposit-step-shell flex flex-col">
       <DepositStepStyles />
       <header className="deposit-step-header">
-        <button onClick={() => setStep("ashtech-operator")} className="deposit-step-back"><ChevronLeft className="w-5 h-5" /><span>Finaliser le paiement</span></button>
+        <button onClick={() => setStep("ashtech-operator")} className="deposit-step-back"><ChevronLeft className="w-5 h-5" /><span>Complete payment</span></button>
       </header>
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
         <div className="deposit-step-icon"><ExternalLink className="w-10 h-10 text-[#FF7A14]" /></div>
-        <div><p className="font-bold text-gray-900 text-xl mb-2">Finaliser avec Wave</p><p className="text-sm text-gray-500">Ouvrez la page Wave pour confirmer votre dépôt de <strong>{Number(amount).toLocaleString()} {currency}</strong>.</p></div>
+        <div><p className="font-bold text-gray-900 text-xl mb-2">Complete with Wave</p><p className="text-sm text-gray-500">Open the Wave page to confirm your deposit of <strong>{Number(amount).toLocaleString()} {currency}</strong>.</p></div>
         <a href={ashtechWaveUrl} target="_blank" rel="noopener noreferrer" onClick={() => { setAshtechPolling(true); setStep("ashtech-waiting"); }}
           className="deposit-step-primary w-full py-5 flex items-center justify-center gap-2" style={{ background: TON_GRADIENT }}>
-          <ExternalLink className="w-5 h-5" /> Ouvrir Wave
+          <ExternalLink className="w-5 h-5" /> Open Wave
         </a>
       </div>
     </div>
@@ -1501,12 +1501,12 @@ export default function DepositPage() {
   if (step === "ashtech-waiting") return (
     <div className="deposit-step-shell flex flex-col">
       <DepositStepStyles />
-      <header className="deposit-step-header"><span className="font-semibold text-base text-gray-800">Paiement en cours</span></header>
+      <header className="deposit-step-header"><span className="font-semibold text-base text-gray-800">Payment in progress</span></header>
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
         <div className="deposit-step-icon"><RefreshCw className="w-10 h-10 text-[#FF7A14] animate-spin" style={{ animationDuration: "2s" }} /></div>
-        <div><p className="font-bold text-gray-900 text-xl">En attente de confirmation</p><p className="text-sm text-gray-500 mt-2">Validez le paiement sur votre téléphone. Cette page se met à jour automatiquement.</p></div>
-        <div className="flex gap-3 w-full"><Link href="/history" className="flex-1"><button className="deposit-step-secondary w-full py-3 text-sm">Voir l'historique</button></Link>
-          <button onClick={() => { setStep("amount"); setAmount(""); setAshtechDepositId(null); setAshtechPolling(false); setAshtechStatus(""); }} className="deposit-step-secondary flex-1 py-3 text-sm">Nouvelle recharge</button>
+        <div><p className="font-bold text-gray-900 text-xl">Awaiting confirmation</p><p className="text-sm text-gray-500 mt-2">Approve the payment on your phone. This page updates automatically.</p></div>
+        <div className="flex gap-3 w-full"><Link href="/history" className="flex-1"><button className="deposit-step-secondary w-full py-3 text-sm">View history</button></Link>
+          <button onClick={() => { setStep("amount"); setAmount(""); setAshtechDepositId(null); setAshtechPolling(false); setAshtechStatus(""); }} className="deposit-step-secondary flex-1 py-3 text-sm">New top-up</button>
         </div>
       </div>
     </div>
@@ -1516,7 +1516,7 @@ export default function DepositPage() {
     <div className="deposit-step-shell flex flex-col">
       <DepositStepStyles />
       <header className="deposit-step-header">
-        <span className="font-semibold text-base text-gray-800">Paiement en cours</span>
+        <span className="font-semibold text-base text-gray-800">Payment in progress</span>
       </header>
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
         <div className="deposit-step-icon">
@@ -1526,16 +1526,16 @@ export default function DepositPage() {
         </div>
         <div>
           <p className="font-bold text-gray-900 text-xl">
-            {soleaspayStatus === "approved" ? "Paiement confirmé !" : soleaspayStatus === "rejected" ? "Paiement échoué" : "En attente de confirmation"}
+            {soleaspayStatus === "approved" ? "Payment confirmed!" : soleaspayStatus === "rejected" ? "Payment failed" : "Awaiting confirmation"}
           </p>
           <p className="text-sm text-gray-500 mt-2">
             {soleaspayStatus === "approved"
-              ? `Votre solde a été crédité de ${Number(amount).toLocaleString()} ${currency}.`
+              ? `Your balance has been credited with ${Number(amount).toLocaleString()} ${currency}.`
               : soleaspayStatus === "rejected"
-                ? "Le paiement a été refusé ou annulé."
-                : soleaspayMessage || "Validez la demande de paiement sur votre téléphone. Cette page se met à jour automatiquement."}
+                ? "The payment was declined or cancelled."
+                : soleaspayMessage || "Approve the payment request on your phone. This page updates automatically."}
           </p>
-          {soleaspayDepositId && <p className="text-xs text-gray-400 mt-2">Référence dépôt : #{soleaspayDepositId}</p>}
+          {soleaspayDepositId && <p className="text-xs text-gray-400 mt-2">Deposit reference: #{soleaspayDepositId}</p>}
         </div>
         <div className="flex gap-3 w-full">
           {soleaspayStatus === "rejected" ? (
@@ -1549,11 +1549,11 @@ export default function DepositPage() {
               className="deposit-step-primary flex-1 py-3 text-sm"
               style={{ background: TON_GRADIENT }}
             >
-              Réessayer
+              Try again
             </button>
           ) : (
             <Link href="/history" className="flex-1">
-              <button className="deposit-step-secondary w-full py-3 text-sm">Voir l'historique</button>
+              <button className="deposit-step-secondary w-full py-3 text-sm">View history</button>
             </Link>
           )}
           <button
@@ -1566,7 +1566,7 @@ export default function DepositPage() {
             }}
             className="deposit-step-secondary flex-1 py-3 text-sm"
           >
-            Nouvelle recharge
+            New top-up
           </button>
         </div>
       </div>
@@ -1583,23 +1583,23 @@ export default function DepositPage() {
           <span className="font-semibold text-base">Top up</span>
         </button>
         <Link href="/history">
-          <button className="deposit-step-history">Historique</button>
+          <button className="deposit-step-history">History</button>
         </Link>
       </header>
 
       {/* Amount recap */}
       <div className="deposit-step-summary mx-4 mt-4 p-4 flex items-center justify-between">
         <div>
-          <p className="text-xs text-gray-500">Montant à déposer</p>
+          <p className="text-xs text-gray-500">Deposit amount</p>
           <p className="text-xl font-bold text-[#E85D00]">{Number(amount).toLocaleString()} {currency}</p>
         </div>
-        <button onClick={() => setStep("amount")} className="text-xs text-[#E85D00] underline">Modifier</button>
+        <button onClick={() => setStep("amount")} className="text-xs text-[#E85D00] underline">Edit</button>
       </div>
 
       <div className="deposit-step-content space-y-4 pb-10">
         {/* Country selector */}
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Pays</p>
+          <p className="text-sm font-semibold text-gray-800 mb-2">Country</p>
           <select
             value={svCountry}
             onChange={(e) => { setSvCountry(e.target.value); setSvOperator(null); }}
@@ -1613,7 +1613,7 @@ export default function DepositPage() {
 
         {/* Phone number */}
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Numéro Mobile Money</p>
+          <p className="text-sm font-semibold text-gray-800 mb-2">Mobile Money number</p>
           <div className="deposit-step-field flex items-center overflow-hidden">
             <Phone className="w-4 h-4 text-gray-400 ml-4 flex-shrink-0" />
             <input
@@ -1621,7 +1621,7 @@ export default function DepositPage() {
               inputMode="numeric"
               value={svPhone}
               onChange={(e) => setSvPhone(e.target.value)}
-              placeholder="Numéro sur lequel envoyer la demande"
+              placeholder="Number to receive the payment request"
               className="flex-1 px-3 py-4 text-sm text-gray-700 outline-none bg-transparent"
             />
           </div>
@@ -1629,14 +1629,14 @@ export default function DepositPage() {
 
         {/* Operator selector */}
         <div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">Opérateur Mobile Money</p>
+          <p className="text-sm font-semibold text-gray-800 mb-2">Mobile Money operator</p>
           {svOperatorsLoading ? (
             <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-[#FF7A14]" />
             </div>
           ) : svOperators.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
-              <p className="text-sm">Aucun opérateur disponible pour ce pays</p>
+              <p className="text-sm">No operator is available for this country</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -1664,7 +1664,7 @@ export default function DepositPage() {
                       )}
                       <div className="text-left">
                         <p className="font-semibold text-gray-900 text-sm">{op.name}</p>
-                        {op.requiresOtp && <p className="text-xs text-[#E85D00]">Code OTP requis</p>}
+                        {op.requiresOtp && <p className="text-xs text-[#E85D00]">OTP code required</p>}
                       </div>
                     </div>
                     {svOperator?.id === op.id && <CheckCircle className="w-5 h-5 text-[#FF7A14]" />}
@@ -1684,7 +1684,7 @@ export default function DepositPage() {
           {svInitiateMutation.isPending ? (
             <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Initiation en cours...</span>
           ) : (
-            <span className="flex items-center justify-center gap-2"><img src="/topup-icon.png" className="w-6 h-6 object-contain" alt="topup" /> Initier le paiement</span>
+                    <span className="flex items-center justify-center gap-2"><img src="/topup-icon.png" className="w-6 h-6 object-contain" alt="topup" /> Initiate payment</span>
           )}
         </button>
       </div>
@@ -1710,16 +1710,16 @@ export default function DepositPage() {
            <div className="w-7 h-7 rounded-full bg-[#FF7A14] flex items-center justify-center flex-shrink-0">
               <span className="text-gray-900 font-bold text-xs">1</span>
             </div>
-            <p className="font-bold text-gray-900 text-sm">Composez ce code sur votre téléphone</p>
+            <p className="font-bold text-gray-900 text-sm">Dial this code on your phone</p>
           </div>
           {svUssdCode ? (
              <div className="deposit-step-otp px-4 py-3 text-center">
               <p className="font-mono font-black text-2xl text-[#E85D00] tracking-widest">{svUssdCode}</p>
-              <p className="text-xs text-gray-400 mt-1">Composez ce code USSD sur votre téléphone</p>
+              <p className="text-xs text-gray-400 mt-1">Dial this USSD code on your phone</p>
             </div>
           ) : (
             <p className="text-sm text-gray-600">
-              Composez le code USSD de votre opérateur (ex&nbsp;: <span className="font-mono font-bold text-[#E85D00]">*144#</span>) sur votre téléphone pour recevoir le code OTP par SMS.
+              Dial your operator's USSD code (e.g. <span className="font-mono font-bold text-[#E85D00]">*144#</span>) on your phone to receive the OTP by SMS.
             </p>
           )}
         </div>
@@ -1730,17 +1730,17 @@ export default function DepositPage() {
             <div className="w-7 h-7 rounded-full bg-[#FF7A14] flex items-center justify-center flex-shrink-0">
               <span className="text-white font-bold text-xs">2</span>
             </div>
-            <p className="font-bold text-gray-900 text-sm">Entrez le code OTP reçu par SMS</p>
+            <p className="font-bold text-gray-900 text-sm">Enter the OTP received by SMS</p>
           </div>
           <p className="text-xs text-gray-500 mb-3">
-            Après avoir composé le code, vous recevrez un SMS avec un code OTP. Saisissez-le ci-dessous pour confirmer le paiement de <strong>{Number(amount).toLocaleString()} {currency}</strong>.
+            After dialing the code, you will receive an SMS with an OTP. Enter it below to confirm the payment of <strong>{Number(amount).toLocaleString()} {currency}</strong>.
           </p>
          <input
             type="text"
             inputMode="numeric"
             value={svOtp}
             onChange={(e) => setSvOtp(e.target.value)}
-            placeholder="Code OTP reçu par SMS"
+            placeholder="OTP received by SMS"
            className="deposit-step-otp w-full px-4 py-4 text-center text-2xl tracking-widest font-black text-gray-800 outline-none focus:border-[#FF7A14]"
             maxLength={8}
           />
@@ -1753,8 +1753,8 @@ export default function DepositPage() {
           style={{ background: TON_GRADIENT }}
         >
           {svOtpMutation.isPending ? (
-            <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Vérification...</span>
-          ) : "Valider le code OTP"}
+            <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Verifying...</span>
+          ) : "Verify OTP code"}
         </button>
       </div>
     </div>
@@ -1767,7 +1767,7 @@ export default function DepositPage() {
       <header className="deposit-step-header">
         <button onClick={() => setStep("sv-operator")} className="deposit-step-back">
           <ChevronLeft className="w-5 h-5" />
-          <span className="font-semibold text-base">Finaliser le paiement</span>
+          <span className="font-semibold text-base">Complete payment</span>
         </button>
       </header>
 
@@ -1776,10 +1776,10 @@ export default function DepositPage() {
           <ExternalLink className="w-10 h-10 text-[#FF7A14]" />
         </div>
         <div>
-          <p className="font-bold text-gray-900 text-xl mb-2">Finaliser sur l'application</p>
+          <p className="font-bold text-gray-900 text-xl mb-2">Complete in the app</p>
           <p className="text-sm text-gray-500">
-            Appuyez sur le bouton ci-dessous pour ouvrir la page de paiement de l'opérateur
-            et confirmer votre dépôt de <strong>{Number(amount).toLocaleString()} {currency}</strong>.
+            Tap the button below to open the operator's payment page
+            and confirm your deposit of <strong>{Number(amount).toLocaleString()} {currency}</strong>.
           </p>
         </div>
         <a
@@ -1790,7 +1790,7 @@ export default function DepositPage() {
            style={{ background: TON_GRADIENT }}
           onClick={() => { setSvPolling(true); setStep("sv-waiting"); }}
         >
-          <ExternalLink className="w-5 h-5" /> Ouvrir la page de paiement
+          <ExternalLink className="w-5 h-5" /> Open payment page
         </a>
       </div>
     </div>
@@ -1801,7 +1801,7 @@ export default function DepositPage() {
     <div className="deposit-step-shell flex flex-col">
       <DepositStepStyles />
       <header className="deposit-step-header">
-        <span className="font-semibold text-base text-gray-800">Paiement en cours</span>
+        <span className="font-semibold text-base text-gray-800">Payment in progress</span>
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
@@ -1811,8 +1811,8 @@ export default function DepositPage() {
               <CheckCircle className="w-10 h-10 text-[#FF7A14]" />
             </div>
             <div>
-              <p className="font-bold text-gray-900 text-xl">Paiement confirmé !</p>
-              <p className="text-sm text-gray-500 mt-1">Votre solde a été crédité de <strong>{Number(amount).toLocaleString()} {currency}</strong></p>
+              <p className="font-bold text-gray-900 text-xl">Payment confirmed!</p>
+              <p className="text-sm text-gray-500 mt-1">Your balance was credited with <strong>{Number(amount).toLocaleString()} {currency}</strong></p>
             </div>
           </>
         ) : svStatus === "rejected" ? (
@@ -1821,8 +1821,8 @@ export default function DepositPage() {
               <RefreshCw className="w-10 h-10 text-red-400" />
             </div>
             <div>
-              <p className="font-bold text-gray-900 text-xl">Paiement échoué</p>
-              <p className="text-sm text-gray-500 mt-1">Le paiement a été refusé ou annulé.</p>
+              <p className="font-bold text-gray-900 text-xl">Payment failed</p>
+              <p className="text-sm text-gray-500 mt-1">The payment was declined or cancelled.</p>
             </div>
             <div className="flex gap-3 w-full">
               {svPaymentToken && (
@@ -1833,14 +1833,14 @@ export default function DepositPage() {
                    style={{ background: TON_GRADIENT }}
                 >
                   {svRetryMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                  Réessayer
+                  Try again
                 </button>
               )}
               <button
                 onClick={() => { setStep("amount"); setAmount(""); setSvOperator(null); setSvDepositId(null); setSvPaymentToken(""); setSvPolling(false); setSvStatus(""); }}
                  className="deposit-step-secondary flex-1 py-3 text-sm"
               >
-                Nouvelle recharge
+                New top-up
               </button>
             </div>
           </>
@@ -1850,23 +1850,23 @@ export default function DepositPage() {
               <RefreshCw className="w-10 h-10 text-[#FF7A14] animate-spin" style={{ animationDuration: "2s" }} />
             </div>
             <div>
-              <p className="font-bold text-gray-900 text-xl">En attente de confirmation</p>
+              <p className="font-bold text-gray-900 text-xl">Awaiting confirmation</p>
               <p className="text-sm text-gray-500 mt-2">
-                Une demande de paiement de <strong>{Number(amount).toLocaleString()} {currency}</strong> a été envoyée sur votre téléphone.<br />
-                Acceptez-la sur votre téléphone. Cette page se met à jour automatiquement.
+                A payment request for <strong>{Number(amount).toLocaleString()} {currency}</strong> was sent to your phone.<br />
+                Accept it on your phone. This page updates automatically.
               </p>
             </div>
             <div className="flex gap-3 w-full">
               <Link href="/history" className="flex-1">
                  <button className="deposit-step-secondary w-full py-3 text-sm">
-                  Voir l'historique
+                  View history
                 </button>
               </Link>
               <button
                 onClick={() => { setStep("amount"); setAmount(""); setSvOperator(null); setSvDepositId(null); setSvPaymentToken(""); setSvPolling(false); setSvStatus(""); }}
                  className="deposit-step-secondary flex-1 py-3 text-sm"
               >
-                Nouvelle recharge
+                New top-up
               </button>
             </div>
           </>

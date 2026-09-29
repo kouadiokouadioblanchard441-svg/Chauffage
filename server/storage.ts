@@ -238,7 +238,7 @@ export class DatabaseStorage implements IStorage {
       userId: user.id,
       type: "bonus",
       amount: signupBonus,
-      description: "Bonus d'inscription",
+      description: "Registration bonus",
     });
     
     return user;
@@ -340,15 +340,15 @@ export class DatabaseStorage implements IStorage {
 
   async purchaseProduct(userId: number, productId: number, assignedByAdmin = false): Promise<UserProduct> {
     const product = await this.getProduct(productId);
-    if (!product) throw new Error("Produit non trouvé");
-    if (!product.isActive && !assignedByAdmin) throw new Error("Produit indisponible");
+    if (!product) throw new Error("Product not found");
+    if (!product.isActive && !assignedByAdmin) throw new Error("Product unavailable");
 
     const user = await this.getUser(userId);
-    if (!user) throw new Error("Utilisateur non trouvé");
+    if (!user) throw new Error("User not found");
 
     if (!product.isFree && !assignedByAdmin) {
       const balance = parseFloat(user.balance);
-      if (balance < product.price) throw new Error("Solde insuffisant");
+      if (balance < product.price) throw new Error("Insufficient balance");
       
       // Check if this is user's first paid investment
       const existingPaidProducts = await db.select()
@@ -371,7 +371,7 @@ export class DatabaseStorage implements IStorage {
         userId,
         type: "purchase",
         amount: (-product.price).toString(),
-        description: `Achat ${product.name}`,
+        description: `Purchase ${product.name}`,
       });
 
       // Process referral commissions ONLY on first investment
@@ -435,7 +435,7 @@ export class DatabaseStorage implements IStorage {
         userId: level1User.id,
         type: "commission",
         amount: commission.toFixed(2),
-        description: `Commission niveau 1 de ${user.fullName}`,
+        description: `Level 1 commission from ${user.fullName}`,
       });
 
       // Level 2
@@ -457,7 +457,7 @@ export class DatabaseStorage implements IStorage {
             userId: level2User.id,
             type: "commission",
             amount: commission2.toFixed(2),
-            description: `Commission niveau 2`,
+            description: "Level 2 commission",
           });
 
           // Level 3
@@ -479,7 +479,7 @@ export class DatabaseStorage implements IStorage {
                 userId: level3User.id,
                 type: "commission",
                 amount: commission3.toFixed(2),
-                description: `Commission niveau 3`,
+                description: "Level 3 commission",
               });
             }
           }
@@ -543,7 +543,7 @@ export class DatabaseStorage implements IStorage {
               userId: user.id,
               type: "earning",
               amount: earningsPerCycle.toString(),
-              description: `Gains ${product.name}`,
+              description: `Earnings ${product.name}`,
             });
           }
         }
@@ -753,7 +753,7 @@ export class DatabaseStorage implements IStorage {
           userId: level1User.id,
           type: "deposit_commission",
           amount: commission.toString(),
-          description: `Commission depot niveau 1`,
+          description: "Level 1 deposit commission",
         });
       }
 
@@ -769,7 +769,7 @@ export class DatabaseStorage implements IStorage {
               userId: level2User.id,
               type: "deposit_commission",
               amount: comm2.toString(),
-              description: `Commission depot niveau 2`,
+              description: "Level 2 deposit commission",
             });
           }
 
@@ -785,7 +785,7 @@ export class DatabaseStorage implements IStorage {
                   userId: level3User.id,
                   type: "deposit_commission",
                   amount: comm3.toString(),
-                  description: `Commission depot niveau 3`,
+                  description: "Level 3 deposit commission",
                 });
               }
             }
@@ -1337,12 +1337,12 @@ export class DatabaseStorage implements IStorage {
     const tasksStatus = await this.getTasksWithStatus(userId);
     const taskStatus = tasksStatus.find(t => t.id === taskId);
 
-    if (!taskStatus) throw new Error("Tâche non trouvée");
-    if (taskStatus.isCompleted) throw new Error("Tâche déjà réclamée");
-    if (!taskStatus.canClaim) throw new Error("Conditions non remplies (recharge et achat requis)");
+    if (!taskStatus) throw new Error("Task not found");
+    if (taskStatus.isCompleted) throw new Error("Task already claimed");
+    if (!taskStatus.canClaim) throw new Error("Requirements not met (deposit and purchase required)");
 
     const user = await this.getUser(userId);
-    if (!user) throw new Error("Utilisateur non trouvé");
+    if (!user) throw new Error("User not found");
 
     await db.insert(userTasks).values({ userId, taskId });
     
@@ -1353,7 +1353,7 @@ export class DatabaseStorage implements IStorage {
       userId,
       type: "task_reward",
       amount: taskStatus.reward.toString(),
-      description: `Récompense: ${taskStatus.name}`,
+      description: `Reward: ${taskStatus.name}`,
     });
   }
 
@@ -1535,7 +1535,7 @@ export class DatabaseStorage implements IStorage {
         userId,
         type: "gift_code",
         amount: amount.toString(),
-        description: `Bonus code cadeau`
+        description: "Gift code bonus"
       });
     });
   }
@@ -1630,25 +1630,25 @@ export class DatabaseStorage implements IStorage {
 
   async purchaseStaking(userId: number, stakingProductId: number): Promise<UserStaking> {
     const sp = await this.getStakingProduct(stakingProductId);
-    if (!sp) throw new Error("Produit de staking introuvable");
-    if (!sp.isActive) throw new Error("Produit de staking inactif");
+    if (!sp) throw new Error("Staking product not found");
+    if (!sp.isActive) throw new Error("Staking product is inactive");
 
     const now = new Date();
     if (sp.launchDate && new Date(sp.launchDate) > now) {
-      throw new Error("Ce produit n'est pas encore disponible à l'achat");
+      throw new Error("This product is not yet available for purchase");
     }
 
     const user = await this.getUser(userId);
-    if (!user) throw new Error("Utilisateur introuvable");
+    if (!user) throw new Error("User not found");
     if (parseFloat(user.balance) < sp.price) {
-      throw new Error(`Solde insuffisant. Il vous manque ${(sp.price - parseFloat(user.balance)).toLocaleString()} ${user.country === "TD" ? "XAF" : "XOF"}`);
+      throw new Error(`Insufficient balance. You are missing ${(sp.price - parseFloat(user.balance)).toLocaleString()} PHP`);
     }
 
     // Check user has at least one active regular product
     const activeProds = await db.select().from(userProducts)
       .where(and(eq(userProducts.userId, userId), eq(userProducts.isActive, true)));
     if (activeProds.length === 0) {
-      throw new Error("Vous devez posséder un produit actif avant d'accéder au Staking");
+      throw new Error("You must own an active product before accessing staking");
     }
 
     const releaseDate = new Date(now.getTime() + sp.lockDays * 24 * 60 * 60 * 1000);
@@ -1713,7 +1713,7 @@ export class DatabaseStorage implements IStorage {
           userId: staking.userId,
           type: "staking_release",
           amount: staking.returnAmount.toString(),
-          description: `Déblocage staking #${staking.id}`,
+          description: `Staking release #${staking.id}`,
         });
       } catch (e) {
         console.error("Error releasing staking:", staking.id, e);

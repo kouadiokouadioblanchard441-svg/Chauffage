@@ -42,26 +42,26 @@ const quickActions = [
 ] as const;
 
 const bannerSlides = [
-  { image: chargingStationUser, alt: "Conducteur utilisant une borne de recharge" },
-  { image: electricBus, alt: "Bus électrique en charge" },
-  { image: homeCharging, alt: "Recharge d'un véhicule à domicile" },
-  { image: publicCharger, alt: "Bornes de recharge dans un espace public" },
-  { image: chargerProduct, alt: "Équipement de recharge ChargePoint" },
+  { image: chargingStationUser, alt: "Driver using a charging station" },
+  { image: electricBus, alt: "Electric bus charging" },
+  { image: homeCharging, alt: "Charging a vehicle at home" },
+  { image: publicCharger, alt: "Charging stations in a public space" },
+  { image: chargerProduct, alt: "ChargePoint charging equipment" },
 ] as const;
 
 const announcementLibrary = [
-  "052**85 a obtenu 20 000 F de bonus d'équipe",
-  "55*368 a retiré 23 654 F",
-  "07****42 a obtenu 12 500 F de bonus d'équipe",
-  "01****73 a retiré 8 000 F",
-  "05****91 a obtenu 15 000 F de bonus d'équipe",
-  "07****26 a retiré 32 400 F",
-  "05****14 a obtenu 10 000 F de bonus d'équipe",
-  "01****82 a retiré 15 000 F",
-  "07****63 a obtenu 18 500 F de bonus d'équipe",
-  "05****47 a retiré 27 800 F",
-  "01****29 a obtenu 25 000 F de bonus d'équipe",
-  "07****18 a retiré 11 250 F",
+  "052**85 received 20,000 PHP in team bonus",
+  "55*368 withdrew 23,654 PHP",
+  "07****42 received 12,500 PHP in team bonus",
+  "01****73 withdrew 8,000 PHP",
+  "05****91 received 15,000 PHP in team bonus",
+  "07****26 withdrew 32,400 PHP",
+  "05****14 received 10,000 PHP in team bonus",
+  "01****82 withdrew 15,000 PHP",
+  "07****63 received 18,500 PHP in team bonus",
+  "05****47 withdrew 27,800 PHP",
+  "01****29 received 25,000 PHP in team bonus",
+  "07****18 withdrew 11,250 PHP",
 ] as const;
 
 const partners = [
@@ -98,7 +98,7 @@ export default function HomePage() {
   const balance = Number.parseFloat(user.balance || "0");
   const totalEarnings = Number.parseFloat(user.totalEarnings || "0");
   const groupLink = settings?.groupLink || "";
-  const popupButtonLabel = settings?.popupButtonLabel || settings?.groupLabel || "Rejoindre le groupe Telegram Officiel";
+  const popupButtonLabel = settings?.popupButtonLabel || settings?.groupLabel || "Join the official Telegram group";
   const formatMoney = (amount: number) => `${Math.round(amount).toLocaleString("en-PH")} ${currency}`;
   const formatPopupMoney = (amount: number) => `${Math.round(amount).toLocaleString("en-PH")} ${currency}`;
   const parseIntegerSetting = (key: string, fallback: number) => {
@@ -144,21 +144,21 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-            <div className="cp-hero-dots" aria-label="Images de la bannière">
+            <div className="cp-hero-dots" aria-label="Banner images">
               {bannerSlides.map((slide, index) => (
                 <button
                   key={slide.image}
                   type="button"
                   className={index === bannerIndex ? "is-active" : ""}
                   onClick={() => setBannerIndex(index)}
-                  aria-label={`Afficher l'image ${index + 1}`}
+                   aria-label={`Show image ${index + 1}`}
                   aria-pressed={index === bannerIndex}
                 />
               ))}
             </div>
           </section>
 
-          <section className="cp-actions" aria-label="Actions rapides">
+           <section className="cp-actions" aria-label="Quick actions">
             {quickActions.map(({ label, href, icon }) => (
               <button key={label} className="cp-action" onClick={() => navigate(href)}>
                 <span className="cp-action-icon">
@@ -169,7 +169,7 @@ export default function HomePage() {
             ))}
           </section>
 
-          <button className="cp-notice" type="button" onClick={() => setWelcomePopupOpen(true)} aria-label="Ouvrir les informations ChargePoint" aria-describedby="cp-notice-messages">
+           <button className="cp-notice" type="button" onClick={() => setWelcomePopupOpen(true)} aria-label="Open ChargePoint information" aria-describedby="cp-notice-messages">
             <span className="cp-notice-icon"><img src={noticeBell} alt="" width={26} height={26} /></span>
             <span className="cp-notice-marquee" aria-hidden="true">
               <span className="cp-notice-track">
@@ -197,7 +197,7 @@ export default function HomePage() {
                <h2 id="overview-title">Overview</h2>
             </header>
             <div className="cp-metrics">
-              <button className="cp-balance" type="button" onClick={() => navigate("/wallet")} aria-label={`Voir le portefeuille, solde ${formatMoney(balance)}`}>
+              <button className="cp-balance" type="button" onClick={() => navigate("/wallet")} aria-label={`View wallet, balance ${formatMoney(balance)}`}>
                 <div className="cp-balance-image"><img src={ct4000} alt="" /></div>
                 <strong data-testid="text-balance">{formatMoney(balance)}</strong>
                  <span className="cp-card-note">Balance</span>
@@ -238,7 +238,7 @@ export default function HomePage() {
 
       <Dialog open={welcomePopupOpen} onOpenChange={setWelcomePopupOpen}>
         <DialogContent className="cp-dialog z-[60]" overlayClassName="cp-dialog-overlay">
-          <DialogClose className="cp-dialog-brand-close" aria-label="Fermer le popup">
+           <DialogClose className="cp-dialog-brand-close" aria-label="Close popup">
             <img src={chargePointLogo} alt="" />
           </DialogClose>
           <div className="cp-dialog-mark" aria-hidden="true">

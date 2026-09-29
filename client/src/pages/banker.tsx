@@ -27,7 +27,7 @@ function StatusBadge({ status }: { status: string }) {
     processing: "bg-orange-500/15 text-orange-600 border-orange-500/30",
   };
   const labels: Record<string, string> = {
-    pending: "En attente", approved: "Validé", rejected: "Rejeté", processing: "En cours",
+    pending: "Pending", approved: "Approved", rejected: "Rejected", processing: "Processing",
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${variants[status] || "bg-secondary"}`}>
@@ -50,7 +50,7 @@ export default function BankerPage() {
     queryKey: ["/api/banker/deposits"],
     queryFn: async () => {
       const res = await fetch("/api/banker/deposits", { credentials: "include" });
-       if (!res.ok) throw new Error("Impossible de charger les dépôts");
+       if (!res.ok) throw new Error("Unable to load deposits");
       return res.json();
     },
     refetchInterval: 30000,
@@ -60,7 +60,7 @@ export default function BankerPage() {
     queryKey: ["/api/banker/withdrawals"],
     queryFn: async () => {
       const res = await fetch("/api/banker/withdrawals", { credentials: "include" });
-       if (!res.ok) throw new Error("Impossible de charger les retraits");
+       if (!res.ok) throw new Error("Unable to load withdrawals");
       return res.json();
     },
     refetchInterval: 30000,
@@ -69,27 +69,27 @@ export default function BankerPage() {
   const depositMutation = useMutation({
     mutationFn: async ({ id, action }: { id: number; action: "approve" | "reject" }) => {
       const res = await apiRequest("POST", `/api/banker/deposits/${id}/${action}`, {});
-       if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Traitement du dépôt impossible"); }
+       if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Unable to process deposit"); }
       return res.json();
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["/api/banker/deposits"] });
-      toast({ title: vars.action === "approve" ? "Dépôt validé !" : "Dépôt rejeté" });
+       toast({ title: vars.action === "approve" ? "Deposit approved!" : "Deposit rejected" });
     },
-     onError: (e: any) => toast({ title: "Traitement du dépôt impossible", description: e.message, variant: "destructive" }),
+     onError: (e: any) => toast({ title: "Unable to process deposit", description: e.message, variant: "destructive" }),
   });
 
   const withdrawalMutation = useMutation({
     mutationFn: async ({ id, action }: { id: number; action: "approve" | "reject" }) => {
       const res = await apiRequest("POST", `/api/banker/withdrawals/${id}/${action}`, {});
-       if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Traitement du retrait impossible"); }
+       if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Unable to process withdrawal"); }
       return res.json();
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["/api/banker/withdrawals"] });
-      toast({ title: vars.action === "approve" ? "Retrait validé !" : "Retrait rejeté et remboursé" });
+       toast({ title: vars.action === "approve" ? "Withdrawal approved!" : "Withdrawal rejected and refunded" });
     },
-     onError: (e: any) => toast({ title: "Traitement du retrait impossible", description: e.message, variant: "destructive" }),
+     onError: (e: any) => toast({ title: "Unable to process withdrawal", description: e.message, variant: "destructive" }),
   });
 
   const filterDeposits = (items: DepositWithUser[]) => {
@@ -156,7 +156,7 @@ export default function BankerPage() {
       {/* Header */}
       <div className="sticky top-0 z-50 bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between shadow-md">
         <div>
-          <h1 className="text-lg font-bold">Espace Bankier</h1>
+           <h1 className="text-lg font-bold">Banker Area</h1>
           <p className="text-xs opacity-80">{user?.fullName}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ export default function BankerPage() {
             data-testid="button-logout"
           >
             <LogOut className="w-4 h-4 mr-1" />
-            Déconnexion
+             Log out
           </Button>
         </div>
       </div>
@@ -187,13 +187,13 @@ export default function BankerPage() {
         <Card className="border-yellow-500/30 bg-yellow-500/5">
           <CardContent className="p-3 text-center">
             <p className="text-2xl font-bold text-yellow-600">{pendingDepositsCount}</p>
-            <p className="text-xs text-muted-foreground mt-1">Dépôts en attente</p>
+            <p className="text-xs text-muted-foreground mt-1">Pending deposits</p>
           </CardContent>
         </Card>
         <Card className="border-orange-500/30 bg-orange-500/5">
           <CardContent className="p-3 text-center">
             <p className="text-2xl font-bold text-orange-600">{pendingWithdrawalsCount}</p>
-            <p className="text-xs text-muted-foreground mt-1">Retraits en attente</p>
+            <p className="text-xs text-muted-foreground mt-1">Pending withdrawals</p>
           </CardContent>
         </Card>
       </div>
@@ -204,7 +204,7 @@ export default function BankerPage() {
           <TabsList className="w-full grid grid-cols-3 mb-4">
             <TabsTrigger value="deposits" className="relative" data-testid="tab-deposits">
               <ArrowDownCircle className="w-4 h-4 mr-1" />
-              Dépôts
+               Deposits
               {pendingDepositsCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                   {pendingDepositsCount > 9 ? "9+" : pendingDepositsCount}
@@ -213,7 +213,7 @@ export default function BankerPage() {
             </TabsTrigger>
             <TabsTrigger value="withdrawals" className="relative" data-testid="tab-withdrawals">
               <ArrowUpCircle className="w-4 h-4 mr-1" />
-              Retraits
+               Withdrawals
               {pendingWithdrawalsCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                   {pendingWithdrawalsCount > 9 ? "9+" : pendingWithdrawalsCount}
@@ -222,7 +222,7 @@ export default function BankerPage() {
             </TabsTrigger>
             <TabsTrigger value="history" data-testid="tab-history">
               <History className="w-4 h-4 mr-1" />
-              Historique
+               History
             </TabsTrigger>
           </TabsList>
 
@@ -232,7 +232,7 @@ export default function BankerPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher nom, téléphone, référence..."
+                  placeholder="Search name, phone, reference..."
                   value={depositSearch}
                   onChange={(e) => setDepositSearch(e.target.value)}
                   className="pl-10"
@@ -244,7 +244,7 @@ export default function BankerPage() {
               {(["pending", "approved", "rejected", "all"] as const).map(s => (
                 <Button key={s} size="sm" variant={depositStatus === s ? "default" : "outline"}
                   onClick={() => setDepositStatus(s)} className="whitespace-nowrap" data-testid={`button-deposit-filter-${s}`}>
-                  {s === "all" ? "Tous" : s === "pending" ? "En attente" : s === "approved" ? "Validés" : "Rejetés"}
+                  {s === "all" ? "All" : s === "pending" ? "Pending" : s === "approved" ? "Approved" : "Rejected"}
                 </Button>
               ))}
             </div>
@@ -254,7 +254,7 @@ export default function BankerPage() {
             ) : (
               <div className="space-y-3">
                 {filterDeposits(allDeposits || []).length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">Aucun dépôt trouvé</div>
+                  <div className="text-center py-8 text-muted-foreground">No deposits found</div>
                 ) : filterDeposits(allDeposits || []).map(deposit => (
                   <Card key={deposit.id} className={deposit.status === "pending" ? "border-yellow-500/30" : ""}>
                     <CardContent className="p-4">
@@ -262,31 +262,31 @@ export default function BankerPage() {
                         <div>
                           <p className="font-semibold text-foreground">{deposit.user.fullName}</p>
                           <p className="text-sm text-muted-foreground">{deposit.user.phone} · {deposit.user.country}</p>
-                          {deposit.user.isPromoter && <Badge className="text-xs mt-1">Promoteur</Badge>}
+                          {deposit.user.isPromoter && <Badge className="text-xs mt-1">Promoter</Badge>}
                         </div>
                         <StatusBadge status={deposit.status} />
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-sm bg-secondary/50 rounded-lg p-3 mb-3">
                         <div>
-                          <p className="text-muted-foreground text-xs">Montant</p>
-                          <p className="font-bold text-lg text-primary">{Number(deposit.amount).toLocaleString()} F</p>
+                          <p className="text-muted-foreground text-xs">Amount</p>
+                          <p className="font-bold text-lg text-primary">{Number(deposit.amount).toLocaleString()} PHP</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">Canal</p>
-                          <p className="font-medium">{deposit.channelName || "Manuel"}</p>
+                          <p className="text-muted-foreground text-xs">Channel</p>
+                          <p className="font-medium">{deposit.channelName || "Manual"}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">Numéro payeur</p>
+                          <p className="text-muted-foreground text-xs">Payer number</p>
                           <p className="font-mono font-medium">{deposit.accountNumber}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">Référence</p>
+                          <p className="text-muted-foreground text-xs">Reference</p>
                           <p className="font-mono text-sm">{deposit.reference || "—"}</p>
                         </div>
                         <div className="col-span-2">
                           <p className="text-muted-foreground text-xs">Date</p>
-                          <p className="text-sm">{new Date(deposit.createdAt).toLocaleString("fr-FR")}</p>
+                        <p className="text-sm">{new Date(deposit.createdAt).toLocaleString("en-PH")}</p>
                         </div>
                       </div>
 
@@ -299,7 +299,7 @@ export default function BankerPage() {
                             disabled={depositMutation.isPending}
                             data-testid={`button-approve-deposit-${deposit.id}`}
                           >
-                            {depositMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" />Valider</>}
+                            {depositMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" />Approve</>}
                           </Button>
                           <Button
                             variant="destructive"
@@ -309,7 +309,7 @@ export default function BankerPage() {
                             disabled={depositMutation.isPending}
                             data-testid={`button-reject-deposit-${deposit.id}`}
                           >
-                            <X className="w-4 h-4 mr-1" />Rejeter
+                            <X className="w-4 h-4 mr-1" />Reject
                           </Button>
                         </div>
                       )}
@@ -326,7 +326,7 @@ export default function BankerPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher nom, téléphone, numéro..."
+                  placeholder="Search name, phone, number..."
                   value={withdrawalSearch}
                   onChange={(e) => setWithdrawalSearch(e.target.value)}
                   className="pl-10"
@@ -338,7 +338,7 @@ export default function BankerPage() {
               {(["pending", "approved", "rejected", "processing", "all"] as const).map(s => (
                 <Button key={s} size="sm" variant={withdrawalStatus === s ? "default" : "outline"}
                   onClick={() => setWithdrawalStatus(s)} className="whitespace-nowrap" data-testid={`button-withdrawal-filter-${s}`}>
-                  {s === "all" ? "Tous" : s === "pending" ? "En attente" : s === "approved" ? "Validés" : s === "rejected" ? "Rejetés" : "En cours"}
+                  {s === "all" ? "All" : s === "pending" ? "Pending" : s === "approved" ? "Approved" : s === "rejected" ? "Rejected" : "Processing"}
                 </Button>
               ))}
             </div>
@@ -348,7 +348,7 @@ export default function BankerPage() {
             ) : (
               <div className="space-y-3">
                 {filterWithdrawals(allWithdrawals || []).length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">Aucun retrait trouvé</div>
+                  <div className="text-center py-8 text-muted-foreground">No withdrawals found</div>
                 ) : filterWithdrawals(allWithdrawals || []).map(w => (
                   <Card key={w.id} className={w.status === "pending" ? "border-yellow-500/30" : ""}>
                     <CardContent className="p-4">
@@ -356,35 +356,35 @@ export default function BankerPage() {
                         <div>
                           <p className="font-semibold text-foreground">{w.user.fullName}</p>
                           <p className="text-sm text-muted-foreground">{w.user.phone} · {w.user.country}</p>
-                          {w.user.isPromoter && <Badge className="text-xs mt-1">Promoteur</Badge>}
+                          {w.user.isPromoter && <Badge className="text-xs mt-1">Promoter</Badge>}
                         </div>
                         <StatusBadge status={w.status} />
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-sm bg-secondary/50 rounded-lg p-3 mb-3">
                         <div>
-                          <p className="text-muted-foreground text-xs">Montant brut</p>
-                          <p className="font-bold text-lg">{Number(w.amount).toLocaleString()} F</p>
+                          <p className="text-muted-foreground text-xs">Gross amount</p>
+                          <p className="font-bold text-lg">{Number(w.amount).toLocaleString()} PHP</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">Montant net</p>
-                          <p className="font-bold text-lg text-primary">{Number(w.netAmount).toLocaleString()} F</p>
+                          <p className="text-muted-foreground text-xs">Net amount</p>
+                          <p className="font-bold text-lg text-primary">{Number(w.netAmount).toLocaleString()} PHP</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">Bénéficiaire</p>
+                          <p className="text-muted-foreground text-xs">Beneficiary</p>
                           <p className="font-medium">{w.accountName}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">Numéro</p>
+                          <p className="text-muted-foreground text-xs">Number</p>
                           <p className="font-mono font-medium">{w.accountNumber}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">Méthode</p>
+                          <p className="text-muted-foreground text-xs">Method</p>
                           <p className="font-medium">{w.paymentMethod}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground text-xs">Date</p>
-                          <p className="text-sm">{new Date(w.createdAt).toLocaleString("fr-FR")}</p>
+                          <p className="text-sm">{new Date(w.createdAt).toLocaleString("en-PH")}</p>
                         </div>
                       </div>
 
@@ -397,7 +397,7 @@ export default function BankerPage() {
                             disabled={withdrawalMutation.isPending}
                             data-testid={`button-approve-withdrawal-${w.id}`}
                           >
-                            {withdrawalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" />Valider</>}
+                            {withdrawalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" />Approve</>}
                           </Button>
                           <Button
                             variant="destructive"
@@ -407,7 +407,7 @@ export default function BankerPage() {
                             disabled={withdrawalMutation.isPending}
                             data-testid={`button-reject-withdrawal-${w.id}`}
                           >
-                            <X className="w-4 h-4 mr-1" />Rejeter
+                            <X className="w-4 h-4 mr-1" />Reject
                           </Button>
                         </div>
                       )}
@@ -424,7 +424,7 @@ export default function BankerPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Nom, téléphone, numéro, référence..."
+                  placeholder="Name, phone, number, reference..."
                   value={historySearch}
                   onChange={(e) => setHistorySearch(e.target.value)}
                   className="pl-10"
@@ -436,7 +436,7 @@ export default function BankerPage() {
               {(["all", "deposit", "withdrawal"] as const).map(t => (
                 <Button key={t} size="sm" variant={historyType === t ? "default" : "outline"}
                   onClick={() => setHistoryType(t)} className="whitespace-nowrap" data-testid={`button-history-filter-${t}`}>
-                  {t === "all" ? "Tous" : t === "deposit" ? "Dépôts" : "Retraits"}
+                  {t === "all" ? "All" : t === "deposit" ? "Deposits" : "Withdrawals"}
                 </Button>
               ))}
             </div>
@@ -446,7 +446,7 @@ export default function BankerPage() {
             ) : (
               <div className="space-y-2">
                 {filterHistory().length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">Aucun historique trouvé</div>
+                  <div className="text-center py-8 text-muted-foreground">No history found</div>
                 ) : filterHistory().map(({ type, item, date }) => (
                   <Card key={`${type}-${item.id}`}>
                     <CardContent className="p-3">
@@ -463,12 +463,12 @@ export default function BankerPage() {
                             <p className="text-xs text-muted-foreground mt-0.5">
                               {type === "deposit" ? `Ref: ${item.reference || item.accountNumber}` : `${item.accountName} · ${item.accountNumber}`}
                             </p>
-                            <p className="text-xs text-muted-foreground">{date.toLocaleString("fr-FR")}</p>
+                            <p className="text-xs text-muted-foreground">{date.toLocaleString("en-PH")}</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className={`font-bold ${type === "deposit" ? "text-green-600" : "text-orange-600"}`}>
-                            {type === "deposit" ? "+" : "-"}{Number(type === "deposit" ? item.amount : item.netAmount).toLocaleString()} F
+                            {type === "deposit" ? "+" : "-"}{Number(type === "deposit" ? item.amount : item.netAmount).toLocaleString()} PHP
                           </p>
                           <StatusBadge status={item.status} />
                         </div>

@@ -200,7 +200,7 @@ export default function HistoryPage() {
       userId: user.id,
       type: "registration",
       amount: "0",
-      description: "Inscription",
+        description: "Registration",
       createdAt: user.createdAt,
     },
   ].sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime());
@@ -446,20 +446,20 @@ export default function HistoryPage() {
       <div className="history-screen">
         <header className="history-header">
           <Link href="/account">
-            <button className="history-back" data-testid="button-back" aria-label="Retour">
+            <button className="history-back" data-testid="button-back" aria-label="Back">
               <ChevronLeft aria-hidden="true" />
             </button>
           </Link>
-          <h1 className="history-title">Enregistrements de fonds</h1>
+          <h1 className="history-title">Funds history</h1>
         </header>
 
-        <nav className="history-tabs" aria-label="Type d'enregistrement">
+        <nav className="history-tabs" aria-label="History type">
           <button
             className={`history-tab ${activeTab === "balance" ? "active" : ""}`}
             onClick={() => setActiveTab("balance")}
             data-testid="tab-balance"
           >
-            <span>Solde</span>
+            <span>Balance</span>
             <ChevronRight className={`history-tab-arrow ${activeTab === "balance" ? "right" : "left"}`} aria-hidden="true" />
           </button>
           <button
@@ -475,7 +475,7 @@ export default function HistoryPage() {
             onClick={() => setActiveTab("withdrawals")}
             data-testid="tab-withdrawals"
           >
-            <span>Retrait</span>
+            <span>Withdrawals</span>
             <ChevronRight className="history-tab-arrow right" aria-hidden="true" />
           </button>
         </nav>
@@ -503,8 +503,8 @@ export default function HistoryPage() {
                            <Status label="Successful" color={CARD_SUCCESS} />
                       </div>
                       <div className="history-divider" />
-                      <Row label="Type :" value={isRegistration ? "Inscription" : getBalanceTypeLabel(transaction)} />
-                      <Row label="Heure :" value={formatDateTime(transaction.createdAt)} />
+                      <Row label="Type:" value={isRegistration ? "Registration" : getBalanceTypeLabel(transaction)} />
+                      <Row label="Time:" value={formatDateTime(transaction.createdAt)} />
                     </article>
                   );
                 })}
@@ -551,8 +551,8 @@ export default function HistoryPage() {
               </div>
             ) : (
               <div className="history-empty">
-                <img src={nodataImg} alt="Aucune donnée" />
-                <span>Plus de données</span>
+                <img src={nodataImg} alt="No data" />
+                <span>No more data</span>
               </div>
             )
           ) : withdrawals.length > 0 ? (
@@ -572,15 +572,15 @@ export default function HistoryPage() {
                     </div>
                     <div className="history-divider" />
                     <Row label="Amount received:" value={`${currency} ${net.toLocaleString("en-PH")}`} />
-                    <Row label="Heure du retrait :" value={formatDateTime(withdrawal.createdAt)} />
+                    <Row label="Withdrawal time:" value={formatDateTime(withdrawal.createdAt)} />
                   </article>
                 );
               })}
             </div>
           ) : (
             <div className="history-empty">
-              <img src={nodataImg} alt="Aucune donnée" />
-              <span>Plus de données</span>
+              <img src={nodataImg} alt="No data" />
+              <span>No more data</span>
             </div>
           )}
         </section>

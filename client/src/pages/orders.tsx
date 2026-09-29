@@ -97,7 +97,7 @@ export default function OrdersPage() {
                     <div className="w-24 h-24 flex-shrink-0">
                       <img 
                         src={getProductImage(up.productId ? up.productId % productImages.length : index)} 
-                        alt={up.product?.name || "Produit"}
+                        alt={up.product?.name || "Product"}
                         className="w-full h-full object-cover rounded-lg"
                       />
                     </div>
@@ -105,14 +105,14 @@ export default function OrdersPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-2">
                         <p className="text-red-500 font-bold text-sm">
-                          {up.product?.name || "Produit"}
+                          {up.product?.name || "Product"}
                         </p>
                         <span className={`px-2 py-0.5 text-[11px] font-semibold rounded ${
                           up.status === 'active' 
                             ? 'bg-green-100 text-green-600' 
                             : 'bg-gray-100 text-gray-600'
                         }`}>
-                          {up.status === 'active' ? 'Actif' : 'Termine'}
+                           {up.status === 'active' ? 'Active' : 'Completed'}
                         </span>
                       </div>
                       
@@ -144,8 +144,8 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="text-center py-10 flex flex-col items-center gap-2">
-            <img src={emptyIllustration} alt="Vide" className="w-40 h-40 object-contain opacity-90" />
-            <p className="text-gray-500 font-medium">Aucun contenu pour le moment !</p>
+            <img src={emptyIllustration} alt="Empty" className="w-40 h-40 object-contain opacity-90" />
+            <p className="text-gray-500 font-medium">No content yet!</p>
           </div>
         )}
       </div>

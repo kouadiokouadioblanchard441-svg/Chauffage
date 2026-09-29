@@ -103,6 +103,6 @@ export function getWithdrawalMethodsForCountry(code: string, apiCountries?: ApiC
 
 export function formatCurrency(amount: number, countryCode: string, apiCountries?: ApiCountry[]): string {
   const country = getCountryByCode(countryCode, apiCountries);
-  const currency = country?.currency || "FCFA";
-  return `${amount.toLocaleString()} ${currency}`;
+  const currency = country?.currency || "PHP";
+  return `${amount.toLocaleString("en-PH")} ${currency}`;
 }

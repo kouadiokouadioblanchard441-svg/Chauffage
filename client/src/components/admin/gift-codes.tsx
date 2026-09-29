@@ -70,7 +70,7 @@ export default function AdminGiftCodes() {
        toast({ title: "Success", description: "Gift code deleted" });
     },
     onError: (error: any) => {
-      toast({ title: "Suppression du code cadeau impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to delete gift code", description: error.message, variant: "destructive" });
     },
   });
 

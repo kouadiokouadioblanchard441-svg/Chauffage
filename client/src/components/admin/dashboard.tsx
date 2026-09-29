@@ -78,7 +78,7 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       setShowResetDialog(false);
-      toast({ title: "Statistiques reinitialisees avec succes!" });
+      toast({ title: "Statistics reset successfully!" });
     },
     onError: (error: any) => {
        toast({ title: "Unable to reset statistics", description: error.message, variant: "destructive" });

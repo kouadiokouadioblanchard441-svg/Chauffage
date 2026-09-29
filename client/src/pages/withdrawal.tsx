@@ -553,12 +553,12 @@ export default function WithdrawalPage() {
              <span>Withdrawal</span>
           </h1>
           <Link href="/history">
-            <button className="history-button" aria-label="Historique des transactions">
+             <button className="history-button" aria-label="Transaction history">
               <span className="history-icon" aria-hidden="true" />
             </button>
           </Link>
           <Link href="/account">
-            <button className="withdraw-back" data-testid="button-back" aria-label="Retour" />
+             <button className="withdraw-back" data-testid="button-back" aria-label="Back" />
           </Link>
           <div className="balance-card">
              <p className="balance-label">Account balance</p>
@@ -567,7 +567,7 @@ export default function WithdrawalPage() {
           </div>
         </section>
 
-        <section className="amount-panel" aria-label="Montant de retrait">
+        <section className="amount-panel" aria-label="Withdrawal amount">
            <p className="amount-label">Enter withdrawal amount</p>
           <label className="amount-field">
             <input
@@ -576,7 +576,7 @@ export default function WithdrawalPage() {
               onChange={(event) => setAmount(event.target.value ? Number(event.target.value) : "")}
                placeholder="Amount"
               data-testid="input-withdrawal-amount"
-              aria-label="Montant de retrait"
+               aria-label="Withdrawal amount"
             />
             <span className="amount-currency">{currency}</span>
           </label>

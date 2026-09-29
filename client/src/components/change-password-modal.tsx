@@ -30,14 +30,14 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
       const res = await apiRequest("POST", "/api/change-password", data);
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || "Impossible de modifier le mot de passe");
+        throw new Error(errorData.message || "Unable to change password");
       }
       return res.json();
     },
     onSuccess: () => {
       toast({
-        title: "Succes",
-        description: "Votre mot de passe a ete modifie avec succes",
+        title: "Success",
+        description: "Your password was changed successfully",
       });
       setCurrentPassword("");
       setNewPassword("");
@@ -46,7 +46,7 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
     },
     onError: (error: Error) => {
       toast({
-        title: "Modification du mot de passe impossible",
+        title: "Unable to change password",
         description: error.message,
         variant: "destructive",
       });
@@ -56,8 +56,8 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
   const handleSubmit = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast({
-        title: "Champs requis",
-        description: "Veuillez remplir tous les champs",
+        title: "Required fields",
+        description: "Please fill in all fields",
         variant: "destructive",
       });
       return;
@@ -65,8 +65,8 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
 
     if (newPassword.length < 6) {
       toast({
-        title: "Mot de passe trop court",
-        description: "Le nouveau mot de passe doit contenir au moins 6 caracteres",
+        title: "Password too short",
+        description: "The new password must contain at least 6 characters",
         variant: "destructive",
       });
       return;
@@ -74,8 +74,8 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
 
     if (newPassword !== confirmPassword) {
       toast({
-        title: "Mots de passe differents",
-        description: "Les nouveaux mots de passe ne correspondent pas",
+        title: "Passwords do not match",
+        description: "The new passwords do not match",
         variant: "destructive",
       });
       return;
@@ -88,7 +88,7 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-center">Changer le mot de passe</DialogTitle>
+          <DialogTitle className="text-center">Change password</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="relative">
@@ -96,7 +96,7 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
               type={showCurrentPassword ? "text" : "password"}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Mot de passe actuel"
+              placeholder="Current password"
               data-testid="input-current-password"
             />
             <button
@@ -113,7 +113,7 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
               type={showNewPassword ? "text" : "password"}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Nouveau mot de passe"
+              placeholder="New password"
               data-testid="input-new-password"
             />
             <button
@@ -129,7 +129,7 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirmer le nouveau mot de passe"
+            placeholder="Confirm new password"
             data-testid="input-confirm-password"
           />
 
@@ -142,7 +142,7 @@ export default function ChangePasswordModal({ open, onClose }: ChangePasswordMod
             {changePasswordMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
             ) : null}
-            Changer le mot de passe
+            Change password
           </Button>
         </div>
       </DialogContent>

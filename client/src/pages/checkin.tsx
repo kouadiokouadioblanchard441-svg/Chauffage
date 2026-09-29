@@ -31,7 +31,7 @@ export default function CheckinPage() {
       const response = await apiRequest("POST", "/api/claim-daily-bonus", {});
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || "Récompense indisponible");
+        throw new Error(data.message || "Reward unavailable");
       }
       return response.json();
     },
@@ -42,7 +42,7 @@ export default function CheckinPage() {
       toast({ title: "Bonus received!", description: `${amount} PHP added to your balance` });
     },
     onError: (error: Error) => {
-      toast({ title: "Récompense indisponible", description: error.message, variant: "destructive" });
+      toast({ title: "Reward unavailable", description: error.message, variant: "destructive" });
     },
   });
 
@@ -402,7 +402,7 @@ export default function CheckinPage() {
       <div className="checkin-screen">
         <header className="topbar">
           <button className="back" onClick={() => navigate("/")}>
-            <ChevronLeft aria-hidden="true" /><span>Retour</span>
+            <ChevronLeft aria-hidden="true" /><span>Back</span>
           </button>
           <div className="brand">
             <img src={chargepointLogo} alt="ChargePoint" />
@@ -413,40 +413,40 @@ export default function CheckinPage() {
 
         <section className="hero" aria-label="Check-in quotidien">
           <div className="hero-art">
-            <img src={chargepointHero} alt="Bornes de recharge ChargePoint" />
+            <img src={chargepointHero} alt="ChargePoint charging stations" />
           </div>
           <div className="hero-copy">
             <strong>ChargePoint</strong>
-            <span>Votre récompense quotidienne</span>
+            <span>Your daily reward</span>
           </div>
         </section>
 
-        <section className="earnings-card" aria-label="Revenus du check-in">
+        <section className="earnings-card" aria-label="Check-in earnings">
           <div className="earnings-mark"><img src={chargepointLogo} alt="ChargePoint" /></div>
           <div>
             <p className="earned-total">{formatAmount(totalBonusClaimed)}</p>
-            <p className="earned-heading">Bonus cumulé</p>
+            <p className="earned-heading">Total bonus</p>
           </div>
           <div className="earnings-check" aria-hidden="true">✓</div>
         </section>
 
-        <section className="reward-panel" aria-label="Récompense quotidienne">
-          <h2 className="reward-heading">Récompense du <span>pointage quotidien</span></h2>
+        <section className="reward-panel" aria-label="Daily reward">
+          <h2 className="reward-heading">Daily <span>check-in reward</span></h2>
           <div className="reward-row">
-            <div className="reward-image"><img src={chargepointHero} alt="Solutions de recharge ChargePoint" /></div>
+             <div className="reward-image"><img src={chargepointHero} alt="ChargePoint charging solutions" /></div>
             <div className="reward-copy">
-              <p>Recevez une récompense chaque jour</p>
-              <strong>20 à 50 {currency}</strong>
+              <p>Receive a reward every day</p>
+              <strong>20 to 50 {currency}</strong>
             </div>
           </div>
           <div className="stats">
             <div className="stat">
               <p className="stat-value">{bonusStatus?.daysPointed || 0}</p>
-              <p className="stat-label">Jours de pointage</p>
+              <p className="stat-label">Check-in days</p>
             </div>
             <div className="stat">
               <div className="stats-image"><img src={chargepointDevice} alt="Borne ChargePoint et application" /></div>
-              <p className="stat-label">Activité récente</p>
+              <p className="stat-label">Recent activity</p>
             </div>
           </div>
         </section>
@@ -466,14 +466,14 @@ export default function CheckinPage() {
           )}
         </button>
         {!canClaim && bonusStatus?.hoursRemaining ? (
-          <p className="next-claim">Prochain check-in dans {bonusStatus.hoursRemaining}h</p>
+          <p className="next-claim">Next check-in in {bonusStatus.hoursRemaining}h</p>
         ) : null}
 
-        <section className="instructions" aria-label="Instructions du pointage">
-          <h2>Comment fonctionne le pointage ?</h2>
-          <p className="instruction"><b>1.</b><span>Effectuez votre pointage une fois par jour pour recevoir la récompense.</span></p>
-          <p className="instruction"><b>2.</b><span>La récompense est ajoutée automatiquement à votre solde après validation.</span></p>
-          <p className="instruction"><b>3.</b><span>Revenez chaque jour pour continuer à cumuler vos bonus.</span></p>
+        <section className="instructions" aria-label="Check-in instructions">
+          <h2>How does check-in work?</h2>
+          <p className="instruction"><b>1.</b><span>Check in once a day to receive your reward.</span></p>
+          <p className="instruction"><b>2.</b><span>The reward is automatically added to your balance after validation.</span></p>
+          <p className="instruction"><b>3.</b><span>Return every day to keep accumulating bonuses.</span></p>
         </section>
       </div>
     </main>

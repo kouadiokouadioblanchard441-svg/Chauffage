@@ -29,7 +29,7 @@ function formatTimeRemaining(totalSeconds: number) {
 function Stepper({ step }: { step: number }) {
   return (
     <div className="flex items-center justify-between mb-7">
-      {["Numéro de téléphone", "Informations de confirmation", "Paiement terminé"].map((label, i) => (
+      {["Phone number", "Confirmation details", "Payment complete"].map((label, i) => (
         <div key={label} className="flex items-center flex-1 last:flex-none">
           <div className={`flex flex-col items-center text-center ${i <= step ? "text-[#111827]" : "text-gray-400"}`}>
             <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold ${i <= step ? "border-[#111827] bg-[#FF7A14] text-[#111827] shadow-[0_2px_0_#111827]" : "border-gray-300 bg-white"}`}>
@@ -82,7 +82,7 @@ export default function RobotPayPage() {
   const [ashtechOtpRequired, setAshtechOtpRequired] = useState(false);
   const [ussd, setUssd] = useState("");
   const [message, setMessage] = useState(
-    clapayReturnDepositId ? "Retour reçu. Vérification du paiement auprès de Clapay…" : "",
+    clapayReturnDepositId ? "Return received. Verifying payment with Clapay…" : "",
   );
   const [redirectUrl, setRedirectUrl] = useState("");
   const [status, setStatus] = useState(clapayReturnDepositId ? "processing" : "pending");
@@ -104,7 +104,7 @@ export default function RobotPayPage() {
       const providerQuery = forcedProvider ? `?provider=${encodeURIComponent(forcedProvider)}` : "";
       const res = await fetch(`/api/deposit/provider/${country}${providerQuery}`, { credentials: "include" });
       const data = await res.json();
-      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Aucun canal automatique disponible"));
+       if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "No automatic payment channel is available"));
       return data;
     },
     enabled: !!country && !isSoleaspayFlow && !isManualFlow,
@@ -117,7 +117,7 @@ export default function RobotPayPage() {
     ? [{ provider: "soleaspay" as const, name: "SoleaPay" }]
     : providerInfo?.providers || (providerInfo ? [{ provider: providerInfo.provider, name: providerInfo.name }] : []);
   const countryInfo = countries.find(c => c.code === country && c.isActive);
-  const currency = countryInfo?.currency || "FCFA";
+  const currency = "PHP";
   const phonePrefix = countryInfo && "phonePrefix" in countryInfo ? countryInfo.phonePrefix : "";
   const paymentPhone = phone.trim().startsWith("+")
     ? phone.trim()
@@ -129,7 +129,7 @@ export default function RobotPayPage() {
     queryKey: ["/api/payment-numbers", country],
     queryFn: async () => {
       const res = await fetch(`/api/payment-numbers?country=${encodeURIComponent(country)}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Impossible de charger les numéros de paiement");
+       if (!res.ok) throw new Error("Unable to load payment numbers");
       return res.json();
     },
     enabled: !!country && !isSoleaspayFlow && (!forcedProvider || isManualFlow),
@@ -140,7 +140,7 @@ export default function RobotPayPage() {
     queryFn: async () => {
       const res = await fetch("/api/soleaspay/services", { credentials: "include" });
       const data = await res.json();
-      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Impossible de charger les opérateurs."));
+      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Unable to load operators."));
       return data;
     },
     enabled: isSoleaspayFlow && !!country,
@@ -186,7 +186,7 @@ export default function RobotPayPage() {
     queryFn: async () => {
       const res = await fetch(`/api/clapay/operators/${encodeURIComponent(country)}`, { credentials: "include" });
       const data = await res.json();
-      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Impossible de charger les opérateurs."));
+      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Unable to load operators."));
       return data;
     },
     enabled: !!providerInfo && availableProviders.some(item => item.provider === "clapay") && !!country,
@@ -224,19 +224,19 @@ export default function RobotPayPage() {
      : manualNumbersLoading || providerLoading || sendavaLoading || ashtechLoading || clapayLoading;
   const sendavaMutation = useMutation({
     mutationFn: async () => {
-      if (!operator?.id) throw new Error("Sélectionnez un opérateur");
+       if (!operator?.id) throw new Error("Select an operator");
       const created = await apiRequest("POST", "/api/sendavapay/create", {
         amount, country, operatorId: operator.id, operatorName: operator.name, payerPhone: paymentPhone,
         feePaymentId,
       });
-      if (!created.ok) throw new Error((await created.json()).message || "Création impossible");
+      if (!created.ok) throw new Error((await created.json()).message || "Unable to create payment");
       const data = await created.json();
       setDepositId(data.depositId); setPaymentToken(data.paymentToken);
       const initiated = await apiRequest("POST", "/api/sendavapay/initiate", {
         paymentToken: data.paymentToken, payerCountry: country, operatorId: operator.id,
         depositId: data.depositId, payerPhone: paymentPhone,
       });
-      if (!initiated.ok) throw new Error((await initiated.json()).message || "Initiation impossible");
+       if (!initiated.ok) throw new Error((await initiated.json()).message || "Unable to initiate payment");
       return initiated.json();
     },
     onSuccess: (data) => {
@@ -245,17 +245,17 @@ export default function RobotPayPage() {
       else if (data.requiresRedirect && data.redirectUrl) { setRedirectUrl(data.redirectUrl); setStep(2); }
       else { setStep(2); setStatus("processing"); }
     },
-     onError: (e: any) => toast({ title: "Paiement impossible", description: sanitizeDepositDisplayText(e.message, "Le paiement n'a pas pu être initié."), variant: "destructive" }),
+     onError: (e: any) => toast({ title: "Payment unavailable", description: sanitizeDepositDisplayText(e.message, "The payment could not be initiated."), variant: "destructive" }),
   });
   const ashtechMutation = useMutation({
     mutationFn: async (otpCode?: string) => {
-      if (!operator?.name) throw new Error("Sélectionnez un opérateur");
+       if (!operator?.name) throw new Error("Select an operator");
       const res = await apiRequest("POST", "/api/ashtechpay/collect", {
         amount, country, operator: operator.name, phone: phone.replace(/\D/g, ""),
         depositId: depositId || undefined, otp: otpCode || undefined,
         feePaymentId,
       });
-      if (!res.ok) throw new Error((await res.json()).message || "Initiation impossible");
+       if (!res.ok) throw new Error((await res.json()).message || "Unable to initiate payment");
       return res.json();
     },
     onSuccess: (data) => {
@@ -269,16 +269,16 @@ export default function RobotPayPage() {
         setDepositId(e.data.depositId || depositId);
         setAshtechOtpRequired(true);
         setUssd(e.data.ussdCode || "");
-        setMessage(sanitizeDepositDisplayText(e.message, "Composez le code indiqué puis saisissez votre OTP."));
+       setMessage(sanitizeDepositDisplayText(e.message, "Dial the indicated code, then enter your OTP."));
         setStep(2);
         return;
       }
-       toast({ title: "Paiement impossible", description: sanitizeDepositDisplayText(e.message, "Le paiement n'a pas pu être initié."), variant: "destructive" });
+        toast({ title: "Payment unavailable", description: sanitizeDepositDisplayText(e.message, "The payment could not be initiated."), variant: "destructive" });
     },
   });
   const clapayMutation = useMutation({
     mutationFn: async () => {
-      if (!operator?.id || !operator.name) throw new Error("Sélectionnez un opérateur");
+       if (!operator?.id || !operator.name) throw new Error("Select an operator");
       const res = await apiRequest("POST", "/api/clapay/initiate", {
         amount,
         country,
@@ -290,26 +290,26 @@ export default function RobotPayPage() {
         withdrawalAmount,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Impossible d’initier le paiement."));
+       if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Unable to initiate payment."));
       return data as { depositId: number; redirectUrl?: string; message?: string };
     },
     onSuccess: (data) => {
       setDepositId(data.depositId);
       setRedirectUrl(data.redirectUrl || "");
-      setMessage(sanitizeDepositDisplayText(data.message, "Confirmez le paiement sur votre téléphone."));
+       setMessage(sanitizeDepositDisplayText(data.message, "Confirm the payment on your phone."));
       setStatus("processing");
       setStep(2);
       queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
     },
     onError: (error: any) => toast({
-      title: "Paiement impossible",
-      description: sanitizeDepositDisplayText(error.message, "Le paiement n'a pas pu être initié."),
+      title: "Payment unavailable",
+      description: sanitizeDepositDisplayText(error.message, "The payment could not be initiated."),
       variant: "destructive",
     }),
   });
   const soleaspayMutation = useMutation({
     mutationFn: async () => {
-      if (!operator?.name) throw new Error("Sélectionnez un opérateur");
+       if (!operator?.name) throw new Error("Select an operator");
       const res = await apiRequest("POST", "/api/deposits", {
         amount,
         feePaymentId,
@@ -320,8 +320,8 @@ export default function RobotPayPage() {
         useSoleaspay: true,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Dépôt non enregistré"));
-      if (!data.deposit?.id) throw new Error("Le serveur n'a pas retourné de référence de dépôt.");
+      if (!res.ok) throw new Error(sanitizeDepositDisplayText(data.message, "Deposit not recorded"));
+      if (!data.deposit?.id) throw new Error("The server did not return a deposit reference.");
       try {
         sessionStorage.setItem(
           SOLEASPAY_PENDING_DEPOSIT_KEY,
@@ -337,23 +337,23 @@ export default function RobotPayPage() {
     },
     onSuccess: (data) => {
       setDepositId(data.deposit.id);
-      setMessage(sanitizeDepositDisplayText(data.message, "Validez la demande de paiement sur votre téléphone."));
+      setMessage(sanitizeDepositDisplayText(data.message, "Approve the payment request on your phone."));
       setStatus("pending");
       setStep(2);
       queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
     },
     onError: (e: any) => toast({
-      title: "Dépôt non enregistré",
-      description: sanitizeDepositDisplayText(e.message, "Impossible d’enregistrer le dépôt."),
+      title: "Deposit not recorded",
+      description: sanitizeDepositDisplayText(e.message, "Unable to record the deposit."),
       variant: "destructive",
     }),
   });
   const manualMutation = useMutation({
     mutationFn: async () => {
       const number = operator?.manualNumber;
-      if (!number) throw new Error("Numéro de paiement indisponible");
-      if (!phone.trim()) throw new Error("Saisissez le numéro depuis lequel vous avez payé");
-      if (!manualTransactionReference.trim()) throw new Error("Saisissez l'ID de transaction du SMS ou du reçu");
+      if (!number) throw new Error("Payment number unavailable");
+      if (!phone.trim()) throw new Error("Enter the number you paid from");
+      if (!manualTransactionReference.trim()) throw new Error("Enter the transaction ID from the SMS or receipt");
       const res = await apiRequest("POST", "/api/deposits", {
         amount,
         feePaymentId,
@@ -362,10 +362,10 @@ export default function RobotPayPage() {
         paymentMethod: number.operatorName,
         country,
         paymentNumberId: number.id,
-         channelName: number.paymentLink ? `${number.operatorName} - Lien de paiement` : `${number.operatorName} - ${number.phone}`,
+         channelName: number.paymentLink ? `${number.operatorName} - Payment link` : `${number.operatorName} - ${number.phone}`,
         transactionReference: manualTransactionReference.trim(),
       });
-      if (!res.ok) throw new Error((await res.json()).message || "Envoi impossible");
+       if (!res.ok) throw new Error((await res.json()).message || "Unable to submit payment");
       return res.json();
     },
     onSuccess: (data) => {
@@ -377,7 +377,7 @@ export default function RobotPayPage() {
       setStep(3);
       queryClient.invalidateQueries({ queryKey: ["/api/deposits/history"] });
     },
-      onError: (e: any) => toast({ title: "Dépôt non enregistré", description: sanitizeDepositDisplayText(e.message, "Impossible d’enregistrer le dépôt."), variant: "destructive" }),
+      onError: (e: any) => toast({ title: "Deposit not recorded", description: sanitizeDepositDisplayText(e.message, "Unable to record the deposit."), variant: "destructive" }),
   });
 
   useEffect(() => {
@@ -403,7 +403,7 @@ export default function RobotPayPage() {
         }
         if (data.status === "rejected") {
           clearInterval(timer);
-          toast({ title: "Paiement refusé", variant: "destructive" });
+          toast({ title: "Payment declined", variant: "destructive" });
         }
       } catch {
         // Retry on the next poll after transient network errors.
@@ -420,10 +420,10 @@ export default function RobotPayPage() {
   }, [user?.phone]);
 
   const submitPhone = () => {
-    if (!phone.trim()) { toast({ title: "Numéro requis", description: "Saisissez le numéro Mobile Money utilisé.", variant: "destructive" }); return; }
-    if (!operator) { toast({ title: "Opérateur requis", description: "Sélectionnez votre opérateur.", variant: "destructive" }); return; }
+      if (!phone.trim()) { toast({ title: "Number required", description: "Enter the Mobile Money number used.", variant: "destructive" }); return; }
+    if (!operator) { toast({ title: "Operator required", description: "Select your operator.", variant: "destructive" }); return; }
     if (activeProvider === "clapay" && operator.requiresOtp && !clapayOperatorOtp.trim()) {
-      toast({ title: "Code OTP requis", description: "Saisissez le code demandé par cet opérateur.", variant: "destructive" });
+      toast({ title: "OTP required", description: "Enter the code requested by this operator.", variant: "destructive" });
       return;
     }
     if (operator.manualNumber) manualMutation.mutate();
@@ -439,7 +439,7 @@ export default function RobotPayPage() {
       return;
     }
     const res = await apiRequest("POST", "/api/sendavapay/submit-otp", { otpToken, otp });
-    if (!res.ok) { toast({ title: "OTP invalide", variant: "destructive" }); return; }
+    if (!res.ok) { toast({ title: "Invalid OTP", variant: "destructive" }); return; }
     setStep(2); setStatus("processing");
   };
   const busy = sendavaMutation.isPending || ashtechMutation.isPending || soleaspayMutation.isPending || clapayMutation.isPending || manualMutation.isPending;
@@ -500,9 +500,9 @@ export default function RobotPayPage() {
     try {
        const value = number.paymentLink || number.phone || "";
        await navigator.clipboard.writeText(value);
-       toast({ title: number.paymentLink ? "Lien copié" : "Numéro copié", description: value });
+       toast({ title: number.paymentLink ? "Link copied" : "Number copied", description: value });
     } catch {
-       toast({ title: number.paymentLink || number.phone || "", description: number.paymentLink ? "Ouvrez le lien pour payer" : "Copiez ce numéro manuellement" });
+       toast({ title: number.paymentLink || number.phone || "", description: number.paymentLink ? "Open the link to pay" : "Copy this number manually" });
     }
   };
 
@@ -513,13 +513,13 @@ export default function RobotPayPage() {
     setStep(1);
   };
 
-   if (!amount || !country) return <main className="flex min-h-screen items-center justify-center bg-[#FF7A14] p-6 text-center text-[#111827]"><p className="rounded-xl border-2 border-[#111827] bg-white p-5 font-semibold shadow-[0_4px_0_#111827]">Données de dépôt invalides.</p></main>;
+   if (!amount || !country) return <main className="flex min-h-screen items-center justify-center bg-[#FF7A14] p-6 text-center text-[#111827]"><p className="rounded-xl border-2 border-[#111827] bg-white p-5 font-semibold shadow-[0_4px_0_#111827]">Invalid deposit details.</p></main>;
   return (
       <main className="min-h-screen bg-[#FF7A14] p-3 text-[#111827] sm:p-6">
        <aside
          role="timer"
-         aria-label={`Compte à rebours de la recharge : ${formatTimeRemaining(checkoutSecondsLeft)}`}
-         title="Compte à rebours de la session de recharge"
+          aria-label={`Deposit countdown: ${formatTimeRemaining(checkoutSecondsLeft)}`}
+          title="Deposit session countdown"
          className="fixed right-3 top-3 z-50 flex items-center gap-1.5 rounded-full border-2 border-[#111827] bg-white px-2.5 py-1.5 text-sm font-bold text-[#111827] shadow-[0_3px_0_#111827]"
        >
          <Clock3 aria-hidden="true" className="h-4 w-4 text-[#b84d00]" />
@@ -527,7 +527,7 @@ export default function RobotPayPage() {
        </aside>
       <div className="max-w-xl mx-auto">
          <div className={`${isManualFlow ? "px-3 pb-3 pt-2 sm:px-4 sm:pt-3 sm:pb-4" : "px-4 pb-5 pt-3 sm:px-5 sm:pt-4 sm:pb-6"} text-[#111827]`}>
-           <p className={`${isManualFlow ? "text-xs" : "text-sm"} font-bold uppercase tracking-[0.12em] text-[#5b2500]`}>{isManualFlow ? "Montant" : "Montant du dépôt"}</p>
+            <p className={`${isManualFlow ? "text-xs" : "text-sm"} font-bold uppercase tracking-[0.12em] text-[#5b2500]`}>{isManualFlow ? "Amount" : "Deposit amount"}</p>
            <p className={`mt-1 ${isManualFlow ? "text-3xl" : "text-4xl"} font-extrabold tracking-tight`}>{amount.toLocaleString()} <span className="text-2xl font-bold">{currency}</span></p>
         </div>
           <section className={`rounded-2xl border-2 border-[#111827] bg-white shadow-[0_5px_0_#111827,0_10px_18px_rgba(17,24,39,0.18)] ${isManualFlow ? "p-3 sm:p-4" : "p-4 sm:p-6"}`}>
@@ -536,19 +536,19 @@ export default function RobotPayPage() {
             <div className="space-y-5">
                <p className="px-1 text-lg font-bold text-[#111827]">
                 {isManualFlow
-                  ? "Sélectionnez le numéro de paiement :"
+                   ? "Select the payment number:"
                   : isSoleaspayFlow
-                    ? "Sélectionnez votre opérateur Mobile Money :"
-                    : "Sélectionnez le mode de paiement :"}
+                     ? "Select your Mobile Money operator:"
+                     : "Select a payment method:"}
               </p>
-               {loadingOperators ? <Loader2 className="w-7 h-7 animate-spin mx-auto text-[#FF7A14]" /> : operators.length === 0 ? <p className="text-center text-gray-500">{providerError instanceof Error ? sanitizeDepositDisplayText(providerError.message, "Aucun opérateur disponible pour ce pays.") : "Aucun opérateur disponible pour ce pays."}</p> : (
+              {loadingOperators ? <Loader2 className="w-7 h-7 animate-spin mx-auto text-[#FF7A14]" /> : operators.length === 0 ? <p className="text-center text-gray-500">{providerError instanceof Error ? sanitizeDepositDisplayText(providerError.message, "No operator is available for this country.") : "No operator is available for this country."}</p> : (
                   <div className="space-y-3">
                     {operators.map((op, i) => (
                       <button
                         key={`${op.id || op.name}-${i}`}
                         type="button"
                         onClick={() => chooseOperator(op)}
-                        aria-label={`Sélectionner ${op.name || op.code || "cet opérateur"}`}
+                        aria-label={`Select ${op.name || op.code || "this operator"}`}
                         className={`group flex min-h-[68px] w-full items-center justify-between gap-4 rounded-xl border-2 border-[#111827] px-4 py-3.5 text-left transition duration-200 ease-out active:translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FF7A14]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:px-5 ${
                           operator === op
                             ? "bg-[#fff1e6] ring-2 ring-[#FF7A14]/35 shadow-[0_3px_0_#111827,0_6px_12px_rgba(17,24,39,0.12)]"
@@ -576,12 +576,12 @@ export default function RobotPayPage() {
             <div className={operator?.manualNumber ? "space-y-3" : "space-y-5"}>
               {operator?.manualNumber && (
                 <section
-                  aria-label="Informations de paiement manuel"
+                  aria-label="Manual payment information"
                   className="mx-auto w-full max-w-md rounded-2xl border-2 border-[#111827] bg-white p-2.5 text-center shadow-[0_3px_0_#111827,0_7px_14px_rgba(17,24,39,0.14)]"
                 >
                   <div className="mb-2 border-b border-gray-200 pb-2 text-center">
                     <p className="text-xs font-bold uppercase tracking-[0.1em] text-slate-600">
-                      {operator.name || operator.code || "Paiement"} · {operator.manualNumber.paymentLink ? "Lien" : "Numéro"}
+                      {operator.name || operator.code || "Payment"} · {operator.manualNumber.paymentLink ? "Link" : "Number"}
                     </p>
                   </div>
                   {operator.manualNumber.paymentLink ? (
@@ -592,7 +592,7 @@ export default function RobotPayPage() {
                         rel="noreferrer"
                         className="inline-flex min-w-0 items-center justify-center gap-1.5 text-center text-sm font-semibold text-[#111827] underline decoration-[#FF7A14] underline-offset-2"
                       >
-                        <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0" /> Ouvrir le lien
+                        <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0" /> Open link
                       </a>
                     </div>
                   ) : (
@@ -606,15 +606,15 @@ export default function RobotPayPage() {
                     type="button"
                     onClick={copyPaymentNumber}
                     aria-label={operator.manualNumber.paymentLink
-                      ? "Copier le lien de paiement"
-                      : `Copier le numéro ${operator.manualNumber.phone}`}
+                      ? "Copy payment link"
+                      : `Copy number ${operator.manualNumber.phone}`}
                     className="mx-auto mt-2 flex h-9 min-w-24 items-center justify-center gap-1.5 rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] px-3 text-xs font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition duration-150 hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A14] focus-visible:ring-offset-2"
                   >
                     <Copy aria-hidden="true" className="h-4 w-4" /> Copier
                   </button>
                 </section>
               )}
-              <label htmlFor="robotpay-payer-phone" className="block text-sm font-semibold text-[#111827]">Téléphone payeur</label>
+              <label htmlFor="robotpay-payer-phone" className="block text-sm font-semibold text-[#111827]">Payer phone</label>
               <div className="flex items-center rounded-[11px] border-2 border-[#111827] px-3 shadow-[0_2px_5px_rgba(17,24,39,0.1)] transition focus-within:border-[#FF7A14] focus-within:ring-2 focus-within:ring-[#FF7A14]/20">
                 <Phone className="h-4 w-4 text-[#111827]" />
                 <span className="shrink-0 border-r border-gray-300 pr-2 text-[#111827]">+{phonePrefix}</span>
@@ -623,7 +623,7 @@ export default function RobotPayPage() {
               {activeProvider === "clapay" && operator?.requiresOtp && (
                 <div className="text-left">
                   <label htmlFor="robotpay-clapay-operator-otp" className="mb-1.5 block text-sm font-semibold text-[#111827]">
-                    Code OTP opérateur <span className="text-red-500">*</span>
+                    Operator OTP code <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="robotpay-clapay-operator-otp"
@@ -633,7 +633,7 @@ export default function RobotPayPage() {
                     inputMode="numeric"
                     className="w-full rounded-[11px] border-2 border-[#111827] px-3 py-2.5 text-center font-mono text-lg text-[#111827] outline-none transition focus:border-[#FF7A14] focus:ring-2 focus:ring-[#FF7A14]/20"
                   />
-                  <p className="mt-1 text-xs text-gray-600">Saisissez le code demandé par votre opérateur Mobile Money.</p>
+                  <p className="mt-1 text-xs text-gray-600">Enter the code requested by your Mobile Money operator.</p>
                 </div>
               )}
               {operator?.manualNumber && (
@@ -651,7 +651,7 @@ export default function RobotPayPage() {
                       autoComplete="off"
                       autoCapitalize="none"
                       spellCheck={false}
-                      placeholder="ID du SMS ou du reçu"
+                      placeholder="SMS or receipt ID"
                       aria-required="true"
                       className="w-full min-w-0 px-3 py-2.5 text-center font-mono tracking-wide text-[#111827] placeholder:font-sans placeholder:text-sm placeholder:tracking-normal placeholder:text-gray-500 outline-none"
                     />
@@ -659,8 +659,8 @@ export default function RobotPayPage() {
                 </div>
               )}
               <div className="flex items-center justify-center gap-3 pt-1">
-                <button onClick={() => { setOperator(null); setStep(0); }} className="flex-1 rounded-[11px] border-2 border-[#111827] bg-white py-2.5 font-semibold text-[#111827] shadow-[0_3px_0_#111827] transition active:translate-y-[2px] active:shadow-[0_1px_0_#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A14] focus-visible:ring-offset-2">Retour</button>
-               <button onClick={submitPhone} disabled={busy || !phone.trim() || (activeProvider === "clapay" && !!operator?.requiresOtp && !clapayOperatorOtp.trim()) || (!!operator?.manualNumber && !manualTransactionReference.trim())} className="flex-1 rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] py-2.5 font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition duration-150 hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A14] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : operator?.manualNumber ? "Vérifier" : "Continuer"}</button>
+              <button onClick={() => { setOperator(null); setStep(0); }} className="flex-1 rounded-[11px] border-2 border-[#111827] bg-white py-2.5 font-semibold text-[#111827] shadow-[0_3px_0_#111827] transition active:translate-y-[2px] active:shadow-[0_1px_0_#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A14] focus-visible:ring-offset-2">Back</button>
+               <button onClick={submitPhone} disabled={busy || !phone.trim() || (activeProvider === "clapay" && !!operator?.requiresOtp && !clapayOperatorOtp.trim()) || (!!operator?.manualNumber && !manualTransactionReference.trim())} className="flex-1 rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] py-2.5 font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition duration-150 hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A14] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : operator?.manualNumber ? "Verify" : "Continue"}</button>
               </div>
             </div>
           )}
@@ -668,25 +668,25 @@ export default function RobotPayPage() {
             <div className="space-y-5 text-center">
               {redirectUrl ? (
                 <>
-                  <p className="text-gray-700">{message || "Ouvrez la page sécurisée pour terminer votre paiement."}</p>
+                  <p className="text-gray-700">{message || "Open the secure page to complete your payment."}</p>
                   <a
                     href={redirectUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="block rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] py-3 font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827]"
                   >
-                    Ouvrir la page de paiement
+                    Open payment page
                   </a>
                 </>
               ) : (otpToken || ashtechOtpRequired) ? (
                 <>
                   {ussd && <p className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-3 text-center font-mono text-xl font-bold tracking-widest text-[#00a526]">{ussd}</p>}
-                  <p className="text-sm text-gray-600">{ussd ? "Composez ce code sur votre téléphone pour obtenir le code OTP, puis saisissez-le ci-dessous." : "Un code OTP vous a été envoyé. Saisissez-le ci-dessous."}</p>
+                  <p className="text-sm text-gray-600">{ussd ? "Dial this code on your phone to receive the OTP, then enter it below." : "An OTP has been sent to you. Enter it below."}</p>
                   <input
                     value={activeProvider === "ashtech" ? ashtechOtp : otp}
                     onChange={e => activeProvider === "ashtech" ? setAshtechOtp(e.target.value.replace(/\D/g, "")) : setOtp(e.target.value)}
                     inputMode="numeric"
-                    placeholder="Saisissez le code OTP"
+                    placeholder="Enter the OTP"
                     className="w-full rounded-[11px] border-2 border-[#111827] p-3 text-center text-xl text-[#111827] outline-none transition focus:border-[#FF7A14] focus:ring-2 focus:ring-[#FF7A14]/20"
                   />
                   <button
@@ -694,26 +694,26 @@ export default function RobotPayPage() {
                     disabled={busy}
                     className="w-full rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] py-3 font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Confirmer
+                    Confirm
                   </button>
                 </>
               ) : status === "rejected" ? (
                 <>
                   <ShieldCheck className="mx-auto h-16 w-16 text-red-400" />
-                  <p className="text-lg font-semibold text-red-600">Paiement refusé</p>
-                  <p className="text-sm text-gray-500">Le paiement n’a pas été confirmé. Vous pouvez réessayer.</p>
+                  <p className="text-lg font-semibold text-red-600">Payment declined</p>
+                  <p className="text-sm text-gray-500">The payment was not confirmed. You can try again.</p>
                   <button
                     onClick={() => { setDepositId(null); setStatus("pending"); setStep(1); }}
                     className="w-full rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] py-3 font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827]"
                   >
-                    Réessayer
+                    Try again
                   </button>
                 </>
               ) : (
                 <>
                   <ShieldCheck className="mx-auto h-16 w-16 animate-pulse text-green-400" />
-                  <p className="text-lg font-semibold">Paiement en cours de confirmation</p>
-                  <p className="text-sm text-gray-500">{message || "Validez la demande sur votre téléphone. La page se met à jour automatiquement."}</p>
+                  <p className="text-lg font-semibold">Payment confirmation in progress</p>
+                  <p className="text-sm text-gray-500">{message || "Approve the request on your phone. This page updates automatically."}</p>
                 </>
               )}
             </div>
@@ -722,52 +722,52 @@ export default function RobotPayPage() {
             manualSubmitted ? (
               <div className="space-y-3 py-3 text-center">
                 <Check className="mx-auto h-16 w-16 rounded-full bg-green-500 p-3 text-white" />
-                <h2 className="text-xl font-bold text-gray-900">Demande envoyée</h2>
+                <h2 className="text-xl font-bold text-gray-900">Request sent</h2>
                 <div className="rounded-xl border-2 border-[#111827] bg-[#fffaf6] p-3 text-left text-sm leading-6 text-gray-800">
-                  <b>Opérateur :</b> {operator?.name}<br />
-                  <b>Montant :</b> {amount.toLocaleString()} {currency}<br />
+                  <b>Operator:</b> {operator?.name}<br />
+                  <b>Amount:</b> {amount.toLocaleString()} {currency}<br />
                   <b>ID :</b> <span className="break-all font-mono">{manualTransactionReference.trim()}</span>
                 </div>
                 {status === "approved" ? (
-                  <p role="status" className="text-sm font-semibold text-green-700">Dépôt approuvé</p>
+                  <p role="status" className="text-sm font-semibold text-green-700">Deposit approved</p>
                 ) : status === "rejected" ? (
-                  <p role="status" className="text-sm font-semibold text-red-600">Demande refusée</p>
+                  <p role="status" className="text-sm font-semibold text-red-600">Request declined</p>
                 ) : manualVerificationDeadline && manualVerificationSecondsLeft > 0 ? (
                   <div role="status" aria-live="polite" className="space-y-1">
                     <p className="flex items-center justify-center gap-2 text-sm font-semibold text-[#b84d00]">
                       <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-                      Vérification en cours · {formatTimeRemaining(manualVerificationSecondsLeft)}
+                      Verification in progress · {formatTimeRemaining(manualVerificationSecondsLeft)}
                     </p>
-                    <p className="text-xs text-amber-700">En attente de validation</p>
+                    <p className="text-xs text-amber-700">Awaiting validation</p>
                   </div>
                 ) : manualVerificationDeadline ? (
                   <div className="space-y-2">
-                    <p role="status" className="text-sm font-semibold text-amber-700">Demande toujours en attente</p>
+                    <p role="status" className="text-sm font-semibold text-amber-700">Request still pending</p>
                     <button
                       type="button"
                       onClick={() => setManualVerificationDeadline(Date.now() + 5 * 60 * 1000)}
                       className="mx-auto inline-flex items-center justify-center gap-2 rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] px-4 py-2 text-sm font-bold text-[#111827] shadow-[0_3px_0_#111827] transition hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A14] focus-visible:ring-offset-2"
                     >
-                      <RefreshCw aria-hidden="true" className="h-4 w-4" /> Vérifier à nouveau
+                      <RefreshCw aria-hidden="true" className="h-4 w-4" /> Verify again
                     </button>
                   </div>
                 ) : (
-                  <p className="text-sm font-semibold text-amber-700">En attente de validation</p>
+                  <p className="text-sm font-semibold text-amber-700">Awaiting validation</p>
                 )}
-                <button onClick={() => navigate("/")} className="text-base font-semibold text-[#111827] underline decoration-[#FF7A14] underline-offset-4 hover:text-[#b84d00]">Retour au site</button>
+                <button onClick={() => navigate("/")} className="text-base font-semibold text-[#111827] underline decoration-[#FF7A14] underline-offset-4 hover:text-[#b84d00]">Back to site</button>
               </div>
             ) : (
               <div className="space-y-5 py-5 text-center">
-                <div className="border-b border-gray-200 pb-3 text-left text-xl font-semibold text-gray-900">Paiement — {countryInfo?.name || country}</div>
+                <div className="border-b border-gray-200 pb-3 text-left text-xl font-semibold text-gray-900">Payment — {countryInfo?.name || country}</div>
                 <p className="text-left text-2xl font-bold text-gray-900">{amount.toLocaleString()} {currency}</p>
                 <Check className="mx-auto h-24 w-24 rounded-full bg-green-500 p-4 text-white" />
-                <h2 className="text-xl font-bold text-gray-900">Votre paiement a été approuvé</h2>
+                <h2 className="text-xl font-bold text-gray-900">Your payment was approved</h2>
                 <div className="rounded-xl border-2 border-[#111827] bg-[#fffaf6] p-3 text-left text-sm leading-7 text-gray-800">
                   <b>Payeur :</b> {phone}<br />
                   <b>ID Transaction :</b> {transactionReference}<br />
-                  <b>Date Paiement :</b> {new Date().toLocaleString("fr-FR")}
+                  <b>Payment date:</b> {new Date().toLocaleString("en-PH")}
                 </div>
-                <p className="pt-6 text-gray-600">🔒 Paiement vérifié</p>
+                <p className="pt-6 text-gray-600">🔒 Payment verified</p>
                 <button onClick={() => navigate("/")} className="text-lg font-semibold text-[#111827] underline decoration-[#FF7A14] underline-offset-4 hover:text-[#b84d00]">Retourner sur le site</button>
               </div>
             )

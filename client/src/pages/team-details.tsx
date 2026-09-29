@@ -74,7 +74,7 @@ export default function TeamDetailsPage() {
         </header>
 
         <div className="team-details-content" aria-busy={isLoading || isFetching}>
-          <nav className="team-details-tabs" aria-label="Choisir un niveau d'équipe">
+          <nav className="team-details-tabs" aria-label="Choose a team level">
             {levels.map(level => (
               <button
                 type="button"
@@ -95,7 +95,7 @@ export default function TeamDetailsPage() {
             </p>
           )}
 
-          <section className="team-details-stats" aria-label={`Résumé de l'équipe ${selected.name}`}>
+          <section className="team-details-stats" aria-label={`Team ${selected.name} summary`}>
             <div>
                <span>Team members</span>
               <strong data-testid="text-member-count">{isLoading ? "…" : selected.members.length}</strong>
@@ -107,17 +107,17 @@ export default function TeamDetailsPage() {
             </div>
           </section>
 
-          <section className="team-details-members" aria-label={`Filleuls de l'équipe ${selected.name}`}>
+          <section className="team-details-members" aria-label={`Team ${selected.name} referrals`}>
              <h2>Referrals · Team {selected.name}</h2>
             <p className="team-details-explanation">
                Total earnings represent referral bonuses received for each member.
             </p>
             <div className="team-details-columns" aria-hidden="true">
-              <span>Utilisateur</span><span>Revenu total</span><span>VIP</span><span>Contact</span>
+               <span>User</span><span>Total earnings</span><span>VIP</span><span>Contact</span>
             </div>
 
             {isLoading ? (
-              <div className="team-details-loading" aria-label="Chargement des filleuls">
+               <div className="team-details-loading" aria-label="Loading referrals">
                 {[0, 1, 2].map(i => <Skeleton key={i} className="h-16 w-full" />)}
               </div>
             ) : isError ? (
@@ -143,7 +143,7 @@ export default function TeamDetailsPage() {
                 <div className="team-details-row" key={member.id} data-testid={`team-member-${member.id}`}>
                   <strong data-testid={`text-member-phone-${member.id}`}>
                     {phone}
-                    {member.isDemo && <small className="team-details-demo">Démo</small>}
+                    {member.isDemo && <small className="team-details-demo">Demo</small>}
                   </strong>
                   <span className="team-details-revenue" data-testid={`text-member-revenue-${member.id}`}>
                     {Number(member.demoPreview?.totalReferralRevenue ?? member.totalReferralRevenue).toLocaleString("en-PH")}
@@ -158,14 +158,14 @@ export default function TeamDetailsPage() {
                       href={whatsappHref}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label={member.isDemo ? "Aperçu du message WhatsApp sans destinataire" : `Écrire à ${phone} sur WhatsApp`}
-                      title={member.isDemo ? "Démo : message sans destinataire" : undefined}
+                      aria-label={member.isDemo ? "WhatsApp message preview without a recipient" : `Write to ${phone} on WhatsApp`}
+                      title={member.isDemo ? "Demo: message has no recipient" : undefined}
                       data-testid={`whatsapp-member-${member.id}`}
                     >
                       <img src={whatsappIcon} alt="" />
                     </a>
                   ) : (
-                    <span className="team-details-contact-unavailable" title={member.isDemo ? "Filleul fictif : contact indisponible" : "Numéro WhatsApp indisponible"} aria-label="Numéro WhatsApp indisponible">—</span>
+                    <span className="team-details-contact-unavailable" title={member.isDemo ? "Fictional referral: contact unavailable" : "WhatsApp number unavailable"} aria-label="WhatsApp number unavailable">—</span>
                   )}
                 </div>
               );

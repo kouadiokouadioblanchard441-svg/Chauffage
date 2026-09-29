@@ -70,7 +70,7 @@ export default function WithdrawalHistoryPage() {
 
                 <div className="px-5 py-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-500 text-sm">Montant</span>
+                    <span className="text-gray-500 text-sm">Amount</span>
                     <span className="text-[#3174d1] font-bold text-base">
                        {parseFloat(w.amount).toLocaleString("en-PH")} {currency}
                     </span>

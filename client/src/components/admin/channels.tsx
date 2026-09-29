@@ -109,7 +109,7 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
       const response = await apiRequest("PATCH", `/api/admin/channels/${id}`, { isActive });
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "Modification du statut du canal impossible");
+         throw new Error(result.message || "Unable to change channel status");
       }
       return response.json();
     },
@@ -117,7 +117,7 @@ export default function AdminChannels({ isSuperAdmin }: AdminChannelsProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/channels"] });
     },
     onError: (error: any) => {
-      toast({ title: "Modification du statut du canal impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to change channel status", description: error.message, variant: "destructive" });
     },
   });
 

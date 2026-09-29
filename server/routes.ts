@@ -105,7 +105,7 @@ function checkBruteForce(req: Request, res: Response): boolean {
   const record = loginAttempts.get(key);
   if (record && record.blockedUntil > now) {
     const minutesLeft = Math.ceil((record.blockedUntil - now) / 60000);
-    res.status(429).json({ message: `Trop de tentatives. Réessayez dans ${minutesLeft} minute(s).` });
+    res.status(429).json({ message: `Too many attempts. Try again in ${minutesLeft} minute(s).` });
     return true;
   }
   return false;
@@ -121,7 +121,7 @@ function recordFailedAttempt(req: Request) {
     record.count = 0;
     void sendTelegramSecurityAlert(
       key,
-      "Trop de tentatives. Réessayez dans 15 minute(s).",
+      "Too many attempts. Try again in 15 minute(s).",
     ).catch((error) => console.error("[telegram] security notification failed:", error.message));
   }
   loginAttempts.set(key, record);
@@ -186,7 +186,7 @@ async function creditApprovedDeposit(deposit: {
     userId: user.id,
     type: "deposit",
     amount: deposit.amount.toString(),
-    description: `Dépôt RobotPay #${deposit.id}`,
+      description: `RobotPay deposit #${deposit.id}`,
   });
   await storage.processDepositReferralCommissions(user.id, deposit.amount);
 }
@@ -198,17 +198,17 @@ async function validateWithdrawalFeePayment(
 ) {
   const id = Number(feePaymentId);
   if (!Number.isInteger(id) || id <= 0) {
-    throw new Error("Paiement préalable invalide");
+    throw new Error("Invalid prepayment");
   }
   const payment = await storage.getWithdrawalFeePayment(id);
   if (!payment || payment.userId !== userId) {
-    throw new Error("Paiement préalable introuvable");
+    throw new Error("Prepayment not found");
   }
   if (payment.status === "used") {
-    throw new Error("Ce paiement préalable a déjà été utilisé");
+    throw new Error("This prepayment has already been used");
   }
   if (payment.requiredAmount !== amount) {
-    throw new Error("Le montant payé ne correspond pas à cette obligation de retrait");
+    throw new Error("The paid amount does not match this withdrawal requirement");
   }
   return payment;
 }
@@ -295,22 +295,22 @@ function parseDepositMethodsByCountry(
   try {
     value = JSON.parse(raw);
   } catch {
-    throw new Error("La configuration des méthodes de dépôt par pays est invalide");
+    throw new Error("The country deposit-method configuration is invalid");
   }
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("La configuration des méthodes de dépôt par pays doit être un objet JSON");
+    throw new Error("The country deposit-method configuration must be a JSON object");
   }
 
   const result: Record<string, DepositMethodId[]> = {};
   for (const [rawCountry, rawMethods] of Object.entries(value)) {
     const country = rawCountry.trim().toUpperCase();
     if (!/^[A-Z]{2}$/.test(country) || !Array.isArray(rawMethods)) {
-      throw new Error(`Configuration de dépôt invalide pour le pays ${rawCountry}`);
+      throw new Error(`Invalid deposit configuration for country ${rawCountry}`);
     }
     const methods = rawMethods.map((method) => String(method).trim().toLowerCase());
     const invalidMethod = methods.find((method) => !DEPOSIT_METHOD_ID_SET.has(method));
     if (invalidMethod) {
-      throw new Error(`Méthode de dépôt inconnue : ${invalidMethod}`);
+      throw new Error(`Unknown deposit method: ${invalidMethod}`);
     }
     result[country] = (methods as DepositMethodId[]).filter(
       (method, index, list) => list.indexOf(method) === index,
@@ -406,7 +406,7 @@ function getDepositMethodName(
   method: DepositMethodId,
   settings: Record<string, string>,
 ): string {
-  if (method === "manual") return "Paiement manuel";
+  if (method === "manual") return "Manual payment";
   const settingKey: Record<Exclude<DepositMethodId, "manual">, string> = {
     soleaspay: "soleaspayChannelName",
     ashtech: "ashtechChannelName",
@@ -446,22 +446,22 @@ function adminSettings(settings: Record<string, string>) {
 function validatePhone(value: unknown, fieldName: string): string {
   const result = phoneNumberSchema.safeParse(value);
   if (!result.success) {
-    throw new Error(`${fieldName} invalide`);
+    throw new Error(`Invalid ${fieldName}`);
   }
   return result.data;
 }
 
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
-    return res.status(401).json({ message: "Non authentifié" });
+    return res.status(401).json({ message: "Not authenticated" });
   }
   try {
     const user = await storage.getUser(req.session.userId);
-    if (!user) return res.status(401).json({ message: "Non authentifié" });
+    if (!user) return res.status(401).json({ message: "Not authenticated" });
     if (user.isAdmin) return next();
     const activeCountries = await storage.getActiveCountries();
     if (!activeCountries.some(country => country.code === user.country)) {
-      req.session.destroy(() => res.status(403).json({ message: "Compte indisponible dans ce pays" }));
+      req.session.destroy(() => res.status(403).json({ message: "Account unavailable in this country" }));
       return;
     }
     next();
@@ -472,30 +472,30 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
-    return res.status(401).json({ message: "Non authentifié" });
+    return res.status(401).json({ message: "Not authenticated" });
   }
   const user = await storage.getUser(req.session.userId);
   if (!user?.isAdmin) {
-    return res.status(403).json({ message: "Accès refusé" });
+    return res.status(403).json({ message: "Access denied" });
   }
   next();
 }
 
 async function requireBanker(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
-    return res.status(401).json({ message: "Non authentifié" });
+    return res.status(401).json({ message: "Not authenticated" });
   }
   try {
     const user = await storage.getUser(req.session.userId);
-    if (!user) return res.status(401).json({ message: "Non authentifié" });
+    if (!user) return res.status(401).json({ message: "Not authenticated" });
     if (!user.isAdmin) {
       const activeCountries = await storage.getActiveCountries();
       if (!activeCountries.some(country => country.code === user.country)) {
-        req.session.destroy(() => res.status(403).json({ message: "Compte indisponible dans ce pays" }));
+        req.session.destroy(() => res.status(403).json({ message: "Account unavailable in this country" }));
         return;
       }
     }
-    if (!user.isAdmin && !user.isBanker) return res.status(403).json({ message: "Accès refusé" });
+    if (!user.isAdmin && !user.isBanker) return res.status(403).json({ message: "Access denied" });
     next();
   } catch (error) {
     next(error);
@@ -534,7 +534,7 @@ export async function registerRoutes(
     try {
       const blockedIps = await getCachedBlockedIps();
       if (blockedIps.includes(getClientKey(req))) {
-        return res.status(403).json({ message: "Accès bloqué pour cette adresse IP" });
+        return res.status(403).json({ message: "Access blocked for this IP address" });
       }
       next();
     } catch (error) {
@@ -549,12 +549,12 @@ export async function registerRoutes(
       const data = registerSchema.parse(req.body);
       const activeCountries = await storage.getActiveCountries();
       if (!activeCountries.some(country => country.code === data.country)) {
-        return res.status(400).json({ message: "Pays indisponible" });
+        return res.status(400).json({ message: "Country unavailable" });
       }
       
       const existing = await storage.getUserByPhone(data.phone, data.country);
       if (existing) {
-        return res.status(400).json({ message: "Ce numéro est déjà utilisé" });
+        return res.status(400).json({ message: "This number is already in use" });
       }
 
       let referredBy: string | undefined;
@@ -562,7 +562,7 @@ export async function registerRoutes(
         const cleanCode = data.invitationCode.trim().toUpperCase();
         const referrer = await storage.getUserByReferralCode(cleanCode);
         if (!referrer) {
-          return res.status(400).json({ message: "Code d'invitation invalide" });
+          return res.status(400).json({ message: "Invalid invitation code" });
         }
         referredBy = cleanCode;
       }
@@ -581,7 +581,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      res.status(500).json({ message: error.message || "Erreur serveur" });
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 
@@ -609,7 +609,7 @@ export async function registerRoutes(
 
       if (!user) {
         recordFailedAttempt(req);
-        return res.status(400).json({ message: "Identifiants incorrects" });
+        return res.status(400).json({ message: "Invalid credentials" });
       }
 
       const validPassword = await bcrypt.compare(data.password, user.password);
@@ -619,7 +619,7 @@ export async function registerRoutes(
       }
 
       if (user.isBanned) {
-        return res.status(403).json({ message: "Compte suspendu" });
+        return res.status(403).json({ message: "Account suspended" });
       }
 
       clearFailedAttempts(req);
@@ -639,17 +639,17 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      res.status(500).json({ message: error.message || "Erreur serveur" });
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     if (!req.session.userId) {
-      return res.status(401).json({ message: "Non authentifié" });
+    return res.status(401).json({ message: "Not authenticated" });
     }
     const user = await storage.getUser(req.session.userId);
     if (!user) {
-      return res.status(401).json({ message: "Non authentifié" });
+    return res.status(401).json({ message: "Not authenticated" });
     }
     res.json({ user: { ...user, password: undefined } });
   });
@@ -665,27 +665,27 @@ export async function registerRoutes(
       const { currentPassword, newPassword } = req.body;
       
       if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Veuillez remplir tous les champs" });
+        return res.status(400).json({ message: "Please complete all fields" });
       }
 
       if (newPassword.length < 6) {
-        return res.status(400).json({ message: "Le nouveau mot de passe doit contenir au moins 6 caracteres" });
+        return res.status(400).json({ message: "The new password must be at least 6 characters" });
       }
 
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
-        return res.status(404).json({ message: "Utilisateur non trouve" });
+        return res.status(404).json({ message: "User not found" });
       }
 
       const validPassword = await bcrypt.compare(currentPassword, user.password);
       if (!validPassword) {
-        return res.status(400).json({ message: "Mot de passe actuel incorrect" });
+        return res.status(400).json({ message: "Current password is incorrect" });
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await storage.updateUser(user.id, { password: hashedPassword });
 
-      res.json({ success: true, message: "Mot de passe modifie avec succes" });
+      res.json({ success: true, message: "Password changed successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Erreur serveur" });
     }
@@ -729,16 +729,16 @@ export async function registerRoutes(
       const product = await storage.getProduct(productId);
       
       if (!product) {
-        return res.status(404).json({ message: "Produit non trouvé" });
+        return res.status(404).json({ message: "Product not found" });
       }
       
       if (product.isFree) {
-        return res.status(400).json({ message: "Utilisez /claim-free pour ce produit" });
+        return res.status(400).json({ message: "Use /claim-free for this product" });
       }
 
       if (!Number.isInteger(product.price) || product.price <= 0) {
         return res.status(400).json({
-          message: "Le prix de ce produit doit être supérieur à zéro.",
+          message: "Product price must be greater than zero.",
         });
       }
 
@@ -755,22 +755,22 @@ export async function registerRoutes(
       const product = await storage.getProduct(productId);
       
       if (!product || !product.isFree) {
-        return res.status(400).json({ message: "Produit non valide" });
+        return res.status(400).json({ message: "Invalid product" });
       }
       if (!product.isActive) {
-        return res.status(400).json({ message: "Produit indisponible" });
+        return res.status(400).json({ message: "Product unavailable" });
       }
 
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
-        return res.status(401).json({ message: "Non authentifié" });
+        return res.status(401).json({ message: "Not authenticated" });
       }
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
       if (user.lastFreeProductClaim && new Date(user.lastFreeProductClaim) >= today) {
-        return res.status(400).json({ message: "Déjà réclamé aujourd'hui" });
+        return res.status(400).json({ message: "Already claimed today" });
       }
 
       const newBalance = parseFloat(user.balance) + product.dailyEarnings;
@@ -783,7 +783,7 @@ export async function registerRoutes(
         userId: user.id,
         type: "free_claim",
         amount: product.dailyEarnings.toString(),
-        description: "Bonus produit gratuit",
+        description: "Free product bonus",
       });
 
       res.json({ success: true });
@@ -819,7 +819,7 @@ export async function registerRoutes(
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
       if (!user) {
-        return res.status(401).json({ message: "Non authentifie" });
+        return res.status(401).json({ message: "Not authenticated" });
       }
 
       const userProductsList = await storage.getAllUserProducts(userId);
@@ -870,7 +870,7 @@ export async function registerRoutes(
                 userId,
                 type: "earning",
                 amount: earningsPerCycle.toString(),
-                description: `Gains ${product.name}`,
+                description: `Earnings ${product.name}`,
               });
             }
           }
@@ -1036,7 +1036,7 @@ export async function registerRoutes(
     try {
       const { name, description, price, returnAmount, lockDays, launchDate, imageUrl, isActive } = req.body;
       if (!name || !price || !returnAmount || !lockDays) {
-        return res.status(400).json({ message: "Champs requis : nom, prix, retour, durée" });
+        return res.status(400).json({ message: "Required fields: name, price, return, duration" });
       }
       const sp = await storage.createStakingProduct({
         name, description: description || null,
@@ -1122,15 +1122,15 @@ export async function registerRoutes(
       const { ownerName, phone, paymentLink, operatorName, country, logoUrl, isActive } = req.body;
       const normalizedLink = typeof paymentLink === "string" ? paymentLink.trim() : "";
       if (!ownerName || !operatorName || !country || (!phone && !normalizedLink)) {
-        return res.status(400).json({ message: "Renseignez un numéro ou un lien de paiement" });
+        return res.status(400).json({ message: "Enter a payment number or link" });
       }
       let normalizedPhone: string | null = null;
       if (!normalizedLink) {
-        normalizedPhone = validatePhone(phone, "Numéro");
+        normalizedPhone = validatePhone(phone, "Phone number");
       } else {
         const parsedUrl = new URL(normalizedLink);
         if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-          throw new Error("Le lien de paiement doit commencer par http:// ou https://");
+          throw new Error("The payment link must start with http:// or https://");
         }
       }
       const num = await storage.createPaymentNumber({
@@ -1158,11 +1158,11 @@ export async function registerRoutes(
       if (normalizedLink) {
         const parsedUrl = new URL(normalizedLink);
         if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-          throw new Error("Le lien de paiement doit commencer par http:// ou https://");
+          throw new Error("The payment link must start with http:// or https://");
         }
         normalizedPhone = null;
       } else if (phone !== undefined) {
-        normalizedPhone = phone ? validatePhone(phone, "Numéro") : null;
+        normalizedPhone = phone ? validatePhone(phone, "Phone number") : null;
       }
       const num = await storage.updatePaymentNumber(id, {
         ownerName: ownerName === undefined ? undefined : String(ownerName).trim().slice(0, 100),
@@ -1202,20 +1202,20 @@ export async function registerRoutes(
       const minDeposit = parseInt(settings.minDeposit || "3500");
        const requestedAmount = typeof amount === "number" ? amount : Number(amount);
        if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
-        return res.status(400).json({ message: "Montant invalide" });
+        return res.status(400).json({ message: "Invalid amount" });
        }
        const withdrawalFeePayment = feePaymentId !== undefined && feePaymentId !== null
          ? await validateWithdrawalFeePayment(user.id, feePaymentId, requestedAmount)
          : undefined;
        if (!withdrawalFeePayment && requestedAmount < minDeposit) {
-        return res.status(400).json({ message: `Montant minimum: ${minDeposit.toLocaleString()} FCFA` });
+        return res.status(400).json({ message: `Minimum amount: ${minDeposit.toLocaleString()} PHP` });
       }
        if (
          useInpay === true &&
          (!Number.isInteger(requestedAmount) || requestedAmount % 5 !== 0)
        ) {
          return res.status(400).json({
-           message: "Le montant InPay doit être un nombre entier multiple de 5 (ex. 300, 305 ou 310 FCFA)",
+           message: "The InPay amount must be a whole number and a multiple of 5 (e.g. 300, 305 or 310 PHP)",
            inpay: true,
          });
        }
@@ -1226,7 +1226,7 @@ export async function registerRoutes(
          paymentChannelId: paymentChannelId === undefined ? undefined : Number(paymentChannelId),
        });
        if (!parsedDeposit.success) {
-         return res.status(400).json({ message: parsedDeposit.error.errors[0]?.message || "Données invalides" });
+         return res.status(400).json({ message: parsedDeposit.error.errors[0]?.message || "Invalid data" });
        }
        if (screenshot !== undefined && screenshot !== null) {
          if (
@@ -1234,7 +1234,7 @@ export async function registerRoutes(
            screenshot.length > 7_000_000 ||
            !/^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(screenshot)
          ) {
-           return res.status(400).json({ message: "Capture invalide ou trop volumineuse (7 Mo maximum)" });
+           return res.status(400).json({ message: "Invalid or oversized screenshot (7 MB maximum)" });
          }
        }
         const normalizedDeposit = parsedDeposit.data;
@@ -1246,7 +1246,7 @@ export async function registerRoutes(
        if (hasManualPaymentNumber) {
          const parsedPaymentNumberId = Number(paymentNumberId);
          if (!Number.isInteger(parsedPaymentNumberId) || parsedPaymentNumberId <= 0) {
-           return res.status(400).json({ message: "Numéro de paiement invalide" });
+           return res.status(400).json({ message: "Invalid payment number" });
          }
          selectedPaymentNumber = await storage.getPaymentNumber(parsedPaymentNumberId);
          if (
@@ -1254,19 +1254,19 @@ export async function registerRoutes(
            !selectedPaymentNumber.isActive ||
            selectedPaymentNumber.country.toUpperCase() !== normalizedDeposit.country.toUpperCase()
          ) {
-           return res.status(400).json({ message: "Ce numéro de paiement n'est plus disponible pour ce pays" });
+           return res.status(400).json({ message: "This payment number is no longer available for this country" });
          }
           if (!isDepositMethodConfigured(normalizedDeposit.country, "manual", settings)) {
-            return res.status(400).json({ message: "Le paiement manuel n'est pas configuré pour ce pays" });
+            return res.status(400).json({ message: "Manual payment is not configured for this country" });
           }
           if (
             normalizedTransactionReference &&
             (normalizedTransactionReference.length > 120 || /[\r\n]/.test(normalizedTransactionReference))
           ) {
-            return res.status(400).json({ message: "L'ID de transaction doit tenir sur une ligne et ne pas dépasser 120 caractères" });
+            return res.status(400).json({ message: "The transaction ID must be one line and no longer than 120 characters" });
           }
           if (!screenshot && !normalizedTransactionReference) {
-            return res.status(400).json({ message: "Ajoutez une capture ou saisissez l'ID de transaction" });
+        return res.status(400).json({ message: "Add a screenshot or enter the transaction ID" });
           }
        }
 
@@ -1274,7 +1274,7 @@ export async function registerRoutes(
         const hasAutomaticProviderRequest =
           useSoleaspay === true || useWestpay === true || useInpay === true;
         if (explicitRouting && !hasManualPaymentNumber && !hasAutomaticProviderRequest) {
-          return res.status(400).json({ message: "Sélectionnez un moyen de dépôt autorisé pour ce pays" });
+          return res.status(400).json({ message: "Select an approved deposit method for this country" });
         }
 
       const soleaspayCountry = normalizedDeposit.country.trim().toUpperCase();
@@ -1282,7 +1282,7 @@ export async function registerRoutes(
       
       if (useSoleaspay === true) {
         if (!isDepositMethodConfigured(soleaspayCountry, "soleaspay", settings)) {
-          return res.status(400).json({ message: "SoleaPay n'est pas activé pour ce pays", soleaspay: true });
+          return res.status(400).json({ message: "SoleaPay is not enabled for this country", soleaspay: true });
         }
         try {
           validateSoleaspayConfig();
@@ -1291,7 +1291,7 @@ export async function registerRoutes(
         }
          if (!isSoleaspaySupported(soleaspayCountry, normalizedDeposit.paymentMethod)) {
           return res.status(400).json({
-            message: `L'opérateur "${normalizedDeposit.paymentMethod}" n'est pas supporté par ce canal pour le pays "${soleaspayCountry}". Veuillez choisir un autre canal.`,
+            message: `The operator "${normalizedDeposit.paymentMethod}" is not supported by this channel in "${soleaspayCountry}". Please choose another channel.`,
             soleaspay: true,
           });
         }
@@ -1330,22 +1330,22 @@ export async function registerRoutes(
             });
           } else {
             notifyTelegramPaymentError({
-              operation: "Dépôt SoleaPay",
-              error: paymentResult.message || "Échec de l'initialisation",
+              operation: "SoleaPay deposit",
+              error: paymentResult.message || "Initialization failed",
               userId: user.id,
               amount: normalizedDeposit.amount,
               country: soleaspayCountry,
               paymentMethod: normalizedDeposit.paymentMethod,
             });
             return res.status(400).json({ 
-              message: paymentResult.message || "Erreur Soleaspay",
+              message: paymentResult.message || "SoleaPay error",
               soleaspay: true
             });
           }
         } catch (soleaspayError: any) {
           console.error("[soleaspay] Payment error:", soleaspayError);
           notifyTelegramPaymentError({
-            operation: "Dépôt SoleaPay",
+            operation: "SoleaPay deposit",
             error: soleaspayError,
             userId: user.id,
             amount: normalizedDeposit.amount,
@@ -1353,7 +1353,7 @@ export async function registerRoutes(
             paymentMethod: normalizedDeposit.paymentMethod,
           });
           return res.status(400).json({ 
-            message: soleaspayError.message || "Erreur de paiement Soleaspay",
+            message: soleaspayError.message || "SoleaPay payment error",
             soleaspay: true
           });
         }
@@ -1362,19 +1362,19 @@ export async function registerRoutes(
       // ── WestPay: redirect-based hosted-payment flow ─────────────────────────
       if (useWestpay === true) {
         if (!isDepositMethodConfigured(normalizedDeposit.country, "westpay", settings)) {
-          return res.status(400).json({ message: "WestPay n'est pas activé pour ce pays", westpay: true });
+          return res.status(400).json({ message: "WestPay is not enabled for this country", westpay: true });
         }
         try {
           validateWestpayConfig();
         } catch (error: any) {
-          return res.status(503).json({ message: error.message || "WestPay n'est pas configuré dans Plesk", westpay: true });
+          return res.status(503).json({ message: error.message || "WestPay is not configured in Plesk", westpay: true });
         }
         try {
           if (!process.env.WESTPAY_MERCHANT_SLUG) {
-            return res.status(400).json({ message: "WestPay non configuré : ajoutez WESTPAY_MERCHANT_SLUG aux variables d'environnement Plesk", westpay: true });
+          return res.status(400).json({ message: "WestPay is not configured: add WESTPAY_MERCHANT_SLUG to the Plesk environment variables", westpay: true });
           }
           if (!process.env.WESTPAY_WEBHOOK_SECRET) {
-            return res.status(503).json({ message: "WestPay ne peut pas confirmer les paiements : configurez WESTPAY_WEBHOOK_SECRET dans les variables d'environnement Plesk", westpay: true });
+        return res.status(503).json({ message: "WestPay cannot confirm payments: configure WESTPAY_WEBHOOK_SECRET in the Plesk environment variables", westpay: true });
           }
           const baseUrl = `${req.protocol}://${req.get("host")}`;
           // Create deposit to get an ID, then build the redirect URL
@@ -1399,14 +1399,14 @@ export async function registerRoutes(
         } catch (westpayError: any) {
           console.error("[westpay] deposit error:", westpayError);
           notifyTelegramPaymentError({
-            operation: "Dépôt WestPay",
+            operation: "WestPay deposit",
             error: westpayError,
             userId: user.id,
             amount: normalizedDeposit.amount,
             country: normalizedDeposit.country,
             paymentMethod: "WestPay",
           });
-          return res.status(400).json({ message: westpayError.message || "Erreur WestPay", westpay: true });
+          return res.status(400).json({ message: westpayError.message || "WestPay error", westpay: true });
         }
       }
 
@@ -1414,11 +1414,11 @@ export async function registerRoutes(
       if (useInpay === true) {
         const normalizedCountry = normalizedDeposit.country.trim().toUpperCase();
         if (!isDepositMethodConfigured(normalizedCountry, "inpay", settings)) {
-          return res.status(400).json({ message: "InPay n'est pas activé pour ce pays", inpay: true });
+          return res.status(400).json({ message: "InPay is not enabled for this country", inpay: true });
         }
         if (!isInpayConfigured(normalizedCountry)) {
           return res.status(400).json({
-            message: `InPay n'est pas configuré pour ${normalizedCountry} : URL API, merchant ID ou clé API manquant`,
+            message: `InPay is not configured for ${normalizedCountry}: API URL, merchant ID, or API key is missing`,
             inpay: true,
           });
         }
@@ -1428,7 +1428,7 @@ export async function registerRoutes(
         const parsedInpayPhone = phoneNumberSchema.safeParse(inpayPhoneValue);
         if (!parsedInpayPhone.success) {
           return res.status(400).json({
-            message: "Le numéro du compte est invalide",
+            message: "Invalid account number",
             inpay: true,
           });
         }
@@ -1469,7 +1469,7 @@ export async function registerRoutes(
         } catch (inpayError: any) {
           await storage.updateDeposit(inpayDeposit.id, { status: "rejected", processedAt: new Date() });
           void sendTelegramInpayError({
-            operation: "Dépôt pay-in",
+            operation: "Pay-in deposit",
             error: inpayError,
             country: normalizedCountry,
             amount: normalizedDeposit.amount,
@@ -1482,7 +1482,7 @@ export async function registerRoutes(
             console.error("[telegram] InPay deposit error notification failed:", notificationError.message);
           });
           console.error("[inpay] payin error:", inpayError);
-          return res.status(400).json({ message: inpayError.message || "Erreur InPay", inpay: true });
+          return res.status(400).json({ message: inpayError.message || "InPay error", inpay: true });
         }
       }
 
@@ -1518,7 +1518,7 @@ export async function registerRoutes(
       const deposit = await storage.getDeposit(depositId);
       
       if (!deposit) {
-        return res.status(404).json({ message: "Depot non trouve" });
+        return res.status(404).json({ message: "Deposit not found" });
       }
 
       if (deposit.userId !== req.session.userId) {
@@ -1553,7 +1553,7 @@ export async function registerRoutes(
                   userId: deposit.userId,
                   type: "deposit",
                   amount: deposit.amount.toString(),
-                  description: `Depot Soleaspay #${deposit.id}`,
+                  description: `SoleaPay deposit #${deposit.id}`,
                 });
 
                 await storage.processDepositReferralCommissions(deposit.userId, deposit.amount);
@@ -1569,7 +1569,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     userId: user.id,
     type: "withdrawal_refund",
     amount: withdrawal.amount.toString(),
-    description: `Remboursement retrait InPay #${withdrawal.id}`,
+    description: `InPay withdrawal refund #${withdrawal.id}`,
   });
 }
             }
@@ -1584,7 +1584,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         } catch (verifyError: any) {
           console.error("[soleaspay] Verify error:", verifyError);
           notifyTelegramPaymentError({
-            operation: "Vérification du dépôt SoleaPay",
+            operation: "SoleaPay deposit verification",
             error: verifyError,
             recordId: deposit.id,
             userId: deposit.userId,
@@ -1595,7 +1595,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
           return res.json({ 
             status: deposit.status,
             soleaspay: true,
-            error: "Erreur de verification"
+            error: "Verification error"
           });
         }
       }
@@ -1619,12 +1619,12 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
   app.get("/api/ashtechpay/countries", requireAuth, async (_req, res) => {
     try {
       if (!isAshtechConfigured()) {
-        return res.status(503).json({ message: "AshtechPay non configuré" });
+        return res.status(503).json({ message: "AshtechPay is not configured" });
       }
       res.json(await ashtechGetCountries());
     } catch (error: any) {
       console.error("[ashtechpay] countries error:", error);
-      res.status(502).json({ message: error.message || "Impossible de charger les pays AshtechPay" });
+      res.status(502).json({ message: error.message || "Unable to load AshtechPay countries" });
     }
   });
 
@@ -1632,34 +1632,34 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const { amount, country, operator, phone, otp, depositId, reference: requestedReference, feePaymentId } = req.body;
       const user = await storage.getUser(req.session.userId!);
-      if (!user) return res.status(401).json({ message: "Non authentifié" });
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
 
       const settings = await storage.getSettings();
       const numericAmount = Number(amount);
       const minDeposit = parseInt(settings.minDeposit || "3500");
       if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-        return res.status(400).json({ message: "Montant invalide" });
+        return res.status(400).json({ message: "Invalid amount" });
       }
       const existingDeposit = depositId ? await storage.getDeposit(Number(depositId)) : undefined;
       if (existingDeposit && existingDeposit.userId !== user.id) {
-        return res.status(403).json({ message: "Accès refusé" });
+        return res.status(403).json({ message: "Access denied" });
       }
       const selectedCountryCode = String(existingDeposit?.country || country || "").trim().toUpperCase();
       if (!existingDeposit && !isDepositMethodConfigured(selectedCountryCode, "ashtech", settings)) {
-        return res.status(400).json({ message: "AshtechPay n'est pas configuré pour ce pays" });
+        return res.status(400).json({ message: "AshtechPay is not configured for this country" });
       }
       if (existingDeposit?.status === "approved") {
-        return res.status(409).json({ message: "Ce dépôt est déjà confirmé" });
+        return res.status(409).json({ message: "This deposit is already confirmed" });
       }
       if (existingDeposit?.status === "rejected") {
-        return res.status(409).json({ message: "Ce dépôt a déjà été refusé" });
+        return res.status(409).json({ message: "This deposit has already been rejected" });
       }
       if (existingDeposit && (
         existingDeposit.status !== "pending" ||
         !existingDeposit.ashtechReference ||
         existingDeposit.ashtechTransactionId
       )) {
-        return res.status(409).json({ message: "Cette tentative OTP AshtechPay ne peut plus être reprise" });
+        return res.status(409).json({ message: "This AshtechPay OTP attempt can no longer be resumed" });
       }
       const withdrawalFeePayment = existingDeposit?.withdrawalFeePaymentId
         ? await validateWithdrawalFeePayment(user.id, existingDeposit.withdrawalFeePaymentId, numericAmount)
@@ -1667,10 +1667,10 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
           ? await validateWithdrawalFeePayment(user.id, feePaymentId, numericAmount)
           : undefined;
       if (!withdrawalFeePayment && numericAmount < minDeposit) {
-        return res.status(400).json({ message: `Montant minimum: ${minDeposit.toLocaleString()} FCFA` });
+        return res.status(400).json({ message: `Minimum amount: ${minDeposit.toLocaleString()} PHP` });
       }
       if (!country || !operator || !phone) {
-        return res.status(400).json({ message: "Pays, opérateur et numéro requis" });
+        return res.status(400).json({ message: "Country, operator, and number are required" });
       }
 
       const ashtechCountries = await ashtechGetCountries();
@@ -1679,7 +1679,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         (entry) => entry.code.toUpperCase() === countryCode,
       );
       if (!catalogCountry) {
-        return res.status(400).json({ message: "Pays non pris en charge par AshtechPay" });
+        return res.status(400).json({ message: "Country is not supported by AshtechPay" });
       }
 
       const requestedOperator = String(operator).trim();
@@ -1689,7 +1689,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         .map((value) => value.trim())
         .find((value) => value.toLowerCase() === requestedOperator.toLowerCase());
       if (!canonicalOperator) {
-        return res.status(400).json({ message: "Opérateur non disponible pour ce pays" });
+        return res.status(400).json({ message: "No operator is available for this country" });
       }
       if (existingDeposit && (
         Number(existingDeposit.amount) !== numericAmount ||
@@ -1697,7 +1697,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         String(existingDeposit.paymentMethod || "").trim() !== canonicalOperator ||
         String(existingDeposit.accountNumber || "").trim() !== requestedPhone
       )) {
-        return res.status(409).json({ message: "Les détails de cette tentative OTP ne correspondent plus au dépôt initial" });
+        return res.status(409).json({ message: "The details of this OTP attempt no longer match the original deposit" });
       }
 
       const generatedReference = `paget-studio-${Date.now()}-${user.id}`;
@@ -1780,17 +1780,17 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
            feePaymentId: requestFeePaymentId,
         } = req.body;
         const otpUser = await storage.getUser(req.session.userId!);
-        if (!otpUser) return res.status(401).json({ message: "Non authentifié" });
+        if (!otpUser) return res.status(401).json({ message: "Not authenticated" });
         const otpAmount = Number(requestedAmount);
         const otpExistingDeposit = requestDepositId
           ? await storage.getDeposit(Number(requestDepositId))
           : undefined;
         if (otpExistingDeposit && otpExistingDeposit.userId !== otpUser.id) {
-          return res.status(403).json({ message: "Accès refusé" });
+          return res.status(403).json({ message: "Access denied" });
         }
         const otpReference = String(error.data.reference || "").trim();
         if (!otpReference) {
-          return res.status(400).json({ message: error.message || "Référence OTP AshtechPay manquante" });
+          return res.status(400).json({ message: error.message || "AshtechPay OTP reference is missing" });
         }
 
         const otpUssdCode = error.data.ussd_code
@@ -1827,7 +1827,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         [
           "❌ <b>Erreur de dépôt</b>",
           `Utilisateur : ${formatTelegramValue(errorUser?.fullName || "Inconnu")}`,
-          `Montant : <b>${formatTelegramValue(req.body?.amount)} XOF</b>`,
+          `Amount: <b>${formatTelegramValue(req.body?.amount)} PHP</b>`,
           `Pays : ${formatTelegramValue(req.body?.country)}`,
           `Opérateur : ${formatTelegramValue(req.body?.operator)}`,
           `Erreur exacte : <code>${formatTelegramValue(message)}</code>`,
@@ -1842,11 +1842,11 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const depositId = Number.parseInt(String(req.params.id), 10);
       if (!Number.isInteger(depositId) || depositId <= 0) {
-        return res.status(400).json({ message: "Identifiant de dépôt invalide" });
+        return res.status(400).json({ message: "Invalid deposit ID" });
       }
       const deposit = await storage.getDeposit(depositId);
-      if (!deposit) return res.status(404).json({ message: "Dépôt non trouvé" });
-      if (deposit.userId !== req.session.userId) return res.status(403).json({ message: "Accès refusé" });
+      if (!deposit) return res.status(404).json({ message: "Deposit not found" });
+      if (deposit.userId !== req.session.userId) return res.status(403).json({ message: "Access denied" });
       if (deposit.status === "approved" || deposit.status === "rejected") {
         return res.json({ status: deposit.status });
       }
@@ -1870,7 +1870,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
                 userId: user.id,
                 type: "deposit",
                 amount: deposit.amount.toString(),
-                description: `Dépôt AshtechPay #${deposit.id}`,
+                description: `AshtechPay deposit #${deposit.id}`,
               });
               await storage.processDepositReferralCommissions(user.id, deposit.amount);
             }
@@ -1883,7 +1883,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       res.json({ status: finalDeposit?.status || newStatus, rawStatus: result.status });
     } catch (error: any) {
       console.error("[ashtechpay] status error:", error);
-      res.status(502).json({ message: error.message || "Erreur de vérification AshtechPay" });
+      res.status(502).json({ message: error.message || "AshtechPay verification error" });
     }
   });
 
@@ -1894,7 +1894,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const settings = await storage.getSettings();
       if (!isDepositMethodConfigured(req.params.country, "sendavapay", settings)) {
-        return res.status(403).json({ success: false, message: "SendavaPay n'est pas configuré pour ce pays" });
+        return res.status(403).json({ success: false, message: "SendavaPay is not configured for this country" });
       }
       const svCountry = toSendavapayCountry(req.params.country);
       const r = await fetch(`${getSendavapayApiBaseUrl()}/operators/${svCountry}`);
@@ -1910,25 +1910,25 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const { amount, country, operatorId, operatorName, payerPhone, feePaymentId } = req.body;
       const user = await storage.getUser(req.session.userId!);
-      if (!user) return res.status(401).json({ message: "Non authentifié" });
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
 
       const settings = await storage.getSettings();
       if (!isDepositMethodConfigured(country, "sendavapay", settings)) {
-        return res.status(400).json({ message: "SendavaPay n'est pas configuré pour ce pays" });
+        return res.status(400).json({ message: "SendavaPay is not configured for this country" });
       }
       const minDeposit = parseInt(settings.minDeposit || "3500");
       const numericAmount = Number(amount);
       if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-        return res.status(400).json({ message: "Montant invalide" });
+        return res.status(400).json({ message: "Invalid amount" });
       }
       const withdrawalFeePayment = feePaymentId !== undefined && feePaymentId !== null
         ? await validateWithdrawalFeePayment(user.id, feePaymentId, numericAmount)
         : undefined;
       if (!withdrawalFeePayment && numericAmount < minDeposit) {
-        return res.status(400).json({ message: `Montant minimum: ${minDeposit.toLocaleString()} FCFA` });
+        return res.status(400).json({ message: `Minimum amount: ${minDeposit.toLocaleString()} PHP` });
       }
       if (!payerPhone || !payerPhone.trim()) {
-        return res.status(400).json({ message: "Le numéro Mobile Money est requis" });
+        return res.status(400).json({ message: "Mobile Money number is required" });
       }
 
       const svCountry = toSendavapayCountry(country);
@@ -1950,7 +1950,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const result = await sendavapayCreate({
          amount: numericAmount,
         currency,
-        description: `Dépôt #${externalRef}`,
+        description: `Deposit #${externalRef}`,
         customerName: user.fullName,
         customerPhone,
         customerEmail: `user${user.id}@sybotx.app`,
@@ -1961,15 +1961,15 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
 
       if (!result.success || !result.data) {
         notifyTelegramPaymentError({
-          operation: "Création du dépôt SendavaPay",
-          error: result.error || "Échec de la création du paiement",
+          operation: "SendavaPay deposit creation",
+          error: result.error || "Payment creation failed",
           userId: user.id,
           amount: numericAmount,
           country,
           paymentMethod: operatorName || "SendavaPay",
         });
         return res.status(400).json({
-          message: result.error || "Erreur SendavaPay",
+          message: result.error || "SendavaPay error",
         });
       }
 
@@ -1995,14 +1995,14 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     } catch (error: any) {
       console.error("[sendavapay] create error:", error);
       notifyTelegramPaymentError({
-        operation: "Création du dépôt SendavaPay",
+        operation: "SendavaPay deposit creation",
         error,
         userId: req.session.userId,
         amount: req.body?.amount,
         country: req.body?.country,
         paymentMethod: req.body?.operatorName || "SendavaPay",
       });
-      res.status(500).json({ message: error.message || "Erreur serveur" });
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 
@@ -2011,9 +2011,9 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const { paymentToken, payerCountry, operatorId, depositId, payerPhone } = req.body;
       const user = await storage.getUser(req.session.userId!);
-      if (!user) return res.status(401).json({ message: "Non authentifié" });
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
       if (!payerPhone || !payerPhone.trim()) {
-        return res.status(400).json({ message: "Le numéro Mobile Money est requis" });
+        return res.status(400).json({ message: "Mobile Money number is required" });
       }
 
       const svCountry = toSendavapayCountry(payerCountry);
@@ -2036,14 +2036,14 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     } catch (error: any) {
       console.error("[sendavapay] initiate error:", error);
       notifyTelegramPaymentError({
-        operation: "Initialisation du dépôt SendavaPay",
+        operation: "SendavaPay deposit initialization",
         error,
         recordId: req.body?.depositId,
         userId: req.session.userId,
         country: req.body?.payerCountry,
         paymentMethod: "SendavaPay",
       });
-      res.status(500).json({ message: error.message || "Erreur serveur" });
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 
@@ -2052,7 +2052,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const { otpToken, otp } = req.body;
       if (!otpToken || !otp) {
-        return res.status(400).json({ message: "otpToken et otp requis" });
+        return res.status(400).json({ message: "otpToken and otp are required" });
       }
       const result = await sendavapaySubmitOtp({ otpToken, otp });
       res.json(result);
@@ -2064,7 +2064,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         userId: req.session.userId,
         paymentMethod: "SendavaPay",
       });
-      res.status(500).json({ message: error.message || "Erreur serveur" });
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 
@@ -2073,7 +2073,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const { paymentToken, depositId } = req.body;
       if (!paymentToken) {
-        return res.status(400).json({ message: "paymentToken requis" });
+        return res.status(400).json({ message: "paymentToken is required" });
       }
       // Reset deposit status to processing
       if (depositId) {
@@ -2084,13 +2084,13 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     } catch (error: any) {
       console.error("[sendavapay] retry error:", error);
       notifyTelegramPaymentError({
-        operation: "Nouvel essai du dépôt SendavaPay",
+        operation: "SendavaPay deposit retry",
         error,
         recordId: req.body?.depositId,
         userId: req.session.userId,
         paymentMethod: "SendavaPay",
       });
-      res.status(500).json({ message: error.message || "Erreur serveur" });
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 
@@ -2099,8 +2099,8 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const depositId = parseInt(req.params.id);
       const deposit = await storage.getDeposit(depositId);
-      if (!deposit) return res.status(404).json({ message: "Dépôt non trouvé" });
-      if (deposit.userId !== req.session.userId) return res.status(403).json({ message: "Accès refusé" });
+      if (!deposit) return res.status(404).json({ message: "Deposit not found" });
+      if (deposit.userId !== req.session.userId) return res.status(403).json({ message: "Access denied" });
 
       if (deposit.status === "approved" || deposit.status === "rejected") {
         return res.json({ status: deposit.status });
@@ -2135,7 +2135,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     } catch (error: any) {
       console.error("[sendavapay] status check error:", error);
       notifyTelegramPaymentError({
-        operation: "Vérification du dépôt SendavaPay",
+        operation: "SendavaPay deposit verification",
         error,
         recordId: req.params.id,
         userId: req.session.userId,
@@ -2149,7 +2149,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
   app.post("/api/webhooks/ashtechpay", async (req, res) => {
     try {
       if (!isAshtechConfigured()) {
-        return res.status(503).json({ message: "AshtechPay non configuré" });
+        return res.status(503).json({ message: "AshtechPay is not configured" });
       }
 
       const settings = await storage.getSettings();
@@ -2159,7 +2159,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         "";
       if (!webhookSecret) {
         console.error("[ashtechpay webhook] Webhook secret non configuré");
-        return res.status(503).json({ message: "Webhook AshtechPay non configuré" });
+        return res.status(503).json({ message: "AshtechPay webhook is not configured" });
       }
 
       const rawBody = (req as any).rawBody as Buffer | undefined;
@@ -2175,7 +2175,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         !verifyAshtechWebhookSignature(rawBody, timestamp, signature, webhookSecret)
       ) {
         console.warn("[ashtechpay webhook] Signature invalide ou horodatage expiré");
-        return res.status(401).json({ message: "Signature invalide" });
+        return res.status(401).json({ message: "Invalid signature" });
       }
 
       const payload = req.body || {};
@@ -2226,7 +2226,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         const secret = process.env.SENDAVAPAY_WEBHOOK_SECRET || "";
         if (!secret) {
           console.error("[sendavapay webhook] Webhook secret not configured");
-          return res.status(503).json({ message: "Webhook secret non configuré" });
+          return res.status(503).json({ message: "Webhook secret is not configured" });
         }
         const sig = req.headers["x-sendavapay-signature"] as string || "";
         // req.rawBody is captured by the global express.json verify callback
@@ -2404,18 +2404,18 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
   app.post("/api/withdrawal-fee/prepare", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user) return res.status(401).json({ message: "Non authentifié" });
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
       const settings = await storage.getSettings();
       if (settings.withdrawalPrepaymentEnabled !== "true") {
-        return res.status(400).json({ message: "Le prépaiement des retraits est désactivé." });
+        return res.status(400).json({ message: "Withdrawal prepayment is disabled." });
       }
       const withdrawalAmount = Number(req.body.amount);
       if (!Number.isInteger(withdrawalAmount) || withdrawalAmount <= 0) {
-        return res.status(400).json({ message: "Montant de retrait invalide" });
+        return res.status(400).json({ message: "Invalid withdrawal amount" });
       }
       const withdrawableBalance = parseFloat(await storage.getWithdrawableBalance(user.id));
       if (withdrawalAmount > withdrawableBalance) {
-        return res.status(400).json({ message: "Le montant des dépôts n'est pas retirable" });
+        return res.status(400).json({ message: "Deposit funds are not withdrawable" });
       }
       const { payment, requiredAmount } = await prepareWithdrawalFeePayment(user.id, withdrawalAmount);
       res.json({
@@ -2438,22 +2438,22 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const user = await storage.getUser(req.session.userId!);
       
       if (!user) {
-        return res.status(401).json({ message: "Non authentifié" });
+        return res.status(401).json({ message: "Not authenticated" });
       }
 
       const settingsForWithdrawal = await storage.getSettings();
       const minWithdrawal = parseInt(settingsForWithdrawal.minWithdrawal || "800");
       const withdrawalPrepaymentEnabled = settingsForWithdrawal.withdrawalPrepaymentEnabled === "true";
       if (!Number.isInteger(numericAmount) || numericAmount < minWithdrawal) {
-        return res.status(400).json({ message: `Montant minimum: ${minWithdrawal} FCFA` });
+        return res.status(400).json({ message: `Minimum amount: ${minWithdrawal} PHP` });
       }
 
       if (!user.hasActiveProduct) {
-        return res.status(400).json({ message: "Achetez d'abord un produit" });
+        return res.status(400).json({ message: "Purchase a product first" });
       }
 
       if (user.isWithdrawalBlocked) {
-        return res.status(400).json({ message: "Retraits bloqués sur ce compte" });
+        return res.status(400).json({ message: "Withdrawals are blocked for this account" });
       }
 
       if (user.mustInviteToWithdraw) {
@@ -2465,7 +2465,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
 
        const withdrawableBalance = parseFloat(await storage.getWithdrawableBalance(user.id));
        if (numericAmount > withdrawableBalance) {
-         return res.status(400).json({ message: "Le montant des dépôts n'est pas retirable" });
+         return res.status(400).json({ message: "Deposit amounts are not withdrawable" });
       }
        const balance = parseFloat(user.balance);
 
@@ -2474,18 +2474,18 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       if (requestedWalletId !== undefined && requestedWalletId !== null) {
         const walletId = Number(requestedWalletId);
         if (!Number.isInteger(walletId) || walletId < 1) {
-          return res.status(400).json({ message: "Compte de retrait invalide." });
+          return res.status(400).json({ message: "Invalid withdrawal account." });
         }
         const userWallets = await storage.getWallets(user.id);
         wallet = userWallets.find((savedWallet) => savedWallet.id === walletId);
         if (!wallet) {
-          return res.status(400).json({ message: "Ce portefeuille ne vous appartient pas." });
+          return res.status(400).json({ message: "This wallet does not belong to you." });
         }
       } else {
         wallet = await storage.getDefaultWallet(user.id);
       }
       if (!wallet) {
-        return res.status(400).json({ message: "Enregistrez un portefeuille de retrait" });
+        return res.status(400).json({ message: "Save a withdrawal wallet first" });
       }
 
       const activeCountries = await storage.getActiveCountries();
@@ -2493,7 +2493,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         (country) => country.code.toUpperCase() === wallet.country.toUpperCase(),
       );
       if (!walletCountry) {
-        return res.status(400).json({ message: "Le pays de ce portefeuille n'est plus disponible pour les retraits." });
+          return res.status(400).json({ message: "This wallet's country is no longer available for withdrawals." });
       }
       let configuredMethods: string[] = [];
       try {
@@ -2507,7 +2507,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const withdrawalMethods = getWithdrawalMethods(walletCountry.code, configuredMethods);
       if (!isAllowedWithdrawalMethod(walletCountry.code, wallet.paymentMethod, configuredMethods)) {
         return res.status(400).json({
-          message: `Le moyen ${wallet.paymentMethod} n'est plus autorisé pour les retraits au ${walletCountry.name}. Ajoutez un portefeuille avec : ${withdrawalMethods.join(", ")}.`,
+          message: `${wallet.paymentMethod} is no longer authorized for withdrawals in ${walletCountry.name}. Add a wallet with: ${withdrawalMethods.join(", ")}.`,
         });
       }
 
@@ -2515,7 +2515,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const settingsForMax = await storage.getSettings();
       const maxPerDay = parseInt(settingsForMax.maxWithdrawalsPerDay || "1");
       if (todayCount >= maxPerDay) {
-        return res.status(400).json({ message: `Maximum ${maxPerDay} retrait${maxPerDay > 1 ? 's' : ''} par jour` });
+        return res.status(400).json({ message: `Maximum ${maxPerDay} withdrawal${maxPerDay > 1 ? 's' : ''} per day` });
       }
 
       if (withdrawalPrepaymentEnabled) {
@@ -2523,7 +2523,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         if (feePayment.status !== "paid") {
           return res.status(402).json({
             code: "WITHDRAWAL_PREPAYMENT_REQUIRED",
-            message: `Vous devez payer ${requiredAmount} FCFA (25 % du montant du retrait) avant de lancer le retrait.`,
+            message: `You must pay ${requiredAmount} PHP (25% of the withdrawal amount) before submitting the withdrawal.`,
             paymentId: feePayment.id,
             requiredAmount,
             paymentUrl: `/robotpay?amount=${requiredAmount}&country=${encodeURIComponent(user.country)}&feePaymentId=${feePayment.id}&withdrawalAmount=${numericAmount}`,
@@ -2533,7 +2533,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         if (!claimedFeePayment) {
           return res.status(402).json({
             code: "WITHDRAWAL_PREPAYMENT_REQUIRED",
-            message: "Le paiement préalable doit être approuvé avant de lancer le retrait.",
+          message: "Prepayment must be approved before submitting the withdrawal.",
             paymentId: feePayment.id,
             requiredAmount,
             paymentUrl: `/robotpay?amount=${requiredAmount}&country=${encodeURIComponent(user.country)}&feePaymentId=${feePayment.id}&withdrawalAmount=${numericAmount}`,
@@ -2592,14 +2592,14 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const parsedWallet = walletSchema.safeParse(req.body);
       if (!parsedWallet.success) {
-        return res.status(400).json({ message: parsedWallet.error.errors[0]?.message || "Données invalides" });
+        return res.status(400).json({ message: parsedWallet.error.errors[0]?.message || "Invalid data" });
       }
       const activeCountries = await storage.getActiveCountries();
       const walletCountry = activeCountries.find(
         (country) => country.code.toUpperCase() === parsedWallet.data.country.toUpperCase(),
       );
       if (!walletCountry) {
-        return res.status(400).json({ message: "Pays indisponible pour les retraits." });
+        return res.status(400).json({ message: "Country unavailable for withdrawals." });
       }
       let configuredMethods: string[] = [];
       try {
@@ -2613,7 +2613,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const withdrawalMethods = getWithdrawalMethods(walletCountry.code, configuredMethods);
       if (!isAllowedWithdrawalMethod(walletCountry.code, parsedWallet.data.paymentMethod, configuredMethods)) {
         return res.status(400).json({
-          message: `Pour ${walletCountry.name}, choisissez un moyen de retrait autorisé : ${withdrawalMethods.join(", ") || "aucun moyen configuré"}.`,
+          message: `For ${walletCountry.name}, choose an authorized withdrawal method: ${withdrawalMethods.join(", ") || "none configured"}.`,
         });
       }
       const wallet = await storage.createWallet({
@@ -2651,7 +2651,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       res.json(stats);
     } catch (error) {
       console.error("[team] Unable to load team statistics:", error);
-      res.status(500).json({ message: "Impossible de charger les statistiques de l'équipe" });
+      res.status(500).json({ message: "Unable to load team statistics" });
     }
   });
 
@@ -2661,7 +2661,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       res.json(team);
     } catch (error) {
       console.error("[team] Unable to load team details:", error);
-      res.status(500).json({ message: "Impossible de charger les membres de l'équipe" });
+      res.status(500).json({ message: "Unable to load team members" });
     }
   });
 
@@ -2689,7 +2689,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
-        return res.status(404).json({ message: "Utilisateur non trouve" });
+        return res.status(404).json({ message: "User not found" });
       }
 
       const now = new Date();
@@ -2726,7 +2726,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       res.json({
         success: true,
         amount: bonusAmount,
-        message: `Bonus de ${bonusAmount} FCFA ajoute!`,
+        message: `Bonus of ${bonusAmount} PHP added!`,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2737,7 +2737,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
-        return res.status(404).json({ message: "Utilisateur non trouve" });
+        return res.status(404).json({ message: "User not found" });
       }
 
       const now = new Date();
@@ -2801,10 +2801,10 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         support2Type: settings.support2Type || "telegram",
         channelType: settings.channelType || "telegram",
         groupType: settings.groupType || "telegram",
-        supportLabel: settings.supportLabel || "Service client",
-        support2Label: settings.support2Label || "Service client 2",
-        channelLabel: settings.channelLabel || "Chaîne officielle",
-        groupLabel: settings.groupLabel || "Groupe de discussion",
+        supportLabel: settings.supportLabel || "Customer support",
+        support2Label: settings.support2Label || "Customer support 2",
+        channelLabel: settings.channelLabel || "Official channel",
+        groupLabel: settings.groupLabel || "Discussion group",
         withdrawalStartHour: settings.withdrawalStartHour || "9",
         withdrawalEndHour: settings.withdrawalEndHour || "17",
       });
@@ -2887,7 +2887,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
   app.post("/api/admin/deposits/:id/approve", requireAdmin, async (req, res) => {
     try {
       const deposit = await storage.claimAdminDepositApproval(parseInt(req.params.id), req.session.userId!);
-      if (!deposit) return res.status(409).json({ message: "Ce dépôt est déjà approuvé" });
+      if (!deposit) return res.status(409).json({ message: "This deposit is already approved" });
 
       const user = await storage.getUser(deposit.userId);
       if (user) {
@@ -2904,13 +2904,13 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
             userId: user.id,
             type: "deposit",
             amount: deposit.amount.toString(),
-            description: "Dépôt validé",
+            description: "Deposit approved",
           });
           await storage.processDepositReferralCommissions(deposit.userId, deposit.amount);
         }
       }
 
-      await storage.logAdminAction(req.session.userId!, "approve_deposit", deposit.userId, `Dépôt ${deposit.id} approuvé: ${deposit.amount}F`);
+      await storage.logAdminAction(req.session.userId!, "approve_deposit", deposit.userId, `Deposit ${deposit.id} approved: ${deposit.amount} PHP`);
       res.json(deposit);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2932,7 +2932,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         await storage.logAdminAction(req.session.userId!, "ban_user", deposit.userId, `Utilisateur banni pour fraude`);
       }
 
-      await storage.logAdminAction(req.session.userId!, "reject_deposit", deposit.userId, `Dépôt ${deposit.id} rejeté`);
+      await storage.logAdminAction(req.session.userId!, "reject_deposit", deposit.userId, `Deposit ${deposit.id} rejected`);
       res.json(deposit);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2954,11 +2954,11 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       }
 
       if (!user.adminPin) {
-        return res.status(400).json({ message: "Code PIN non configure" });
+        return res.status(400).json({ message: "Admin PIN is not configured" });
       }
       
       if (user.adminPin !== pin) {
-        return res.status(401).json({ message: "Code PIN incorrect" });
+        return res.status(401).json({ message: "Incorrect admin PIN" });
       }
       
       res.json({ success: true });
@@ -2985,7 +2985,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const withdrawalData = existingWithdrawal.find(w => w.id === withdrawalId);
       
       if (!withdrawalData) {
-        return res.status(404).json({ message: "Retrait non trouve" });
+        return res.status(404).json({ message: "Withdrawal not found" });
       }
 
       const withdrawal = await storage.updateWithdrawal(withdrawalId, {
@@ -2994,7 +2994,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         processedBy: req.session.userId,
       });
 
-      await storage.logAdminAction(req.session.userId!, "approve_withdrawal", withdrawalData.userId, `Retrait ${withdrawal.id} approuvé: ${withdrawalData.netAmount}F`);
+      await storage.logAdminAction(req.session.userId!, "approve_withdrawal", withdrawalData.userId, `Withdrawal ${withdrawal.id} approved: ${withdrawalData.netAmount} PHP`);
       res.json(withdrawal);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3016,7 +3016,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         await storage.updateUser(user.id, { balance: newBalance.toFixed(2) });
       }
 
-      await storage.logAdminAction(req.session.userId!, "reject_withdrawal", withdrawal.userId, `Retrait ${withdrawal.id} rejeté et remboursé`);
+      await storage.logAdminAction(req.session.userId!, "reject_withdrawal", withdrawal.userId, `Withdrawal ${withdrawal.id} rejected and refunded`);
       res.json(withdrawal);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3036,7 +3036,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const settings = await storage.getSettings();
       const country = withdrawal.country.trim().toUpperCase();
       if (!isInpayCountryEnabled(country, settings) || !isInpayConfigured(country)) {
-        return res.status(400).json({ message: `InPay n'est pas configuré pour ${country}` });
+        return res.status(400).json({ message: `InPay is not configured for ${country}` });
       }
       const account = getInpayAccount(country);
       const bankCode = inpayResolveBankCode(country, withdrawal.paymentMethod);
@@ -3063,7 +3063,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         req.session.userId!,
         "send_withdrawal_to_inpay",
         withdrawal.userId,
-        `Retrait ${withdrawal.id} envoyé à InPay (${country})`,
+        `Withdrawal ${withdrawal.id} sent to InPay (${country})`,
       );
       res.json(updated);
     } catch (error: any) {
@@ -3075,7 +3075,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         console.error("[telegram] InPay payout error notification failed:", notificationError.message);
       });
       console.error("[inpay] payout error:", error);
-      res.status(400).json({ message: error.message || "Erreur d'envoi InPay" });
+      res.status(400).json({ message: error.message || "InPay payout error" });
     }
   });
 
@@ -3117,11 +3117,11 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       switch (action) {
         case "balance":
           await storage.updateUser(userId, { balance: value.toFixed(2) });
-          await storage.logAdminAction(req.session.userId!, "update_balance", userId, `Solde modifié: ${value}F`);
+          await storage.logAdminAction(req.session.userId!, "update_balance", userId, `Balance updated: ${value} PHP`);
           break;
         case "password":
           await storage.updateUser(userId, { password: value });
-          await storage.logAdminAction(req.session.userId!, "reset_password", userId, `Mot de passe réinitialisé`);
+          await storage.logAdminAction(req.session.userId!, "reset_password", userId, `Password reset`);
           break;
         case "toggle-ban":
           const user1 = await storage.getUser(userId);
@@ -3131,7 +3131,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         case "toggle-withdrawal":
           const user2 = await storage.getUser(userId);
           await storage.updateUser(userId, { isWithdrawalBlocked: !user2?.isWithdrawalBlocked });
-          await storage.logAdminAction(req.session.userId!, "toggle_withdrawal", userId, `Retrait bloqué: ${!user2?.isWithdrawalBlocked}`);
+          await storage.logAdminAction(req.session.userId!, "toggle_withdrawal", userId, `Withdrawal blocked: ${!user2?.isWithdrawalBlocked}`);
           break;
         case "toggle-promoter":
           const user3 = await storage.getUser(userId);
@@ -3162,7 +3162,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
             return res.status(403).json({ message: "Action réservée au super admin" });
           }
           await storage.updateUser(userId, { adminPin: value });
-          await storage.logAdminAction(req.session.userId!, "update_admin_pin", userId, `PIN admin mis à jour`);
+          await storage.logAdminAction(req.session.userId!, "update_admin_pin", userId, `Admin PIN updated`);
           break;
         case "toggle-password-required":
           if (!adminUser?.isSuperAdmin) {
@@ -3173,11 +3173,11 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
           break;
         case "assign-product":
           await storage.purchaseProduct(userId, value, true);
-          await storage.logAdminAction(req.session.userId!, "assign_product", userId, `Produit ${value} attribué`);
+          await storage.logAdminAction(req.session.userId!, "assign_product", userId, `Product ${value} assigned`);
           break;
         case "revoke-product":
           await storage.removeUserProduct(userId, value);
-          await storage.logAdminAction(req.session.userId!, "revoke_product", userId, `Produit ${value} révoqué`);
+          await storage.logAdminAction(req.session.userId!, "revoke_product", userId, `Product ${value} revoked`);
           break;
         case "toggle-super-admin":
           if (!adminUser?.isSuperAdmin) {
@@ -3193,7 +3193,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
           break;
         case "toggle-banker":
           if (!adminUser?.isSuperAdmin && !adminUser?.isAdmin) {
-            return res.status(403).json({ message: "Action réservée aux admins" });
+        return res.status(403).json({ message: "Action restricted to administrators" });
           }
           const userBanker = await storage.getUser(userId);
           const newBankerStatus = !userBanker?.isBanker;
@@ -3204,7 +3204,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
           await storage.logAdminAction(req.session.userId!, "toggle_banker", userId, `Bankier: ${newBankerStatus}`);
           break;
         default:
-          return res.status(400).json({ message: "Action invalide" });
+          return res.status(400).json({ message: "Invalid action" });
       }
 
       res.json({ success: true });
@@ -3260,11 +3260,11 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         (imageUrl !== undefined && imageUrl !== null && typeof imageUrl !== "string")
       ) {
         return res.status(400).json({
-          message: "Vérifiez le nom, le prix, les gains, la durée et l’ordre du produit.",
+          message: "Check the product name, price, earnings, duration, and order.",
         });
       }
       if (isActive !== undefined && typeof isActive !== "boolean") {
-        return res.status(400).json({ message: "La visibilité du produit est invalide." });
+        return res.status(400).json({ message: "Product visibility is invalid." });
       }
       const product = await storage.createProduct({
         name: name.trim(),
@@ -3277,7 +3277,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         isActive: isActive !== false,
         sortOrder: sortOrderInt,
       });
-      await storage.logAdminAction(req.session.userId!, "create_product", null, `Produit ${product.name} créé`);
+      await storage.logAdminAction(req.session.userId!, "create_product", null, `Product ${product.name} created`);
       res.json(product);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3288,11 +3288,11 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const id = Number(req.params.id);
       if (!Number.isInteger(id) || id <= 0) {
-        return res.status(400).json({ message: "Identifiant de produit invalide." });
+        return res.status(400).json({ message: "Invalid product ID." });
       }
       const current = await storage.getProduct(id);
       if (!current) {
-        return res.status(404).json({ message: "Produit introuvable." });
+        return res.status(404).json({ message: "Product not found." });
       }
 
       const body = req.body ?? {};
@@ -3302,7 +3302,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       ]);
       const unknownKeys = Object.keys(body).filter((key) => !editableKeys.has(key));
       if (unknownKeys.length > 0) {
-        return res.status(400).json({ message: `Champ(s) produit non autorisé(s) : ${unknownKeys.join(", ")}` });
+        return res.status(400).json({ message: `Unauthorized product field(s): ${unknownKeys.join(", ")}` });
       }
 
       const name = body.name === undefined ? current.name : body.name;
@@ -3324,7 +3324,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         typeof isActive !== "boolean" ||
         (imageUrl !== null && typeof imageUrl !== "string")
       ) {
-        return res.status(400).json({ message: "Les valeurs du produit sont invalides." });
+        return res.status(400).json({ message: "Product values are invalid." });
       }
 
       const product = await storage.updateProduct(id, {
@@ -3338,7 +3338,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         isFree,
         isActive,
       });
-      await storage.logAdminAction(req.session.userId!, "update_product", null, `Produit ${product.id} modifié`);
+      await storage.logAdminAction(req.session.userId!, "update_product", null, `Product ${product.id} updated`);
       res.json(product);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3349,7 +3349,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const id = parseInt(req.params.id);
       await storage.deleteProduct(id);
-      await storage.logAdminAction(req.session.userId!, "delete_product", null, `Produit ${id} supprimé`);
+      await storage.logAdminAction(req.session.userId!, "delete_product", null, `Product ${id} deleted`);
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3371,7 +3371,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         ...req.body,
         modifiedBy: req.session.userId,
       });
-      await storage.logAdminAction(req.session.userId!, "create_channel", null, `Canal ${channel.name} créé`);
+      await storage.logAdminAction(req.session.userId!, "create_channel", null, `Channel ${channel.name} created`);
       res.json(channel);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3384,7 +3384,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         ...req.body,
         modifiedBy: req.session.userId,
       });
-      await storage.logAdminAction(req.session.userId!, "update_channel", null, `Canal ${channel.name} modifié`);
+      await storage.logAdminAction(req.session.userId!, "update_channel", null, `Channel ${channel.name} updated`);
       res.json(channel);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3394,7 +3394,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
   app.delete("/api/admin/channels/:id", requireAdmin, async (req, res) => {
     try {
       await storage.deletePaymentChannel(parseInt(req.params.id));
-      await storage.logAdminAction(req.session.userId!, "delete_channel", null, `Canal supprimé`);
+      await storage.logAdminAction(req.session.userId!, "delete_channel", null, `Channel deleted`);
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3440,7 +3440,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const settings = await storage.getSettings();
       if (!isInpayConfigured(country)) {
-        return res.status(400).json({ message: `InPay n'est pas configuré pour ${country}` });
+        return res.status(400).json({ message: `InPay is not configured for ${country}` });
       }
       const account = getInpayAccount(country);
       const balance = await inpayGetBalance({
@@ -3457,7 +3457,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         console.error("[telegram] InPay balance error notification failed:", notificationError.message);
       });
       console.error("[inpay] balance error:", error);
-      res.status(502).json({ message: error.message || "Impossible de consulter le solde InPay" });
+      res.status(502).json({ message: error.message || "Unable to check InPay balance" });
     }
   });
 
@@ -3473,14 +3473,14 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const ip = String(req.body?.ip || "").trim();
       const net = await import("net");
-      if (!net.isIP(ip)) return res.status(400).json({ message: "Adresse IP invalide" });
+      if (!net.isIP(ip)) return res.status(400).json({ message: "Invalid IP address" });
       const blockedIps = [...await getCachedBlockedIps()];
       if (!blockedIps.includes(ip)) {
         blockedIps.push(ip);
         await storage.setSetting("blockedIps", JSON.stringify(blockedIps), req.session.userId);
         updateBlockedIpsCache(blockedIps);
       }
-      await storage.logAdminAction(req.session.userId!, "block_ip", null, `Adresse IP bloquée: ${ip}`);
+      await storage.logAdminAction(req.session.userId!, "block_ip", null, `IP address blocked: ${ip}`);
       res.json({ success: true, ip });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3494,7 +3494,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const nextIps = blockedIps.filter((value) => value !== ip);
       await storage.setSetting("blockedIps", JSON.stringify(nextIps), req.session.userId);
       updateBlockedIpsCache(nextIps);
-      await storage.logAdminAction(req.session.userId!, "unblock_ip", null, `Adresse IP débloquée: ${ip}`);
+      await storage.logAdminAction(req.session.userId!, "unblock_ip", null, `IP address unblocked: ${ip}`);
       res.json({ success: true, ip });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3509,18 +3509,18 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         .filter((key) => !isAdminSettingKey(key));
       if (unknownKeys.length > 0) {
         return res.status(400).json({
-          message: `Paramètre(s) non reconnu(s) : ${unknownKeys.join(", ")}`,
+          message: `Unrecognized parameter(s): ${unknownKeys.join(", ")}`,
         });
       }
       const routingEntry = entries.find(([key]) => key === "depositMethodsByCountry");
       let normalizedRouting: Record<string, DepositMethodId[]> | undefined;
       if (routingEntry) {
         if (typeof routingEntry[1] !== "string") {
-          return res.status(400).json({ message: "La configuration des méthodes de dépôt doit être du JSON texte" });
+          return res.status(400).json({ message: "Deposit-method configuration must be JSON text" });
         }
         normalizedRouting = parseDepositMethodsByCountry(routingEntry[1] as string);
         if (!normalizedRouting) {
-          return res.status(400).json({ message: "La configuration des méthodes de dépôt est vide" });
+          return res.status(400).json({ message: "Deposit-method configuration is empty" });
         }
         const countryCodes = new Set(
           (await storage.getCountries()).map((country) => country.code.trim().toUpperCase()),
@@ -3528,7 +3528,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         const unknownCountries = Object.keys(normalizedRouting).filter((code) => !countryCodes.has(code));
         if (unknownCountries.length > 0) {
           return res.status(400).json({
-            message: `Pays de routage inconnus : ${unknownCountries.join(", ")}`,
+            message: `Unknown routing countries: ${unknownCountries.join(", ")}`,
           });
         }
       }
@@ -3556,7 +3556,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
 
       await storage.resetStats();
       await storage.logAdminAction(req.session.userId!, "reset_stats", null, "Réinitialisation des statistiques de la plateforme");
-      res.json({ success: true, message: "Statistiques réinitialisées" });
+      res.json({ success: true, message: "Statistics reset" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -3573,24 +3573,24 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
   });
 
   const createGiftCodeSchema = z.object({
-    code: z.string().min(1, "Le code est requis"),
-    amount: z.number().positive("Le montant doit etre positif").or(z.string().transform(Number)),
-    maxUses: z.number().int().positive("Le nombre d'utilisations doit etre positif"),
-    expiresAt: z.string().refine((val) => !isNaN(Date.parse(val)), "Date d'expiration invalide"),
+    code: z.string().min(1, "Code is required"),
+    amount: z.number().positive("Amount must be positive").or(z.string().transform(Number)),
+    maxUses: z.number().int().positive("Number of uses must be positive"),
+    expiresAt: z.string().refine((val) => !isNaN(Date.parse(val)), "Expiration date is invalid"),
   });
 
   app.post("/api/admin/gift-codes", requireAdmin, async (req, res) => {
     try {
       const parseResult = createGiftCodeSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ message: parseResult.error.errors[0]?.message || "Donnees invalides" });
+        return res.status(400).json({ message: parseResult.error.errors[0]?.message || "Invalid data" });
       }
 
       const { code, amount, maxUses, expiresAt } = parseResult.data;
 
       const existingCode = await storage.getGiftCodeByCode(code);
       if (existingCode) {
-        return res.status(400).json({ message: "Ce code existe deja" });
+        return res.status(400).json({ message: "This code already exists" });
       }
 
       const giftCode = await storage.createGiftCode({
@@ -3601,7 +3601,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         createdBy: req.session.userId!,
       });
 
-      await storage.logAdminAction(req.session.userId!, "create_gift_code", null, `Code cadeau cree: ${code} - ${amount} FCFA`);
+      await storage.logAdminAction(req.session.userId!, "create_gift_code", null, `Gift code created: ${code} - ${amount} PHP`);
       res.json(giftCode);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3620,14 +3620,14 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
   });
 
   const claimGiftCodeSchema = z.object({
-    code: z.string().min(1, "Le code est requis"),
+    code: z.string().min(1, "Code is required"),
   });
 
   app.post("/api/gift-codes/claim", requireAuth, async (req, res) => {
     try {
       const parseResult = claimGiftCodeSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ message: parseResult.error.errors[0]?.message || "Le code est requis" });
+        return res.status(400).json({ message: parseResult.error.errors[0]?.message || "Code is required" });
       }
 
       const code = parseResult.data.code.trim().toUpperCase();
@@ -3635,31 +3635,31 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
 
       const giftCode = await storage.getGiftCodeByCode(code);
       if (!giftCode) {
-        return res.status(404).json({ message: "Code invalide" });
+        return res.status(404).json({ message: "Invalid code" });
       }
 
       if (!giftCode.isActive) {
-        return res.status(400).json({ message: "Ce code n'est plus actif" });
+        return res.status(400).json({ message: "This code is no longer active" });
       }
 
       if (new Date() > new Date(giftCode.expiresAt)) {
-        return res.status(400).json({ message: "Ce code a expiré" });
+        return res.status(400).json({ message: "This code has expired" });
       }
 
       if (giftCode.currentUses >= giftCode.maxUses) {
-        return res.status(400).json({ message: "Ce code a atteint sa limite d'utilisation" });
+        return res.status(400).json({ message: "This code has reached its usage limit" });
       }
 
       const hasClaimed = await storage.hasUserClaimedGiftCode(userId, giftCode.id);
       if (hasClaimed) {
-        return res.status(400).json({ message: "Vous avez déjà utilisé ce code" });
+        return res.status(400).json({ message: "You have already used this code" });
       }
 
       await storage.claimGiftCode(userId, giftCode.id, parseFloat(giftCode.amount));
       
       res.json({ 
         success: true, 
-        message: `Félicitations! Vous avez reçu ${parseFloat(giftCode.amount).toLocaleString()} FCFA`,
+        message: `Congratulations! You received ${parseFloat(giftCode.amount).toLocaleString()} PHP`,
         amount: parseFloat(giftCode.amount)
       });
     } catch (error: any) {
@@ -3679,10 +3679,10 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
 
   app.post("/api/clapay/webhook", async (req, res) => {
     if (!isClapayConfigured()) {
-      return res.status(503).json({ message: "La configuration API de Clapay est incomplète" });
+      return res.status(503).json({ message: "Clapay API configuration is incomplete" });
     }
     if (!verifyClapayWebhookSignature(req.body, req.get("Nowallet-Signature"))) {
-      return res.status(401).json({ message: "Signature Clapay invalide" });
+      return res.status(401).json({ message: "Invalid Clapay signature" });
     }
 
     const body = req.body as Record<string, unknown>;
@@ -3690,25 +3690,25 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     const signature = typeof body.signature === "string" ? body.signature : "";
     const referenceMatch = transactionId.match(/^CLAPAY-(\d+)-\d+$/);
     if (!referenceMatch || !signature) {
-      return res.status(400).json({ message: "Référence de transaction Clapay invalide" });
+      return res.status(400).json({ message: "Invalid Clapay transaction reference" });
     }
 
     const depositId = Number(referenceMatch[1]);
     if (!Number.isSafeInteger(depositId) || depositId <= 0) {
-      return res.status(400).json({ message: "Identifiant de dépôt Clapay invalide" });
+      return res.status(400).json({ message: "Invalid Clapay deposit ID" });
     }
 
     let deposit: Awaited<ReturnType<typeof storage.getDeposit>> | undefined;
     try {
       deposit = await storage.getDeposit(depositId);
       if (!deposit || !deposit.paymentMethod.startsWith("Clapay — ")) {
-        return res.status(404).json({ message: "Dépôt Clapay introuvable" });
+      return res.status(404).json({ message: "Clapay deposit not found" });
       }
       if (deposit.status === "approved" || deposit.status === "rejected") {
         return res.json({ received: true, status: deposit.status });
       }
       if (deposit.reference !== signature && deposit.reference !== transactionId) {
-        return res.status(409).json({ message: "La signature Clapay ne correspond pas au dépôt" });
+      return res.status(409).json({ message: "The Clapay signature does not match the deposit" });
       }
 
       if (deposit.reference === transactionId) {
@@ -3732,7 +3732,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         userId: deposit?.userId,
         paymentMethod: "Clapay",
       });
-      return res.status(502).json({ message: "Impossible de confirmer la notification Clapay" });
+      return res.status(502).json({ message: "Unable to confirm the Clapay notification" });
     }
   });
 
@@ -3741,19 +3741,19 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const country = String(req.params.country || "").trim().toUpperCase();
       const activeCountries = await storage.getActiveCountries();
       if (!activeCountries.some((entry) => entry.code.toUpperCase() === country)) {
-        return res.status(404).json({ message: "Pays indisponible" });
+        return res.status(404).json({ message: "Country unavailable" });
       }
       const settings = await storage.getSettings();
       if (!isDepositMethodConfigured(country, "clapay", settings)) {
-        return res.status(403).json({ message: "Clapay n'est pas configuré pour ce pays" });
+      return res.status(403).json({ message: "Clapay is not configured for this country" });
       }
       if (!isClapayConfigured()) {
-        return res.status(503).json({ message: "La configuration API de Clapay est incomplète dans Plesk" });
+      return res.status(503).json({ message: "Clapay API configuration is incomplete in Plesk" });
       }
       const operators = await getClapayOperators(country);
       res.json({ operators });
     } catch (error: any) {
-      res.status(502).json({ message: error.message || "Impossible de charger les opérateurs Clapay" });
+      res.status(502).json({ message: error.message || "Unable to load Clapay operators" });
     }
   });
 
@@ -3762,7 +3762,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     let providerMayHaveAcceptedInitiation = false;
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user) return res.status(401).json({ message: "Non authentifié" });
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
 
       const country = String(req.body.country || "").trim().toUpperCase();
       const operatorId = String(req.body.operatorId || "").trim();
@@ -3772,17 +3772,17 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       const activeCountries = await storage.getActiveCountries();
       const selectedCountry = activeCountries.find((entry) => entry.code.toUpperCase() === country);
       if (!selectedCountry) {
-        return res.status(400).json({ message: "Pays indisponible" });
+        return res.status(400).json({ message: "Country unavailable" });
       }
       const settings = await storage.getSettings();
       if (!isDepositMethodConfigured(country, "clapay", settings)) {
-        return res.status(403).json({ message: "Clapay n'est pas configuré pour ce pays" });
+        return res.status(403).json({ message: "Clapay is not configured for this country" });
       }
       if (!isClapayConfigured()) {
-        return res.status(503).json({ message: "La configuration API de Clapay est incomplète dans Plesk" });
+        return res.status(503).json({ message: "Clapay API configuration is incomplete in Plesk" });
       }
       if (!Number.isInteger(amount) || amount <= 0) {
-        return res.status(400).json({ message: "Montant invalide" });
+        return res.status(400).json({ message: "Invalid amount" });
       }
       const feePaymentId = req.body.feePaymentId === undefined || req.body.feePaymentId === null
         ? undefined
@@ -3796,24 +3796,24 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         : await validateWithdrawalFeePayment(user.id, feePaymentId, amount);
       const minDeposit = parseInt(settings.minDeposit || "3500", 10);
       if (!withdrawalFeePayment && amount < minDeposit) {
-        return res.status(400).json({ message: `Montant minimum : ${minDeposit.toLocaleString()} FCFA` });
+        return res.status(400).json({ message: `Minimum amount: ${minDeposit.toLocaleString()} PHP` });
       }
       if (!operatorId || !operatorName) {
-        return res.status(400).json({ message: "Sélectionnez un opérateur Clapay" });
+        return res.status(400).json({ message: "Select a Clapay operator" });
       }
       const parsedPhone = phoneNumberSchema.safeParse(rawPhone);
       if (!parsedPhone.success) {
-        return res.status(400).json({ message: "Le numéro de téléphone est invalide" });
+        return res.status(400).json({ message: "Invalid phone number" });
       }
 
       const operators = await getClapayOperators(country);
       const selectedOperator = operators.find((entry) => entry.id === operatorId);
       if (!selectedOperator || selectedOperator.name !== operatorName) {
-        return res.status(400).json({ message: "Cet opérateur Clapay n'est plus disponible" });
+        return res.status(400).json({ message: "This Clapay operator is no longer available" });
       }
       const operatorOtp = selectedOperator.requiresOtp ? String(req.body.operatorOtp || "").trim() : "";
       if (selectedOperator.requiresOtp && !operatorOtp) {
-        return res.status(400).json({ message: "Saisissez le code OTP demandé par cet opérateur" });
+        return res.status(400).json({ message: "Enter the OTP requested by this operator" });
       }
 
       const deposit = await storage.createDeposit({
@@ -3968,10 +3968,10 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         : "";
       if (requestedProvider) {
         if (requestedProvider !== "ashtech" && requestedProvider !== "sendavapay" && requestedProvider !== "clapay") {
-          return res.status(400).json({ message: "Fournisseur de dépôt invalide" });
+      return res.status(400).json({ message: "Invalid deposit provider" });
         }
         if (!providers.some(({ provider }) => provider === requestedProvider)) {
-          return res.status(403).json({ message: "Ce fournisseur n'est pas configuré pour ce pays" });
+      return res.status(403).json({ message: "This provider is not configured for this country" });
         }
         const selected = providers.find(({ provider }) => provider === requestedProvider)!;
         return res.json({ ...selected, providers: [selected] });
@@ -3979,7 +3979,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       if (providers.length > 0) {
         return res.json({ ...providers[0], providers });
       }
-      return res.status(503).json({ message: "Aucun fournisseur automatique disponible pour ce pays" });
+      return res.status(503).json({ message: "No automatic provider is available for this country" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -4005,7 +4005,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         source: settings.depositMethodsByCountry?.trim() ? "admin" : "legacy",
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message || "Impossible de charger les méthodes de dépôt" });
+      res.status(500).json({ message: error.message || "Unable to load deposit methods" });
     }
   });
 
@@ -4023,7 +4023,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const { code, name, currency, phonePrefix, operators, isActive } = req.body;
       if (!code || !name || !currency || !phonePrefix) {
-        return res.status(400).json({ message: "Code, nom, devise et indicatif sont requis" });
+        return res.status(400).json({ message: "Code, name, currency, and phone prefix are required" });
       }
       const country = await storage.createCountry({
         code: code.toUpperCase(),
@@ -4098,9 +4098,9 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
       if (user) {
         const newBalance = parseFloat(user.balance) + deposit.amount;
         await storage.updateUser(user.id, { balance: newBalance.toFixed(2), hasDeposited: true });
-        await storage.createTransaction({ userId: user.id, type: "deposit", amount: deposit.amount.toString(), description: "Dépôt validé par bankier" });
+        await storage.createTransaction({ userId: user.id, type: "deposit", amount: deposit.amount.toString(), description: "Deposit approved by banker" });
       }
-      await storage.logAdminAction(req.session.userId!, "approve_deposit", deposit.userId, `Dépôt ${deposit.id} approuvé par bankier: ${deposit.amount}F`);
+      await storage.logAdminAction(req.session.userId!, "approve_deposit", deposit.userId, `Deposit ${deposit.id} approved by banker: ${deposit.amount} PHP`);
       res.json(deposit);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -4115,7 +4115,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         processedBy: req.session.userId,
         screenshot: null,
       });
-      await storage.logAdminAction(req.session.userId!, "reject_deposit", deposit.userId, `Dépôt ${deposit.id} rejeté par bankier`);
+      await storage.logAdminAction(req.session.userId!, "reject_deposit", deposit.userId, `Deposit ${deposit.id} rejected by banker`);
       res.json(deposit);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -4126,13 +4126,13 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
     try {
       const allWithdrawals = await storage.getWithdrawals();
       const withdrawalData = allWithdrawals.find(w => w.id === parseInt(req.params.id));
-      if (!withdrawalData) return res.status(404).json({ message: "Retrait non trouvé" });
+      if (!withdrawalData) return res.status(404).json({ message: "Withdrawal not found" });
       const withdrawal = await storage.updateWithdrawal(parseInt(req.params.id), {
         status: "approved",
         processedAt: new Date(),
         processedBy: req.session.userId,
       });
-      await storage.logAdminAction(req.session.userId!, "approve_withdrawal", withdrawalData.userId, `Retrait ${withdrawal.id} approuvé par bankier: ${withdrawalData.netAmount}F`);
+      await storage.logAdminAction(req.session.userId!, "approve_withdrawal", withdrawalData.userId, `Withdrawal ${withdrawal.id} approved by banker: ${withdrawalData.netAmount} PHP`);
       res.json(withdrawal);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -4151,7 +4151,7 @@ async function refundRejectedWithdrawal(withdrawal: { id: number; userId: number
         const newBalance = parseFloat(user.balance) + withdrawal.amount;
         await storage.updateUser(user.id, { balance: newBalance.toFixed(2) });
       }
-      await storage.logAdminAction(req.session.userId!, "reject_withdrawal", withdrawal.userId, `Retrait ${withdrawal.id} rejeté par bankier et remboursé`);
+      await storage.logAdminAction(req.session.userId!, "reject_withdrawal", withdrawal.userId, `Withdrawal ${withdrawal.id} rejected by banker and refunded`);
       res.json(withdrawal);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

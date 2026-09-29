@@ -356,46 +356,46 @@ export const insertCountrySchema = createInsertSchema(countries).omit({ id: true
 
 export const phoneNumberSchema = z.string()
   .trim()
-  .regex(/^\+?[0-9]{8,15}$/, "Numéro de téléphone invalide");
+  .regex(/^\+?[0-9]{8,15}$/, "Invalid phone number");
 
 export const registerSchema = z.object({
-  fullName: z.string().trim().min(2, "Le nom complet est requis").max(100, "Nom trop long"),
+  fullName: z.string().trim().min(2, "Full name is required").max(100, "Name is too long"),
   phone: phoneNumberSchema,
-  country: z.string().trim().regex(/^[A-Z]{2,3}$/, "Pays invalide"),
-  password: z.string().min(6, "Le mot de passe doit avoir au moins 6 caractères"),
+  country: z.string().trim().regex(/^[A-Z]{2,3}$/, "Invalid country"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   invitationCode: z.string().optional(),
 });
 
 export const loginSchema = z.object({
   phone: phoneNumberSchema,
-  country: z.string().trim().regex(/^[A-Z]{2,3}$/, "Pays invalide"),
-  password: z.string().min(1, "Le mot de passe est requis"),
+  country: z.string().trim().regex(/^[A-Z]{2,3}$/, "Invalid country"),
+  password: z.string().min(1, "Password is required"),
 });
 
 export const depositSchema = z.object({
-  amount: z.number().min(2000, "Le montant minimum est de 2000 FCFA"),
-  accountName: z.string().trim().min(2, "Le nom du compte est requis").max(100, "Nom trop long"),
+  amount: z.number().min(2000, "The minimum amount is 2000 PHP"),
+  accountName: z.string().trim().min(2, "Account name is required").max(100, "Name is too long"),
   accountNumber: phoneNumberSchema,
-  country: z.string().trim().regex(/^[A-Z]{2,3}$/, "Pays invalide"),
-  paymentMethod: z.string().trim().min(2, "Le moyen de paiement est requis").max(60, "Moyen de paiement invalide"),
+  country: z.string().trim().regex(/^[A-Z]{2,3}$/, "Invalid country"),
+  paymentMethod: z.string().trim().min(2, "Payment method is required").max(60, "Invalid payment method"),
   paymentChannelId: z.number().optional(),
 });
 
 export const withdrawalSchema = z.object({
-  amount: z.number().min(1000, "Le montant minimum est de 1000 FCFA"),
+  amount: z.number().min(1000, "The minimum amount is 1000 PHP"),
 });
 
 export const walletSchema = z.object({
-  accountName: z.string().trim().min(2, "Le nom du compte est requis").max(100, "Nom trop long"),
+  accountName: z.string().trim().min(2, "Account name is required").max(100, "Name is too long"),
   accountNumber: phoneNumberSchema,
-  paymentMethod: z.string().trim().min(2, "Le moyen de paiement est requis").max(60, "Moyen de paiement invalide"),
-  country: z.string().trim().regex(/^[A-Z]{2,3}$/, "Pays invalide"),
+  paymentMethod: z.string().trim().min(2, "Payment method is required").max(60, "Invalid payment method"),
+  country: z.string().trim().regex(/^[A-Z]{2,3}$/, "Invalid country"),
 });
 
 export const giftCodeSchema = z.object({
-  code: z.string().min(4, "Le code doit avoir au moins 4 caracteres"),
-  amount: z.number().min(1, "Le montant doit etre positif"),
-  maxUses: z.number().min(1, "Le nombre d'utilisations doit etre au moins 1"),
+  code: z.string().min(4, "Code must be at least 4 characters"),
+  amount: z.number().min(1, "Amount must be positive"),
+  maxUses: z.number().min(1, "Number of uses must be at least 1"),
   expiresAt: z.string(),
 });
 

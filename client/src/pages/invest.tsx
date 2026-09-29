@@ -60,7 +60,7 @@ export default function InvestPage() {
     },
     onError: (error: any) => {
       setConfirmProduct(null);
-      toast({ title: "Achat impossible", description: error.message, variant: "destructive" });
+        toast({ title: "Unable to purchase", description: error.message, variant: "destructive" });
     },
   });
 
@@ -150,9 +150,9 @@ export default function InvestPage() {
           })
         ) : (
           <div className="text-center py-8 flex flex-col items-center gap-2">
-            <img src={emptyIllustration} alt="Vide" className="w-40 h-40 object-contain opacity-90" />
+            <img src={emptyIllustration} alt="Empty" className="w-40 h-40 object-contain opacity-90" />
             <p className="text-gray-400 text-sm">
-              Aucun produit disponible
+              No products available
             </p>
           </div>
         )}

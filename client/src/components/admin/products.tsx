@@ -31,7 +31,7 @@ const productSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["price"],
-      message: data.isFree ? "Un produit gratuit doit avoir un prix de 0 F" : "Le prix doit être supérieur à 0 F",
+      message: data.isFree ? "A free product must have a price of 0 PHP" : "Price must be greater than 0 PHP",
     });
   }
 });
@@ -62,7 +62,7 @@ export default function AdminProducts() {
       const response = await apiRequest("POST", "/api/admin/products", data);
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "La création du produit a échoué");
+        throw new Error(result.message || "Product creation failed");
       }
       return response.json();
     },
@@ -74,7 +74,7 @@ export default function AdminProducts() {
       createForm.reset();
     },
     onError: (error: any) => {
-      toast({ title: "Création du produit impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to create product", description: error.message, variant: "destructive" });
     },
   });
 
@@ -83,7 +83,7 @@ export default function AdminProducts() {
       const response = await apiRequest("PATCH", `/api/admin/products/${id}`, data);
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "La mise à jour du produit a échoué");
+        throw new Error(result.message || "Product update failed");
       }
       return response.json();
     },
@@ -94,7 +94,7 @@ export default function AdminProducts() {
       setSelectedProduct(null);
     },
     onError: (error: any) => {
-      toast({ title: "Mise à jour du produit impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to update product", description: error.message, variant: "destructive" });
     },
   });
 
@@ -103,7 +103,7 @@ export default function AdminProducts() {
       const response = await apiRequest("PATCH", `/api/admin/products/${id}`, { isActive });
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "La modification de la visibilité du produit a échoué");
+        throw new Error(result.message || "Changing product visibility failed");
       }
       return response.json();
     },
@@ -112,7 +112,7 @@ export default function AdminProducts() {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
     onError: (error: any) => {
-      toast({ title: "Modification de la visibilité impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to change product visibility", description: error.message, variant: "destructive" });
     },
   });
 
@@ -121,7 +121,7 @@ export default function AdminProducts() {
       const response = await apiRequest("DELETE", `/api/admin/products/${id}`, {});
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.message || "La suppression du produit a échoué");
+        throw new Error(result.message || "Product deletion failed");
       }
       return response.json();
     },
@@ -131,7 +131,7 @@ export default function AdminProducts() {
        toast({ title: "Product deleted" });
     },
     onError: (error: any) => {
-      toast({ title: "Suppression du produit impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Unable to delete product", description: error.message, variant: "destructive" });
     },
   });
 
@@ -175,7 +175,7 @@ export default function AdminProducts() {
   };
 
   const ProductFormFields = ({ form, isPending, submitLabel }: { form: any; isPending: boolean; submitLabel: string }) => (
-    <form onSubmit={form.handleSubmit(submitLabel === "Créer" ? handleCreate : handleUpdate)} className="space-y-4">
+    <form onSubmit={form.handleSubmit(submitLabel === "Create" ? handleCreate : handleUpdate)} className="space-y-4">
       <FormField control={form.control} name="name" render={({ field }) => (
         <FormItem>
            <FormLabel>Product name</FormLabel>
@@ -261,10 +261,10 @@ export default function AdminProducts() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{products?.length || 0} produit(s)</p>
+        <p className="text-sm text-muted-foreground">{products?.length || 0} product(s)</p>
         <Button onClick={() => { setShowCreateForm(true); createForm.reset(); }} data-testid="button-add-product">
           <Plus className="w-4 h-4 mr-2" />
-          Nouveau produit
+          New product
         </Button>
       </div>
 
@@ -288,7 +288,7 @@ export default function AdminProducts() {
                       <p className="font-medium text-foreground">{product.name}</p>
                       {product.isFree && <Badge variant="secondary" className="text-xs">Gratuit</Badge>}
                       <Badge variant={product.isActive ? "default" : "outline"} className="text-xs">
-                        {product.isActive ? "Actif" : "Inactif"}
+                        {product.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -300,8 +300,8 @@ export default function AdminProducts() {
                   <Switch
                     checked={product.isActive}
                     onCheckedChange={(checked) => toggleMutation.mutate({ id: product.id, isActive: checked })}
-                    aria-label={product.isActive ? `Bloquer ${product.name}` : `Débloquer ${product.name}`}
-                    title={product.isActive ? "Bloquer ce produit" : "Débloquer ce produit"}
+                    aria-label={product.isActive ? `Block ${product.name}` : `Unblock ${product.name}`}
+                    title={product.isActive ? "Block this product" : "Unblock this product"}
                     data-testid={`switch-product-${product.id}`}
                   />
                   <Button size="icon" variant="ghost" onClick={() => openEdit(product)} data-testid={`button-edit-product-${product.id}`}>
@@ -312,7 +312,7 @@ export default function AdminProducts() {
                       size="icon"
                       variant="ghost"
                       className="text-destructive"
-                      onClick={() => { if (confirm(`Supprimer "${product.name}" ?`)) deleteMutation.mutate(product.id); }}
+                      onClick={() => { if (confirm(`Delete "${product.name}"?`)) deleteMutation.mutate(product.id); }}
                       disabled={deleteMutation.isPending}
                       data-testid={`button-delete-product-${product.id}`}
                     >
@@ -324,11 +324,11 @@ export default function AdminProducts() {
 
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Prix</p>
+                  <p className="text-muted-foreground">Price</p>
                    <p className="font-medium text-foreground">{product.price.toLocaleString()} PHP</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Gains/jour</p>
+                  <p className="text-muted-foreground">Daily earnings</p>
                    <p className="font-medium text-foreground">{product.dailyEarnings.toLocaleString()} PHP</p>
                 </div>
                 <div>
@@ -349,10 +349,10 @@ export default function AdminProducts() {
       <Dialog open={showCreateForm} onOpenChange={(open) => { if (!open) { setShowCreateForm(false); createForm.reset(); } }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nouveau produit</DialogTitle>
+            <DialogTitle>New product</DialogTitle>
           </DialogHeader>
           <Form {...createForm}>
-            <ProductFormFields form={createForm} isPending={createMutation.isPending} submitLabel="Créer" />
+            <ProductFormFields form={createForm} isPending={createMutation.isPending} submitLabel="Create" />
           </Form>
         </DialogContent>
       </Dialog>
@@ -361,13 +361,13 @@ export default function AdminProducts() {
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Modifier — {selectedProduct?.name}</DialogTitle>
+            <DialogTitle>Edit — {selectedProduct?.name}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3">
              Changes to price, earnings, or duration may also affect existing investments.
           </p>
           <Form {...editForm}>
-            <ProductFormFields form={editForm} isPending={updateMutation.isPending} submitLabel="Enregistrer" />
+            <ProductFormFields form={editForm} isPending={updateMutation.isPending} submitLabel="Save" />
           </Form>
         </DialogContent>
       </Dialog>

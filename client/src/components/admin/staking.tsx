@@ -63,10 +63,10 @@ export default function AdminStaking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/staking/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/staking/products"] });
-      toast({ title: editTarget ? "Produit mis à jour" : `${forms.length} produit(s) ajouté(s)` });
+      toast({ title: editTarget ? "Product updated" : `${forms.length} product(s) added` });
       closeForm();
     },
-    onError: (e: any) => toast({ title: editTarget ? "Modification du produit staking impossible" : "Création du produit staking impossible", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: editTarget ? "Unable to update staking product" : "Unable to create staking product", description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -77,9 +77,9 @@ export default function AdminStaking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/staking/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/staking/products"] });
-      toast({ title: "Produit supprimé" });
+      toast({ title: "Product deleted" });
     },
-    onError: (e: any) => toast({ title: "Suppression du produit staking impossible", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Unable to delete staking product", description: e.message, variant: "destructive" }),
   });
 
   const toggleMutation = useMutation({
@@ -92,7 +92,7 @@ export default function AdminStaking() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/staking/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/staking/products"] });
     },
-    onError: (e: any) => toast({ title: "Modification du statut du produit impossible", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Unable to change product status", description: e.message, variant: "destructive" }),
   });
 
   const openAdd = () => {
@@ -143,7 +143,7 @@ export default function AdminStaking() {
             </div>
             <Button onClick={openAdd} data-testid="button-add-staking">
               <Plus className="w-4 h-4 mr-2" />
-              {bulkCount > 1 ? `Ajouter ${bulkCount} produits` : "Ajouter un produit"}
+              {bulkCount > 1 ? `Add ${bulkCount} products` : "Add a product"}
             </Button>
           </div>
 
@@ -200,7 +200,7 @@ export default function AdminStaking() {
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button size="icon" variant="ghost" className="text-destructive"
-                            onClick={() => { if (confirm("Supprimer ce produit staking ?")) deleteMutation.mutate(sp.id); }}
+                            onClick={() => { if (confirm("Delete this staking product?")) deleteMutation.mutate(sp.id); }}
                             disabled={deleteMutation.isPending} data-testid={`button-delete-${sp.id}`}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -218,7 +218,7 @@ export default function AdminStaking() {
         <TabsContent value="stakings" className="space-y-4 mt-4">
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-secondary rounded-xl p-3 text-center">
-              <p className="text-xs text-muted-foreground">En cours</p>
+              <p className="text-xs text-muted-foreground">Active</p>
               <p className="font-bold text-primary">{stakings.filter(s => s.status === "active").length}</p>
             </div>
             <div className="bg-secondary rounded-xl p-3 text-center">
@@ -279,16 +279,16 @@ export default function AdminStaking() {
           <div className="space-y-6">
             {forms.map((form, i) => (
               <div key={i} className={`space-y-3 ${forms.length > 1 ? "border border-border rounded-xl p-4" : ""}`}>
-                {forms.length > 1 && <p className="font-semibold text-sm text-primary">Produit {i + 1}</p>}
+                {forms.length > 1 && <p className="font-semibold text-sm text-primary">Product {i + 1}</p>}
                 <div>
                    <label className="text-sm font-medium">Product name</label>
                   <Input value={form.name} onChange={e => updateForm(i, "name", e.target.value)}
-                    placeholder="Ex: Staking Gold 30 jours" className="mt-1" data-testid={`input-name-${i}`} />
+                    placeholder="e.g. Staking Gold 30 days" className="mt-1" data-testid={`input-name-${i}`} />
                 </div>
                 <div>
                    <label className="text-sm font-medium">Description <span className="text-muted-foreground font-normal">(optional)</span></label>
                   <Input value={form.description} onChange={e => updateForm(i, "description", e.target.value)}
-                    placeholder="Description du produit" className="mt-1" />
+                    placeholder="Product description" className="mt-1" />
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
@@ -327,7 +327,7 @@ export default function AdminStaking() {
               <Button className="flex-1" onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || forms.some(f => !f.name || !f.price || !f.returnAmount || !f.lockDays)}
                 data-testid="button-save-staking">
-                {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (editTarget ? "Modifier" : `Créer ${forms.length > 1 ? forms.length + " produits" : ""}`)}
+                {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (editTarget ? "Edit" : `Create ${forms.length > 1 ? forms.length + " products" : ""}`)}
               </Button>
             </div>
           </div>

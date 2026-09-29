@@ -54,7 +54,7 @@ export default function ProductsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
       refreshUser();
       setSelectedProduct(null);
-      toast({ title: "Produit acheté !", description: "Vous commencerez à recevoir des gains demain." });
+      toast({ title: "Product purchased!", description: "You will start receiving earnings tomorrow." });
     },
     onError: (error: Error) => {
       setSelectedProduct(null);
@@ -231,7 +231,7 @@ export default function ProductsPage() {
           </div>
         </section>
 
-        <section className="cp-products-stats" aria-label="Résumé des produits">
+        <section className="cp-products-stats" aria-label="Product summary">
           <div className="cp-products-stat">
             <span className="cp-products-stat-icon"><ShoppingBag aria-hidden="true" /></span>
              <span><strong className="cp-products-stat-value">{ownedCount}</strong><small className="cp-products-stat-label">My equipment</small></span>
@@ -246,7 +246,7 @@ export default function ProductsPage() {
            <h2>Our products</h2>
         </div>
 
-        <section className="cp-products-list" aria-label="Produits disponibles">
+        <section className="cp-products-list" aria-label="Available products">
           {isLoading ? (
              <div className="cp-products-empty"><Loader2 className="animate-spin" /><p>Loading products...</p></div>
           ) : availableProducts.length === 0 ? (

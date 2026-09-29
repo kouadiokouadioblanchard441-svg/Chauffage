@@ -75,16 +75,16 @@ export default function AdminDeposits() {
         credentials: "include",
       });
       const data = await res.json();
-       if (!res.ok) throw new Error(data.message || `Le traitement du dépôt a échoué (code ${res.status})`);
+       if (!res.ok) throw new Error(data.message || `Deposit processing failed (code ${res.status})`);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/deposits"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Dépôt traité !" });
+       toast({ title: "Deposit processed!" });
     },
     onError: (error: any) => {
-       toast({ title: "Traitement du dépôt impossible", description: error.message, variant: "destructive" });
+       toast({ title: "Unable to process deposit", description: error.message, variant: "destructive" });
     },
     onSettled: () => setProcessingId(null),
   });
@@ -117,7 +117,7 @@ export default function AdminDeposits() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher par nom, numéro, référence..."
+            placeholder="Search by name, number, or reference..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="pl-10"
@@ -157,7 +157,7 @@ export default function AdminDeposits() {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-foreground">{deposit.user.fullName}</p>
-                        {deposit.user.isPromoter && <Badge className="text-xs">Promoteur</Badge>}
+                        {deposit.user.isPromoter && <Badge className="text-xs">Promoter</Badge>}
                         {isManual && (
                           <Badge className="text-xs bg-red-600 text-white border-red-600">
                             Paiement manuel
@@ -174,15 +174,15 @@ export default function AdminDeposits() {
                   {/* Main info */}
                   <div className="grid grid-cols-2 gap-2 text-sm bg-secondary/50 rounded-xl p-3">
                     <div>
-                      <p className="text-muted-foreground text-xs">Montant</p>
+                      <p className="text-muted-foreground text-xs">Amount</p>
                        <p className="font-bold text-lg text-primary">{deposit.amount.toLocaleString()} PHP</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Opérateur</p>
+                      <p className="text-muted-foreground text-xs">Operator</p>
                       <p className="font-medium">{deposit.paymentMethod}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Numéro payeur</p>
+                      <p className="text-muted-foreground text-xs">Payer number</p>
                       <p className="font-mono font-medium">{deposit.accountNumber}</p>
                     </div>
                     <div>
@@ -197,7 +197,7 @@ export default function AdminDeposits() {
                     {/* Payment number (channel) used */}
                     {(deposit as any).channelName && (
                       <div className="col-span-2">
-                        <p className="text-muted-foreground text-xs">Numéro destinataire utilisé</p>
+                        <p className="text-muted-foreground text-xs">Recipient number used</p>
                         <p className="font-bold text-red-600">{(deposit as any).channelName}</p>
                       </div>
                     )}
@@ -206,32 +206,32 @@ export default function AdminDeposits() {
                     {(deposit as any).reference && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground text-xs">
-                          {(deposit as any).paymentNumberId ? "ID de transaction" : "Référence"}
+                          {(deposit as any).paymentNumberId ? "Transaction ID" : "Reference"}
                         </p>
                         <p className="font-mono font-medium">{(deposit as any).reference}</p>
                       </div>
                     )}
                     {(deposit as any).ashtechReference && (
                       <div className="col-span-2">
-                        <p className="text-muted-foreground text-xs">Référence AshtechPay</p>
+                        <p className="text-muted-foreground text-xs">AshtechPay reference</p>
                         <p className="font-mono font-medium">{(deposit as any).ashtechReference}</p>
                       </div>
                     )}
                     {(deposit as any).inpayOutTradeNo && (
                       <div className="col-span-2">
-                        <p className="text-muted-foreground text-xs">Référence marchand InPay</p>
+                        <p className="text-muted-foreground text-xs">InPay merchant reference</p>
                         <p className="font-mono font-medium">{(deposit as any).inpayOutTradeNo}</p>
                       </div>
                     )}
                     {(deposit as any).inpayOrderNumber && (
                       <div className="col-span-2">
-                        <p className="text-muted-foreground text-xs">N° commande InPay</p>
+                        <p className="text-muted-foreground text-xs">InPay order number</p>
                         <p className="font-mono font-medium">{(deposit as any).inpayOrderNumber}</p>
                       </div>
                     )}
                     {isAshtech && ashtechExpired && deposit.status !== "approved" && (
                       <div className="col-span-2 rounded-lg bg-red-50 dark:bg-red-950 p-2 text-xs text-red-700 dark:text-red-300">
-                        Transaction non confirmée après 3 heures. Vous pouvez la valider manuellement après vérification.
+                         Transaction was not confirmed after 3 hours. You may approve it manually after verification.
                       </div>
                     )}
                   </div>
@@ -241,7 +241,7 @@ export default function AdminDeposits() {
                     <div className="bg-orange-50 dark:bg-orange-950 rounded-xl p-3">
                       <div className="flex items-center gap-1 mb-1">
                         <MessageSquare className="w-3.5 h-3.5 text-orange-600" />
-                        <p className="text-xs font-medium text-orange-600">Message de paiement reçu</p>
+                         <p className="text-xs font-medium text-orange-600">Payment message received</p>
                       </div>
                       <p className="text-sm text-foreground whitespace-pre-wrap">{(deposit as any).paymentMessage}</p>
                     </div>
@@ -252,7 +252,7 @@ export default function AdminDeposits() {
                     <div>
                       <div className="flex items-center gap-1 mb-2">
                         <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                        <p className="text-xs font-medium text-muted-foreground">Capture d'écran</p>
+                         <p className="text-xs font-medium text-muted-foreground">Payment screenshot</p>
                       </div>
                       <button
                         onClick={() => setScreenshotModal((deposit as any).screenshot)}
@@ -261,7 +261,7 @@ export default function AdminDeposits() {
                       >
                         <img
                           src={(deposit as any).screenshot}
-                          alt="Capture"
+                           alt="Payment screenshot"
                           className="w-full max-h-40 object-contain bg-secondary/30"
                         />
                       </button>
@@ -278,7 +278,7 @@ export default function AdminDeposits() {
                         disabled={processingId === deposit.id}
                         data-testid={`button-approve-${deposit.id}`}
                       >
-                        {processingId === deposit.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" />{isAshtech && deposit.status === "rejected" ? "Valider malgré l'échec" : "Valider"}</>}
+                         {processingId === deposit.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-1" />{isAshtech && deposit.status === "rejected" ? "Approve despite failure" : "Approve"}</>}
                       </Button>
                       <Button
                         size="sm"
@@ -287,14 +287,14 @@ export default function AdminDeposits() {
                         disabled={processingId === deposit.id}
                         data-testid={`button-reject-${deposit.id}`}
                       >
-                        <X className="w-4 h-4 mr-1" />Rejeter
+                         <X className="w-4 h-4 mr-1" />Reject
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => processMutation.mutate({ id: deposit.id, action: "reject", ban: true })}
                         disabled={processingId === deposit.id}
-                        title="Rejeter et bannir"
+                         title="Reject and ban"
                         data-testid={`button-ban-${deposit.id}`}
                       >
                         <Ban className="w-4 h-4" />
@@ -316,10 +316,10 @@ export default function AdminDeposits() {
       <Dialog open={!!screenshotModal} onOpenChange={() => setScreenshotModal(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Capture d'écran du paiement</DialogTitle>
+           <DialogTitle>Payment screenshot</DialogTitle>
           </DialogHeader>
           {screenshotModal && (
-            <img src={screenshotModal} alt="Capture" className="w-full rounded-xl object-contain max-h-[70vh]" />
+             <img src={screenshotModal} alt="Payment screenshot" className="w-full rounded-xl object-contain max-h-[70vh]" />
           )}
         </DialogContent>
       </Dialog>

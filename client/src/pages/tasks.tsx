@@ -23,12 +23,12 @@ interface TaskWithStatus extends Task {
 }
 
 const TIER_LABELS = [
-  "Parrain Bronze",
-  "Parrain Argent",
-  "Parrain Or",
-  "Parrain Platine",
-  "Parrain Diamant",
-  "Parrain Elite",
+  "Bronze Referral",
+  "Silver Referral",
+  "Gold Referral",
+  "Platinum Referral",
+  "Diamond Referral",
+  "Elite Referral",
 ];
 
 const TIER_COLORS = [
@@ -55,17 +55,17 @@ export default function TasksPage() {
       const response = await apiRequest("POST", `/api/tasks/${taskId}/claim`, {});
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || "Récompense indisponible");
+        throw new Error(data.message || "Reward unavailable");
       }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       refreshUser();
-      toast({ title: "Récompense réclamée!", description: "Le bonus a été ajouté à votre compte." });
+       toast({ title: "Reward claimed!", description: "The bonus has been added to your account." });
     },
     onError: (error: any) => {
-      toast({ title: "Récompense indisponible", description: error.message, variant: "destructive" });
+       toast({ title: "Reward unavailable", description: error.message, variant: "destructive" });
     },
   });
 

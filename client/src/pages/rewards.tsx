@@ -22,7 +22,7 @@ export default function RewardsPage() {
       const res = await apiRequest("POST", `/api/tasks/${taskId}/claim`);
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || "La récompense n'a pas pu être réclamée.");
+        throw new Error(data.message || "The reward could not be claimed.");
       }
       return res.json();
     },
@@ -36,7 +36,7 @@ export default function RewardsPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Réclamation de la récompense impossible",
+        title: "Unable to claim reward",
         description: error.message,
         variant: "destructive",
       });

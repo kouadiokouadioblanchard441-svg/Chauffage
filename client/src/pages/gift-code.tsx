@@ -78,11 +78,11 @@ export default function GiftCodePage() {
       `}</style>
       <div className="gift-screen">
         <header className="gift-title">
-          <Link href="/account" aria-label="Retour">‹</Link>
+          <Link href="/account" aria-label="Back">‹</Link>
            <h1>Redeem a gift</h1>
         </header>
         <div className="gift-banner">
-          <img className="gift-hero" src={chargepointPromo} alt="Plateforme ChargePoint et borne de recharge" data-testid="img-gift-banner" />
+          <img className="gift-hero" src={chargepointPromo} alt="ChargePoint platform and charging station" data-testid="img-gift-banner" />
         </div>
          <p className="gift-description">You can get a gift code in the group</p>
         <a className="gift-telegram" href={settings?.groupLink || "https://t.me/sybotx"} target="_blank" rel="noreferrer">

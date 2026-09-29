@@ -18,90 +18,90 @@ export default function AboutPage() {
 
         <div className="cp-about-body">
           <p className="cp-about-lead">
-            ChargePoint est une plateforme numérique créée en 2024 pour rendre les solutions de recharge, les produits connectés et les services associés plus simples, plus accessibles et plus transparents pour tous.
+            ChargePoint is a digital platform created in 2024 to make charging solutions, connected products, and related services simpler, more accessible, and more transparent for everyone.
           </p>
 
           <p>
-            Créée en 2024, ChargePoint s’adresse aux particuliers, aux professionnels et aux partenaires qui souhaitent accéder à une plateforme moderne, suivre leurs activités et découvrir des produits conçus pour générer une valeur progressive dans le temps.
+            Created in 2024, ChargePoint serves individuals, professionals, and partners who want a modern platform, activity tracking, and products designed to generate progressive value over time.
           </p>
 
           <h2>Our story</h2>
           <p>
-            ChargePoint est née d’une idée simple : les utilisateurs doivent pouvoir accéder à des services modernes depuis une seule plateforme, avec des informations compréhensibles et un accompagnement disponible à chaque étape. Dès sa création, la marque a été pensée autour d’une expérience mobile rapide, claire et adaptée aux besoins quotidiens.
+            ChargePoint began with a simple idea: users should access modern services from one platform, with clear information and support at every step. From the start, the brand was designed around a fast, clear mobile experience adapted to everyday needs.
           </p>
           <p>
-            Notre développement repose sur l’écoute des utilisateurs, l’amélioration continue de nos outils et la volonté de construire une relation durable avec notre communauté. Chaque évolution de la plateforme vise à faciliter l’accès aux produits, le suivi des activités et la compréhension des services proposés.
+            Our development is based on listening to users, continuously improving our tools, and building a lasting relationship with our community. Every platform update aims to simplify product access, activity tracking, and understanding of the services we offer.
           </p>
 
           <h2>Our mission</h2>
           <p>
-            La mission de ChargePoint est de rapprocher la technologie des utilisateurs. Nous voulons proposer un espace unique dans lequel chacun peut découvrir les solutions disponibles, consulter les informations importantes, suivre ses opérations et trouver rapidement de l’aide lorsqu’il en a besoin.
+            ChargePoint’s mission is to bring technology closer to users. We provide one place where everyone can discover available solutions, review important information, track transactions, and quickly find help when needed.
           </p>
           <p>
-            Nous travaillons pour que la technologie ne soit pas une source de complexité. Les parcours sont conçus avec des étapes simples, des indications visibles et des informations présentées dans un langage accessible, quel que soit le niveau d’expérience numérique de l’utilisateur.
+            We work to ensure technology is not a source of complexity. Flows use simple steps, visible guidance, and accessible language regardless of the user’s level of digital experience.
           </p>
 
           <h2>Our vision for investors</h2>
           <p>
-            ChargePoint souhaite contribuer à un accès plus simple aux opportunités numériques pour les investisseurs africains. Notre vision est de créer une plateforme pensée pour les réalités locales, avec des parcours adaptés au téléphone, des moyens de paiement accessibles et des informations compréhensibles avant chaque décision.
+            ChargePoint aims to provide simpler access to digital opportunities for investors. Our vision is a platform designed for local realities, with mobile-friendly flows, accessible payment methods, and understandable information before every decision.
           </p>
           <p>
-            Nous voulons donner à chaque membre la possibilité de commencer progressivement, de suivre son activité et de mieux comprendre la manière dont un produit fonctionne. L’objectif n’est pas de promettre une richesse immédiate, mais de construire une expérience structurée dans laquelle l’utilisateur peut avancer avec des informations claires et une visibilité sur ses opérations.
-          </p>
-
-          <h2>Que se passe-t-il lorsqu’un produit est acheté ?</h2>
-          <p>
-            Lorsqu’un investisseur achète un produit ChargePoint, l’achat est enregistré dans son espace personnel. Il peut ensuite retrouver le produit dans la section <strong>Mes produits achetés</strong>, avec les informations importantes : le prix du produit, la durée du cycle, le revenu quotidien prévu, le revenu total prévu, la date d’achat et l’évolution de son activité.
-          </p>
-          <p>
-            Chaque produit possède ses propres conditions. Une fois le produit activé, les revenus associés sont calculés selon le produit choisi, sa durée et les règles présentées au moment de l’achat. Les gains sont ensuite suivis dans l’espace personnel afin que l’investisseur puisse consulter l’évolution de ses revenus et l’état de son produit.
+            We want every member to start gradually, track their activity, and better understand how a product works. The goal is not to promise immediate wealth, but to build a structured experience with clear information and visibility into transactions.
           </p>
 
-          <h2>Les gains que l’investisseur peut recevoir</h2>
+          <h2>What happens when a product is purchased?</h2>
           <p>
-            Selon le produit sélectionné, l’investisseur peut recevoir un revenu quotidien pendant la durée prévue du cycle. Le montant total dépend du produit acheté et des conditions qui lui sont associées. La plateforme affiche ces informations avant la confirmation afin que l’utilisateur puisse connaître le prix, le revenu quotidien prévu, la durée et le revenu total prévu.
+            When an investor purchases a ChargePoint product, the purchase is recorded in their personal area. They can find it in <strong>My purchased products</strong>, with key information: product price, cycle duration, expected daily earnings, expected total return, purchase date, and activity progress.
           </p>
           <p>
-            Les gains affichés correspondent aux conditions du produit et ne doivent pas être interprétés comme une promesse de rendement automatique ou sans risque. Avant tout achat, chaque investisseur doit lire les informations disponibles, vérifier qu’il comprend le fonctionnement du produit et n’engager que des fonds qu’il peut se permettre d’utiliser.
+            Each product has its own terms. Once activated, associated earnings are calculated according to the selected product, its duration, and the rules shown at purchase. Earnings are tracked in the personal area so investors can view progress and product status.
+          </p>
+
+          <h2>Earnings an investor may receive</h2>
+          <p>
+            Depending on the selected product, an investor may receive daily earnings for the planned cycle duration. The total depends on the purchased product and its terms. The platform shows this information before confirmation so users know the price, expected daily earnings, duration, and expected total return.
+          </p>
+          <p>
+            Displayed earnings reflect the product terms and must not be interpreted as a promise of automatic or risk-free returns. Before any purchase, investors should read the available information, ensure they understand how the product works, and use only funds they can afford.
           </p>
 
           <h2>What we offer</h2>
           <ul>
-            <li>Une plateforme mobile pensée pour être simple à utiliser au quotidien.</li>
-            <li>Des solutions et produits liés à la recharge et aux équipements connectés.</li>
-            <li>Un espace personnel pour consulter son solde, son historique et ses activités.</li>
-            <li>Un suivi des produits acquis, de leur fonctionnement et des revenus associés lorsqu’ils sont applicables.</li>
-            <li>Des moyens d’assistance et d’accompagnement pour répondre aux questions des utilisateurs.</li>
-            <li>Une communauté qui peut progresser grâce au partage d’informations et au parrainage.</li>
+            <li>A mobile platform designed for everyday simplicity.</li>
+            <li>Solutions and products related to charging and connected equipment.</li>
+            <li>A personal area to review your balance, history, and activity.</li>
+            <li>Tracking for acquired products, how they work, and associated earnings where applicable.</li>
+            <li>Support and guidance to answer user questions.</li>
+            <li>A community that can grow through information sharing and referrals.</li>
           </ul>
 
           <h2>Our goals</h2>
           <p>
-            Notre premier objectif est de rendre les services numériques plus accessibles en Afrique et dans les marchés où ChargePoint est disponible. Nous souhaitons développer des outils adaptés aux réalités locales, aux moyens de paiement utilisés par les communautés et aux habitudes des utilisateurs.
+            Our primary goal is to make digital services more accessible in the markets where ChargePoint is available. We want to develop tools adapted to local realities, community payment methods, and user habits.
           </p>
           <p>
-            Nous voulons également continuer à améliorer la qualité de nos produits, renforcer la rapidité de notre assistance et offrir une meilleure visibilité sur chaque opération. La confiance se construit avec des informations claires, un historique compréhensible et des règles présentées avant chaque action importante.
+            We also want to keep improving product quality, make support faster, and provide better visibility into every transaction. Trust is built with clear information, understandable history, and rules shown before every important action.
           </p>
           <p>
-            À long terme, ChargePoint a pour ambition de devenir un espace de référence pour les solutions de recharge et les services numériques associés : une plateforme fiable, pratique et capable d’évoluer avec les besoins de ses utilisateurs.
+            In the long term, ChargePoint aims to become a trusted destination for charging solutions and related digital services: a reliable, practical platform that evolves with user needs.
           </p>
 
           <h2>Our commitments</h2>
           <ul>
-            <li><strong>Clarté :</strong> présenter les conditions, les étapes et les informations essentielles de manière lisible.</li>
-            <li><strong>Accessibilité :</strong> concevoir une expérience adaptée aux téléphones et aux connexions du quotidien.</li>
-            <li><strong>Écoute :</strong> tenir compte des retours pour améliorer continuellement la plateforme.</li>
-            <li><strong>Sécurité :</strong> protéger les comptes et traiter les opérations avec sérieux.</li>
-            <li><strong>Responsabilité :</strong> rappeler que chaque utilisateur doit consulter les conditions avant toute opération.</li>
-            <li><strong>Innovation utile :</strong> privilégier les fonctionnalités qui apportent une réelle valeur plutôt que la complexité.</li>
+            <li><strong>Clarity:</strong> present terms, steps, and essential information clearly.</li>
+            <li><strong>Accessibility:</strong> design an experience suited to phones and everyday connections.</li>
+            <li><strong>Listening:</strong> use feedback to continuously improve the platform.</li>
+            <li><strong>Security:</strong> protect accounts and handle transactions responsibly.</li>
+            <li><strong>Responsibility:</strong> remind every user to review terms before any transaction.</li>
+            <li><strong>Useful innovation:</strong> prioritize features that deliver real value over complexity.</li>
           </ul>
 
           <h2>Our vision</h2>
           <p>
-            Nous imaginons un avenir dans lequel l’accès aux équipements, aux services de recharge et aux outils numériques ne dépend plus de parcours compliqués. ChargePoint veut contribuer à cette évolution en réunissant technologie, simplicité et accompagnement dans une même expérience.
+            We imagine a future where access to equipment, charging services, and digital tools no longer depends on complicated flows. ChargePoint wants to contribute by bringing technology, simplicity, and support together in one experience.
           </p>
           <p>
-            Merci de faire partie de l’aventure ChargePoint. Vos retours, vos suggestions et votre confiance nous aident à construire une plateforme plus utile, plus claire et plus proche des besoins réels de sa communauté.
+            Thank you for being part of the ChargePoint journey. Your feedback, suggestions, and trust help us build a more useful, clearer platform closer to the real needs of its community.
           </p>
         </div>
       </div>

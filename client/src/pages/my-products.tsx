@@ -307,14 +307,14 @@ export default function MyProductsPage() {
       <div className="products-screen">
         <header className="products-header">
           <img src={chargepointLogo} alt="ChargePoint" />
-          <strong>Mes produits</strong>
+          <strong>My products</strong>
         </header>
-        <section className="products-hero" aria-label="Produits">
-          <img src={chargepointPromo} alt="Solutions de recharge ChargePoint" />
-          <div className="hero-copy"><strong>ChargePoint</strong><span>Vos produits achetés et leurs revenus</span></div>
-          <div className="stat-panel my my-only active" aria-label={`Revenus : ${formatStatAmount(totalUserEarnings)}`}>
+        <section className="products-hero" aria-label="Products">
+          <img src={chargepointPromo} alt="ChargePoint charging solutions" />
+          <div className="hero-copy"><strong>ChargePoint</strong><span>Your purchased products and earnings</span></div>
+          <div className="stat-panel my my-only active" aria-label={`Earnings: ${formatStatAmount(totalUserEarnings)}`}>
             <span className="stat-value">{formatStatAmount(totalUserEarnings)}</span>
-            <span className="stat-label">Revenus cumulés</span>
+            <span className="stat-label">Total earnings</span>
           </div>
         </section>
 
@@ -326,9 +326,9 @@ export default function MyProductsPage() {
                 </div>
               ) : allUserProducts.length === 0 ? (
                 <div className="empty">
-                  <img src={emptyProductsIllustration} alt="Aucun produit acheté" />
-                  <p>Aucun produit ChargePoint acheté</p>
-                  <p className="text-sm text-gray-400">Achetez des produits pour commencer à gagner</p>
+                  <img src={emptyProductsIllustration} alt="No purchased products" />
+                  <p>No ChargePoint products purchased</p>
+                  <p className="text-sm text-gray-400">Buy products to start earning</p>
                 </div>
               ) : (
                 allUserProducts.map((up: any, index: number) => {
@@ -343,9 +343,9 @@ export default function MyProductsPage() {
                       className="product-card my-card"
                       data-testid={`my-product-card-${up.id}`}
                     >
-                      <div className="product-picture"><img src={up.product?.imageUrl || PRODUCT_IMAGES[index % PRODUCT_IMAGES.length]} alt={up.product?.name || "Produit"} /></div>
+                      <div className="product-picture"><img src={up.product?.imageUrl || PRODUCT_IMAGES[index % PRODUCT_IMAGES.length]} alt={up.product?.name || "Product"} /></div>
                       <div className="product-details">
-                        <p className="product-name">{up.product?.name || "Produit"}</p>
+                        <p className="product-name">{up.product?.name || "Product"}</p>
                         <p className="product-price">{Number(up.product?.price || 0).toLocaleString("en-PH")} {currency}</p>
                         <p className="product-line">Days completed:<strong>{daysCompleted} / {cycleDays}</strong></p>
                         <p className="product-line">Earnings generated:<strong>{earnedSoFar.toLocaleString("en-PH")} {currency}</strong></p>

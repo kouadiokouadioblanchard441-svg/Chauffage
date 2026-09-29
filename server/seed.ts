@@ -130,16 +130,32 @@ export async function seed() {
   const existingTasks = await db.select().from(tasks);
   if (existingTasks.length === 0) {
     await db.insert(tasks).values([
-      { name: "Parrain Bronze", description: "Inviter 3 personnes a investir", requiredInvites: 3, reward: 350, sortOrder: 1 },
-      { name: "Parrain Argent", description: "Inviter 5 personnes a investir", requiredInvites: 5, reward: 750, sortOrder: 2 },
-      { name: "Parrain Or", description: "Inviter 10 personnes a investir", requiredInvites: 10, reward: 2500, sortOrder: 3 },
-      { name: "Parrain Platine", description: "Inviter 30 personnes a investir", requiredInvites: 30, reward: 6500, sortOrder: 4 },
-      { name: "Parrain Diamant", description: "Inviter 100 personnes a investir", requiredInvites: 100, reward: 15000, sortOrder: 5 },
-      { name: "Parrain Elite", description: "Inviter 300 personnes a investir", requiredInvites: 300, reward: 50000, sortOrder: 6 },
+      { name: "Bronze Referral", description: "Invite 3 people to invest", requiredInvites: 3, reward: 350, sortOrder: 1 },
+      { name: "Silver Referral", description: "Invite 5 people to invest", requiredInvites: 5, reward: 750, sortOrder: 2 },
+      { name: "Gold Referral", description: "Invite 10 people to invest", requiredInvites: 10, reward: 2500, sortOrder: 3 },
+      { name: "Platinum Referral", description: "Invite 30 people to invest", requiredInvites: 30, reward: 6500, sortOrder: 4 },
+      { name: "Diamond Referral", description: "Invite 100 people to invest", requiredInvites: 100, reward: 15000, sortOrder: 5 },
+      { name: "Elite Referral", description: "Invite 300 people to invest", requiredInvites: 300, reward: 50000, sortOrder: 6 },
     ]);
     console.log("Tasks seeded (first install)");
   } else {
     console.log(`Tasks skipped — ${existingTasks.length} existing tasks preserved`);
+  }
+
+  // Translate only the exact built-in task rows from older installations.
+  // Custom administrator-created tasks are left untouched.
+  const legacyTasks = [
+    ["Parrain Bronze", "Inviter 3 personnes a investir", "Bronze Referral", "Invite 3 people to invest"],
+    ["Parrain Argent", "Inviter 5 personnes a investir", "Silver Referral", "Invite 5 people to invest"],
+    ["Parrain Or", "Inviter 10 personnes a investir", "Gold Referral", "Invite 10 people to invest"],
+    ["Parrain Platine", "Inviter 30 personnes a investir", "Platinum Referral", "Invite 30 people to invest"],
+    ["Parrain Diamant", "Inviter 100 personnes a investir", "Diamond Referral", "Invite 100 people to invest"],
+    ["Parrain Elite", "Inviter 300 personnes a investir", "Elite Referral", "Invite 300 people to invest"],
+  ] as const;
+  for (const [oldName, oldDescription, name, description] of legacyTasks) {
+    await db.update(tasks)
+      .set({ name, description })
+      .where(sql`name = ${oldName} AND description = ${oldDescription}`);
   }
 
   // Check if payment channels exist
@@ -157,18 +173,18 @@ export async function seed() {
   const requiredSettings = [
     { key: "supportLink", value: "https://t.me/sybotx" },
     { key: "supportType", value: "telegram" },
-    { key: "supportLabel", value: "Service client" },
+     { key: "supportLabel", value: "Customer support" },
     { key: "support2Link", value: "https://t.me/sybotx" },
     { key: "support2Type", value: "telegram" },
-    { key: "support2Label", value: "Service client 2" },
+     { key: "support2Label", value: "Customer support 2" },
     { key: "channelLink", value: "https://t.me/sybotx" },
     { key: "channelType", value: "telegram" },
-    { key: "channelLabel", value: "Chaîne officielle" },
+     { key: "channelLabel", value: "Official channel" },
     { key: "groupLink", value: "https://t.me/sybotx" },
     { key: "groupType", value: "telegram" },
-    { key: "groupLabel", value: "Groupe de discussion" },
-    { key: "popupButtonLabel", value: "Cliquez ici pour rejoindre le groupe Telegram" },
-    { key: "noticeText", value: "Bienvenue sur Stone by ton ! Découvrez nos pierres naturelles, travertins, carrelages et parements muraux." },
+     { key: "groupLabel", value: "Discussion group" },
+     { key: "popupButtonLabel", value: "Click here to join the Telegram group" },
+     { key: "noticeText", value: "Welcome to Stone by ton! Discover our natural stone, travertine, tiles, and wall cladding." },
     { key: "supportEnabled", value: "true" },
     { key: "support2Enabled", value: "true" },
     { key: "channelEnabled", value: "true" },
@@ -209,6 +225,18 @@ export async function seed() {
       await db.insert(platformSettings).values(settingData);
       console.log(`Setting added: ${settingData.key}${isSensitive ? "" : ` = ${settingData.value}`}`);
     } else if (
+      settingData.key === "supportLabel" && existing.value === "Service client" ||
+      settingData.key === "support2Label" && existing.value === "Service client 2" ||
+      settingData.key === "channelLabel" && existing.value === "Chaîne officielle" ||
+      settingData.key === "groupLabel" && existing.value === "Groupe de discussion" ||
+      settingData.key === "popupButtonLabel" && existing.value === "Cliquez ici pour rejoindre le groupe Telegram" ||
+      settingData.key === "noticeText" && existing.value === "Bienvenue sur Stone by ton ! Découvrez nos pierres naturelles, travertins, carrelages et parements muraux."
+    ) {
+      await db.update(platformSettings)
+        .set({ value: settingData.value, modifiedAt: new Date() })
+        .where(eq(platformSettings.key, settingData.key));
+      console.log(`Setting translated: ${settingData.key}`);
+    } else if (
       settingData.key === "noticeText" &&
       /sybotx|disney|walt|pixar|marvel|star wars/i.test(existing.value)
     ) {
@@ -240,7 +268,7 @@ export async function seed() {
     await db.insert(platformSettings)
       .values({ key: signupBonusMigrationKey, value: "true" })
       .onConflictDoNothing();
-    console.log("Signup bonus setting migrated to 1000 FCFA");
+     console.log("Signup bonus setting migrated to 1000 PHP");
   }
 
   const minimumWithdrawalMigrationKey = "migration_min_withdrawal_800_applied";
@@ -251,7 +279,7 @@ export async function seed() {
     await db.insert(platformSettings)
       .values({ key: minimumWithdrawalMigrationKey, value: "true" })
       .onConflictDoNothing();
-    console.log("Minimum withdrawal setting migrated to 800 FCFA");
+     console.log("Minimum withdrawal setting migrated to 800 PHP");
   }
 
   // Preserve existing payment settings. Deposit routes are configured explicitly

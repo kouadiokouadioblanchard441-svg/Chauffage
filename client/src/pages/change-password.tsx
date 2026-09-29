@@ -21,7 +21,7 @@ export default function ChangePasswordPage() {
       const res = await apiRequest("POST", "/api/change-password", data);
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || "Le mot de passe n'a pas pu être modifié.");
+        throw new Error(err.message || "The password could not be changed.");
       }
       return res.json();
     },
@@ -33,7 +33,7 @@ export default function ChangePasswordPage() {
       navigate("/account");
     },
     onError: (error: Error) => {
-      toast({ title: "Modification du mot de passe impossible", description: error.message, variant: "destructive" });
+      toast({ title: "Unable to change password", description: error.message, variant: "destructive" });
     },
   });
 
@@ -89,7 +89,7 @@ export default function ChangePasswordPage() {
                 type="button"
                 className="cp-password-visibility"
                 onClick={() => setShowCurrent(!showCurrent)}
-                aria-label={showCurrent ? "Masquer l'ancien mot de passe" : "Afficher l'ancien mot de passe"}
+                aria-label={showCurrent ? "Hide current password" : "Show current password"}
               >
                 {showCurrent ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
               </button>
@@ -110,7 +110,7 @@ export default function ChangePasswordPage() {
                 type="button"
                 className="cp-password-visibility"
                 onClick={() => setShowNew(!showNew)}
-                aria-label={showNew ? "Masquer le nouveau mot de passe" : "Afficher le nouveau mot de passe"}
+                aria-label={showNew ? "Hide new password" : "Show new password"}
               >
                 {showNew ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
               </button>

@@ -65,7 +65,7 @@ export default function ServicePage() {
       <div className="service-screen">
         <header className="service-header">
           <Link href="/account">
-            <button className="service-back" data-testid="button-back" aria-label="Retour">
+            <button className="service-back" data-testid="button-back" aria-label="Back">
               <ChevronLeft aria-hidden="true" />
             </button>
           </Link>
@@ -76,13 +76,13 @@ export default function ServicePage() {
         </header>
 
         <section className="benefits" aria-label="ChargePoint">
-          <img className="benefit-banner" src={chargepointPromo} alt="Solutions de recharge ChargePoint" />
+           <img className="benefit-banner" src={chargepointPromo} alt="ChargePoint charging solutions" />
         </section>
 
         <section className="telegram-section" aria-labelledby="support-heading">
            <h2 id="support-heading" className="telegram-title">ChargePoint support</h2>
           <div className="telegram-grid">
-            <img className="bike-image" src={chargepointDevice} alt="Borne de recharge ChargePoint" />
+             <img className="bike-image" src={chargepointDevice} alt="ChargePoint charging station" />
             <div className="telegram-actions">
               {supportLinks.map((link) => (
                 <button key={link.testId} type="button" className={`telegram-link ${link.size}`} onClick={() => window.open(link.href, "_blank")} data-testid={link.testId}>
@@ -98,7 +98,7 @@ export default function ServicePage() {
           </div>
         </section>
 
-        <section className="advice" aria-label="Conseils">
+        <section className="advice" aria-label="Tips">
            <h2 className="advice-title">TIPS:</h2>
            <p className="advice-copy">1. If you have any questions, contact our online customer support. We will be happy to help.</p>
            <p className="advice-copy">2. Keep your password safe and never share it with anyone.</p>

@@ -55,28 +55,28 @@ export default function RulesPage() {
         </section>
 
         <section className="cp-rules-section">
-          <h2>3. Système de Parrainage</h2>
+          <h2>3. Referral system</h2>
           <ul>
-            <li>Commission de niveau 1 : {lv1}% sur le PREMIER investissement du filleul.</li>
-            <li>Commission de niveau 2 : {lv2}% sur le PREMIER investissement du filleul.</li>
-            <li>Commission de niveau 3 : {lv3}% sur le PREMIER investissement du filleul.</li>
-            <li>Les activités frauduleuses ou la création de comptes multiples pour manipuler le système entraîneront la suspension du compte.</li>
+            <li>Level 1 commission: {lv1}% on the referral's FIRST investment.</li>
+            <li>Level 2 commission: {lv2}% on the referral's FIRST investment.</li>
+            <li>Level 3 commission: {lv3}% on the referral's FIRST investment.</li>
+            <li>Fraudulent activity or creating multiple accounts to manipulate the system will result in account suspension.</li>
           </ul>
         </section>
 
         <section className="cp-rules-section">
-          <h2>4. Bonus d'inscription</h2>
+          <h2>4. Sign-up bonus</h2>
           <ul>
             <li>Each new member receives {parseInt(signupBonus).toLocaleString("en-PH")} PHP as a sign-up bonus.</li>
           </ul>
         </section>
 
         <section className="cp-rules-section">
-          <h2>5. Sécurité</h2>
+          <h2>5. Security</h2>
           <ul>
-            <li>Vous êtes responsable de la sécurité de votre mot de passe.</li>
-            <li>Ne partagez jamais vos identifiants de connexion avec des tiers.</li>
-            <li>Le service client officiel ne vous demandera jamais votre mot de passe.</li>
+            <li>You are responsible for keeping your password secure.</li>
+            <li>Never share your login credentials with third parties.</li>
+            <li>Official customer support will never ask for your password.</li>
           </ul>
         </section>
       </div>
