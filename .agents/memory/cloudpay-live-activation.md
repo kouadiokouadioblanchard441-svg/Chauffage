@@ -27,8 +27,14 @@ For deposits, derive `payment_type` from the selected merchant-confirmed bank co
 
 **How to apply:** Keep CloudPay disabled until the replacement secret, active deposit path, and any required egress allowlisting are confirmed. Use sandbox/merchant-approved verification first. Do not expose type 2 without its exact merchant bank-code mapping.
 
-For Replit preview live testing, keep any override limited to `NODE_ENV=development`; do not turn on the database-wide `cloudpayEnabled` flag just to expose CloudPay in preview. On 2026-09-30, the user confirmed Galaxy's `/api/transfer` and egress-allowlist confirmations and chose live testing in Replit preview. No real deposit was initiated.
+For Replit preview live testing, keep any override limited to `NODE_ENV=development`; do not turn on the database-wide `cloudpayEnabled` flag just to expose CloudPay in preview. On 2026-09-30, the user confirmed Galaxy's `/api/transfer` and egress-allowlist confirmations and chose live testing in Replit preview. The agent must not initiate a live payment as a verification step.
 
 **Why:** The app setting is stored in Neon and may also affect Plesk users if both runtimes share that database; Plesk's exact Neon configuration has not been verified.
 
 **How to apply:** Require explicit approval, a newly issued signing secret, and provider confirmation before using live mode. Keep preview-only behavior behind a development environment flag, leave production unchanged, and never create a real deposit as an agent-side verification.
+
+Treat an explicit provider `status: 0` during initiation as a provider rejection, not proof that the selected bank mapping is wrong. Preserve only a sanitized provider status and reason; do not change merchant-confirmed paths or payment-type/bank-code pairs without evidence.
+
+**Why:** Blindly changing a confirmed contract or retrying a live request can create duplicate or misrouted payments, while the provider's rejection reason distinguishes payload, merchant, signature, and allowlist issues.
+
+**How to apply:** Capture the provider's safe error detail, verify it against the merchant contract and account configuration, and only then change the request or settings. Do not issue another live initiation as an agent-side test.

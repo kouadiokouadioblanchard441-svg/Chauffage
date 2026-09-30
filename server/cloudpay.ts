@@ -15,11 +15,19 @@ const DEFAULT_DEPOSIT_PATH = "/api/transfer";
 
 export class CloudPayError extends Error {
   requestMayHaveReachedProvider: boolean;
+  providerStatus?: string;
+  providerMessage?: string;
 
-  constructor(message: string, requestMayHaveReachedProvider = false) {
+  constructor(
+    message: string,
+    requestMayHaveReachedProvider = false,
+    providerDetails: { status?: string; message?: string } = {},
+  ) {
     super(message);
     this.name = "CloudPayError";
     this.requestMayHaveReachedProvider = requestMayHaveReachedProvider;
+    this.providerStatus = providerDetails.status;
+    this.providerMessage = providerDetails.message;
   }
 }
 
@@ -143,6 +151,49 @@ function getResponsePayload(value: unknown): Record<string, unknown> {
   return body;
 }
 
+function getProviderStatus(payload: Record<string, unknown>): string {
+  const status = String(payload.status ?? "missing").trim();
+  return status.replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 40) || "missing";
+}
+
+function getProviderMessage(
+  payload: Record<string, unknown>,
+  sensitiveValues: string[],
+): string | undefined {
+  const rawMessage = [
+    payload.msg,
+    payload.message,
+    payload.error_message,
+    payload.errorMessage,
+    payload.reason,
+    payload.error,
+  ].find((value): value is string => typeof value === "string" && value.trim().length > 0);
+  if (!rawMessage) return undefined;
+
+  let message = rawMessage
+    .normalize("NFKC")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/https?:\/\/\S+/gi, "[redacted URL]")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[redacted email]")
+    .replace(
+      /(^|[\s,;])((?:sign|signature|signing[_-]?secret|secret|token|api[_-]?key|merchant(?:[_-]?id)?|account(?:[_-]?number)?|phone))\s*[:=]\s*[^,\s;&]+/gi,
+      "$1$2=[redacted]",
+    )
+    .replace(/\b(?:\+?\d[\d(). -]{6,}\d)\b/g, "[redacted number]")
+    .replace(/\b[a-f\d]{32,}\b/gi, "[redacted token]")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  for (const sensitiveValue of sensitiveValues) {
+    if (sensitiveValue.length < 4) continue;
+    const escaped = sensitiveValue.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    message = message.replace(new RegExp(escaped, "gi"), "[redacted]");
+  }
+
+  return message.slice(0, 180) || undefined;
+}
+
 async function postCloudPay(path: string, fields: CloudPayFields): Promise<Record<string, unknown>> {
   const config = getCloudPayConfig();
   const signedFields: Record<string, string> = {};
@@ -180,11 +231,19 @@ async function postCloudPay(path: string, fields: CloudPayFields): Promise<Recor
     throw new CloudPayError("CloudPay returned an unreadable response; check the transaction status before retrying", true);
   }
   const payload = getResponsePayload(parsed);
+  const providerStatus = getProviderStatus(payload);
+  const providerMessage = getProviderMessage(payload, [config.signingSecret, config.merchantId]);
   if (!response.ok) {
-    throw new CloudPayError(`CloudPay request failed with HTTP ${response.status}`, true);
+    throw new CloudPayError(`CloudPay request failed with HTTP ${response.status}`, true, {
+      status: providerStatus,
+      message: providerMessage,
+    });
   }
-  if (String(payload.status ?? "") !== "1" && path !== "/api/query") {
-    throw new CloudPayError(`CloudPay rejected the request (status ${String(payload.status ?? "missing")})`);
+  if (providerStatus !== "1" && path !== "/api/query") {
+    throw new CloudPayError(`CloudPay rejected the request (status ${providerStatus})`, false, {
+      status: providerStatus,
+      message: providerMessage,
+    });
   }
   return payload;
 }

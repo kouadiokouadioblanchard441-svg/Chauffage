@@ -4054,7 +4054,12 @@ export async function registerRoutes(
           message: "The request status is uncertain. Do not retry the payment; verification will continue automatically.",
         });
       }
-      return res.status(502).json({ message: "Unable to start the bank/e-wallet payment right now." });
+      const providerMessage = error instanceof CloudPayError ? error.providerMessage : undefined;
+      return res.status(502).json({
+        message: providerMessage
+          ? `Payment provider rejected the request: ${providerMessage}`
+          : "Unable to start the bank/e-wallet payment right now.",
+      });
     }
   });
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
+  CloudPayError,
   cloudPayAmountMatches,
   cloudPayCreateDeposit,
   cloudPayCreatePayout,
@@ -73,6 +74,10 @@ const responses = [
   { status: 1, qrcode_url: "https://checkout.example/gotyme-qr.png" },
   { status: 1, gcashqr: "https://checkout.example/gcash-qr.png" },
   { status: 1 },
+  {
+    status: 0,
+    message: "Invalid payment; signature=01234567890123456789012345678901; phone=09171234567; https://gateway.example/trace",
+  },
 ];
 
 for (const [key, value] of Object.entries({
@@ -205,6 +210,27 @@ try {
   assert.equal(payout.fields.get("amount"), null);
   assert.equal(payout.fields.get("bank_code"), null);
 
+  process.env.CLOUDPAY_DEPOSIT_PATH = "/api/transfer";
+  let providerRejection: unknown;
+  try {
+    await cloudPayCreateDeposit({
+      orderId: "CPD-test-provider-rejection",
+      amount: 250,
+      bankCode: "PMP",
+      callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
+      returnUrl: "https://merchant.example/robotpay",
+    });
+  } catch (error) {
+    providerRejection = error;
+  }
+  assert.ok(
+    providerRejection instanceof CloudPayError,
+    `Expected a CloudPayError, received: ${providerRejection instanceof Error ? providerRejection.message : String(providerRejection)}`,
+  );
+  assert.equal(providerRejection.providerStatus, "0");
+  assert.match(providerRejection.providerMessage || "", /Invalid payment/);
+  assert.doesNotMatch(providerRejection.providerMessage || "", /01234567890123456789012345678901|09171234567|gateway\.example/);
+
   process.env.CLOUDPAY_LIVE_ACTIVATION_CONFIRMED = "false";
   assert.equal(isCloudPayConfigured(), false);
   await assert.rejects(
@@ -217,7 +243,7 @@ try {
     }),
     /CLOUDPAY_LIVE_ACTIVATION_CONFIRMED/,
   );
-  assert.equal(requests.length, 4);
+  assert.equal(requests.length, 5);
 } finally {
   globalThis.fetch = originalFetch;
   for (const key of configKeys) {
