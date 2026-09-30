@@ -94,30 +94,44 @@ app.use((req, res, next) => {
     next();
   });
 
-  // Seed database with initial data
-  await seed().catch(console.error);
-  
+  app.locals.startupState = "starting";
+  const seedPromise = seed()
+    .then(() => {
+      app.locals.startupState = "ready";
+      return true;
+    })
+    .catch((error) => {
+      app.locals.startupState = "failed";
+      console.error(
+        "[startup] database seed failed; background jobs remain disabled:",
+        error,
+      );
+      return false;
+    });
+
+  // Keep Plesk's startup probe responsive while the database is initializing.
+  // The health endpoint remains available; application APIs wait for a
+  // successful seed so account and financial operations cannot race it.
+  app.use((req, res, next) => {
+    if (
+      !req.path.startsWith("/api") ||
+      req.path === "/api/health" ||
+      app.locals.startupState === "ready"
+    ) {
+      return next();
+    }
+    res.setHeader("Retry-After", "5");
+    return res.status(503).json({
+      status: app.locals.startupState,
+      message: "Application initialization is not complete",
+    });
+  });
+
   await registerRoutes(httpServer, app);
-  if (process.env.NODE_ENV === "production") {
-    startTelegramBot();
-    const scheduleTelegramSummary = () => {
-      const now = new Date();
-      const next = new Date(now);
-      next.setMinutes(0, 0, 0);
-      next.setHours(now.getHours() < 12 ? 12 : 24);
-      const delay = Math.max(1000, next.getTime() - now.getTime());
-      setTimeout(() => {
-        void sendDailyTelegramSummary().catch((error) => console.error("[telegram] summary failed:", error.message));
-        scheduleTelegramSummary();
-      }, delay);
-    };
-    scheduleTelegramSummary();
-  } else {
-    log("Telegram bot polling and summaries disabled outside production", "telegram");
-  }
 
   // Process daily earnings and staking releases
   const processEarningsInterval = async () => {
+    if (!(await seedPromise)) return;
     try {
       await storage.processEarnings();
       log("Daily earnings processed successfully", "earnings");
@@ -139,6 +153,7 @@ app.use((req, res, next) => {
 
   // Clean up deposit screenshots: approved/rejected deposits lose their image after 24h
   const cleanupScreenshots = async () => {
+    if (!(await seedPromise)) return;
     try {
       await storage.cleanupDepositScreenshots();
       log("Deposit screenshots cleanup done", "cleanup");
@@ -153,6 +168,7 @@ app.use((req, res, next) => {
   // browser. A pending transaction is checked until three hours old; at the
   // deadline one final provider check is made before marking it rejected.
   const reconcileAshtechDeposits = async () => {
+    if (!(await seedPromise)) return;
     if (!isAshtechConfigured()) return;
     try {
       const pendingDeposits = await storage.getPendingAshtechDeposits();
@@ -243,6 +259,37 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      void seedPromise.then((seedReady) => {
+        if (!seedReady) return;
+
+        if (process.env.NODE_ENV === "production") {
+          try {
+            startTelegramBot();
+          } catch (error) {
+            console.error("[telegram] bot startup failed:", error);
+          }
+
+          const scheduleTelegramSummary = () => {
+            const now = new Date();
+            const next = new Date(now);
+            next.setMinutes(0, 0, 0);
+            next.setHours(now.getHours() < 12 ? 12 : 24);
+            const delay = Math.max(1000, next.getTime() - now.getTime());
+            setTimeout(() => {
+              void sendDailyTelegramSummary().catch((error) =>
+                console.error("[telegram] summary failed:", error.message),
+              );
+              scheduleTelegramSummary();
+            }, delay);
+          };
+          scheduleTelegramSummary();
+        } else {
+          log(
+            "Telegram bot polling and summaries disabled outside production",
+            "telegram",
+          );
+        }
+      });
     },
   );
 
