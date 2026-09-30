@@ -126,7 +126,7 @@ export default function HomePage() {
     ...(withdrawalPrepaymentEnabled
       ? ["Prepayment: 25% of the requested amount before processing."]
       : []),
-    `Daily check-in bonus: ${formatPopupMoney(20)} to ${formatPopupMoney(50)}, available once every 24 hours.`,
+    `Daily check-in bonus: ${formatPopupMoney(5)} per day, available once every 24 hours.`,
     "Before confirming a request, check your wallet details and the displayed net amount.",
   ];
   const withdrawnTotal = withdrawals?.filter((item) => item.status === "approved")

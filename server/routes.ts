@@ -2680,7 +2680,7 @@ export async function registerRoutes(
     }
   });
 
-  // Daily bonus claim (random 20–50 FCFA every 24h)
+  // Daily check-in bonus: PHP 5 once every 24 hours.
   app.post("/api/claim-daily-bonus", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -2703,8 +2703,7 @@ export async function registerRoutes(
         }
       }
 
-      // Award a random whole amount between 20 and 50 FCFA, inclusive.
-      const bonusAmount = Math.floor(Math.random() * 31) + 20;
+      const bonusAmount = 5;
       const newBalance = parseFloat(user.balance) + bonusAmount;
       await storage.updateUser(user.id, { 
         balance: newBalance.toString(),
