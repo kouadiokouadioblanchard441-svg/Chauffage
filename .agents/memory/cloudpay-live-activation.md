@@ -9,6 +9,10 @@ The merchant-specific connection sheet gives the deposit path `/api/transfer`, w
 
 For deposits, derive `payment_type` from the selected merchant-confirmed bank code rather than a single global payment-type setting. Keep deposit mappings separate from the broader bank-code list used for withdrawals.
 
+**Why:** `payment_type` and `bank_code` form a merchant-specific API pair; guessing one can reject a deposit or send the user through the wrong payment flow.
+
+**How to apply:** Offer only the confirmed pairs (1/`got`, 3/`PMP`, 7/`mya`). Keep type 2 unavailable until Galaxy supplies its exact bank-code mapping.
+
 **Why:** A path-version mismatch can route deposits to an unsupported endpoint or leave them unreconciled.
 
 **How to apply:** Do not treat the two paths as interchangeable. Change the selected path only after Galaxy confirms which one is enabled for this merchant.
