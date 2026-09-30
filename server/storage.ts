@@ -91,6 +91,7 @@ export interface IStorage {
   getWithdrawalByInpayOutTradeNo(reference: string): Promise<Withdrawal | undefined>;
   getWithdrawalByCloudPayOrderId(orderId: string): Promise<Withdrawal | undefined>;
   updateWithdrawal(id: number, data: Partial<Withdrawal>): Promise<Withdrawal>;
+  claimManualWithdrawalApproval(id: number, processedBy: number): Promise<Withdrawal | undefined>;
   claimWithdrawalFinalization(id: number, status: "approved" | "rejected"): Promise<Withdrawal | undefined>;
   releaseWithdrawalProcessing(id: number, cloudpayOrderId: string): Promise<Withdrawal | undefined>;
   getUserWithdrawalCountToday(userId: number): Promise<number>;
@@ -930,6 +931,38 @@ export class DatabaseStorage implements IStorage {
         country: withdrawal.country,
         paymentMethod: withdrawal.paymentMethod,
         reference: withdrawal.cloudpayOrderId || withdrawal.inpayOutTradeNo,
+      });
+    }
+    return withdrawal;
+  }
+
+  async claimManualWithdrawalApproval(
+    id: number,
+    processedBy: number,
+  ): Promise<Withdrawal | undefined> {
+    const [withdrawal] = await db.update(withdrawals)
+      .set({ status: "approved", processedAt: new Date(), processedBy })
+      .where(and(
+        eq(withdrawals.id, id),
+        eq(withdrawals.status, "pending"),
+        sql`${withdrawals.cloudpayOrderId} IS NULL`,
+        sql`${withdrawals.inpayOutTradeNo} IS NULL`,
+        sql`${withdrawals.inpayOrderNumber} IS NULL`,
+        sql`${withdrawals.omnipayId} IS NULL`,
+        sql`${withdrawals.omnipayReference} IS NULL`,
+      ))
+      .returning();
+    if (withdrawal) {
+      notifyTelegramPaymentEvent({
+        kind: "withdrawal",
+        phase: "status",
+        id: withdrawal.id,
+        userId: withdrawal.userId,
+        amount: withdrawal.amount,
+        netAmount: withdrawal.netAmount,
+        status: withdrawal.status,
+        country: withdrawal.country,
+        paymentMethod: withdrawal.paymentMethod,
       });
     }
     return withdrawal;

@@ -5,9 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { X, Search, Loader2, Send } from "lucide-react";
+import { X, Search, Loader2, Send, CheckCircle2 } from "lucide-react";
 import type { Withdrawal } from "@shared/schema";
 
 interface WithdrawalWithUser extends Withdrawal {
@@ -24,6 +33,7 @@ export default function AdminWithdrawals() {
   const { toast } = useToast();
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "processing" | "approved" | "rejected">("pending");
+  const [manualApprovalId, setManualApprovalId] = useState<number | null>(null);
 
   const { data: allWithdrawals, isLoading } = useQuery<WithdrawalWithUser[]>({
     queryKey: ["/api/admin/withdrawals"],
@@ -64,6 +74,33 @@ export default function AdminWithdrawals() {
     onError: (error: any) => {
        toast({ title: "Unable to process withdrawal", description: error.message, variant: "destructive" });
     },
+    onSettled: () => setProcessingId(null),
+  });
+
+  const manualApprovalMutation = useMutation({
+    mutationFn: async (id: number) => {
+      setProcessingId(id);
+      const res = await fetch(`/api/admin/withdrawals/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manualTransferConfirmed: true }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || `Manual withdrawal approval failed (code ${res.status})`);
+      return data;
+    },
+    onSuccess: () => {
+      setManualApprovalId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "Withdrawal marked paid manually" });
+    },
+    onError: (error: any) => toast({
+      title: "Unable to mark withdrawal paid",
+      description: error.message,
+      variant: "destructive",
+    }),
     onSettled: () => setProcessingId(null),
   });
 
@@ -121,6 +158,9 @@ export default function AdminWithdrawals() {
     ((w as any).inpayOrderNumber && (w as any).inpayOrderNumber.toLowerCase().includes(filter.toLowerCase())) ||
     ((w as any).cloudpayOrderId && (w as any).cloudpayOrderId.toLowerCase().includes(filter.toLowerCase()))
   ) || [];
+  const manualApprovalTarget = allWithdrawals?.find(
+    (withdrawal) => withdrawal.id === manualApprovalId,
+  );
 
   return (
     <div className="space-y-4">
@@ -260,6 +300,23 @@ export default function AdminWithdrawals() {
                             : <><Send className="w-4 h-4 mr-1" /> Send to CloudPay</>}
                         </Button>
                       )}
+                    {!withdrawal.cloudpayOrderId &&
+                      !withdrawal.inpayOutTradeNo &&
+                      !withdrawal.inpayOrderNumber &&
+                      !withdrawal.omnipayId &&
+                      !withdrawal.omnipayReference && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setManualApprovalId(withdrawal.id)}
+                          disabled={processingId === withdrawal.id}
+                          data-testid={`button-manual-paid-${withdrawal.id}`}
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-1" />
+                          Mark paid manually
+                        </Button>
+                      )}
                     <Button
                       size="sm"
                       variant="destructive"
@@ -294,6 +351,42 @@ export default function AdminWithdrawals() {
           </div>
         )}
       </div>
+      <AlertDialog
+        open={manualApprovalId !== null}
+        onOpenChange={(open) => {
+          if (!open && !manualApprovalMutation.isPending) setManualApprovalId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm manual payout</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action does not send money. Only confirm after you have completed the transfer outside CloudPay.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {manualApprovalTarget && (
+            <div className="rounded-md border p-3 text-sm">
+              <p><strong>Net amount:</strong> {manualApprovalTarget.netAmount.toLocaleString()} PHP</p>
+              <p><strong>Recipient:</strong> {manualApprovalTarget.accountName}</p>
+              <p><strong>Receiving number:</strong> {manualApprovalTarget.accountNumber}</p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={manualApprovalMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              type="button"
+              disabled={!manualApprovalTarget || manualApprovalMutation.isPending}
+              onClick={() => {
+                if (manualApprovalTarget) manualApprovalMutation.mutate(manualApprovalTarget.id);
+              }}
+            >
+              {manualApprovalMutation.isPending ? "Processing…" : "I sent it — mark paid"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -2988,21 +2988,48 @@ export async function registerRoutes(
 
   app.post("/api/admin/withdrawals/:id/approve", requireAdmin, async (req, res) => {
     try {
-      const withdrawalId = parseInt(req.params.id);
-      const existingWithdrawal = await storage.getWithdrawals();
-      const withdrawalData = existingWithdrawal.find(w => w.id === withdrawalId);
-      
+      const withdrawalId = Number(req.params.id);
+      if (!Number.isSafeInteger(withdrawalId) || withdrawalId <= 0) {
+        return res.status(400).json({ message: "Invalid withdrawal ID" });
+      }
+      if (req.body?.manualTransferConfirmed !== true) {
+        return res.status(400).json({
+          message: "Confirm that the external manual transfer has already been sent.",
+        });
+      }
+      const withdrawalData = (await storage.getWithdrawals())
+        .find((withdrawal) => withdrawal.id === withdrawalId);
       if (!withdrawalData) {
         return res.status(404).json({ message: "Withdrawal not found" });
       }
+      if (
+        withdrawalData.status !== "pending" ||
+        withdrawalData.cloudpayOrderId ||
+        withdrawalData.inpayOutTradeNo ||
+        withdrawalData.inpayOrderNumber ||
+        withdrawalData.omnipayId ||
+        withdrawalData.omnipayReference
+      ) {
+        return res.status(409).json({
+          message: "Only pending withdrawals that have not been sent to a provider can be marked paid manually.",
+        });
+      }
+      const withdrawal = await storage.claimManualWithdrawalApproval(
+        withdrawalId,
+        req.session.userId!,
+      );
+      if (!withdrawal) {
+        return res.status(409).json({
+          message: "This withdrawal was processed or sent to a provider before manual approval completed.",
+        });
+      }
 
-      const withdrawal = await storage.updateWithdrawal(withdrawalId, {
-        status: "approved",
-        processedAt: new Date(),
-        processedBy: req.session.userId,
-      });
-
-      await storage.logAdminAction(req.session.userId!, "approve_withdrawal", withdrawalData.userId, `Withdrawal ${withdrawal.id} approved: ${withdrawalData.netAmount} PHP`);
+      await storage.logAdminAction(
+        req.session.userId!,
+        "approve_withdrawal",
+        withdrawalData.userId,
+        `Withdrawal ${withdrawal.id} marked paid manually after admin confirmation: ${withdrawalData.netAmount} PHP`,
+      );
       res.json(withdrawal);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
