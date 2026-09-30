@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import multer from "multer";
 import { storage } from "./storage";
+import { pool } from "./db";
 import bcrypt from "bcrypt";
 import { registerSchema, loginSchema, depositSchema, walletSchema, phoneNumberSchema } from "@shared/schema";
 import { getWithdrawalMethods, isAllowedWithdrawalMethod } from "@shared/withdrawal-methods";
@@ -256,12 +257,8 @@ declare module "express-session" {
 }
 
 const PgSession = ConnectPgSimple(session);
-const sessionDatabaseUrl = process.env.NEON_DATABASE_URL;
 const sessionSecret = process.env.SESSION_SECRET;
 
-if (!sessionDatabaseUrl) {
-  throw new Error("No database URL configured for session storage.");
-}
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET must be configured.");
 }
@@ -541,10 +538,26 @@ export async function registerRoutes(
   // Trust proxy for production HTTPS (Replit deployment)
   app.set("trust proxy", 1);
 
+  // Use the same Neon pool as application queries for a simple readiness check.
+  // This route deliberately runs before session middleware so it can diagnose
+  // database connectivity even when the session store cannot reach Neon.
+  app.get("/api/health", async (_req, res) => {
+    try {
+      await pool.query("SELECT 1");
+      res.status(200).json({ status: "ok", database: "connected" });
+    } catch (error) {
+      console.error(
+        "[health] Neon database check failed:",
+        error instanceof Error ? error.message : error,
+      );
+      res.status(503).json({ status: "error", database: "unavailable" });
+    }
+  });
+
   app.use(
     session({
       store: new PgSession({
-        conString: sessionDatabaseUrl,
+        pool,
         tableName: "session",
         createTableIfMissing: true,
         pruneSessionInterval: 60 * 60,
