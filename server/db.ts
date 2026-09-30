@@ -12,6 +12,7 @@ if (!databaseUrl) {
 
 export const pool = new Pool({
   connectionString: databaseUrl,
+  connectionTimeoutMillis: 10_000,
   ssl: { rejectUnauthorized: false },
 });
 export const db = drizzle(pool, { schema });
