@@ -96,7 +96,7 @@ Preferred communication style: Simple, everyday language.
 ### First-time setup
 ```bash
 npm install          # install dependencies
-npm run db:push      # create/update the schema in the configured Supabase database
+npm run db:push      # create/update the schema in the configured Neon database
 npm run dev          # start the development server on port 5000
 ```
 

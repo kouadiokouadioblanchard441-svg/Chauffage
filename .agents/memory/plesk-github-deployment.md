@@ -7,7 +7,7 @@ For this project, Plesk must pull the versioned `dist` directory from GitHub; th
 
 **Why:** Plesk does not automatically see the Replit workspace build, and a missing or incorrect document root causes either “startup file not found” or a 403 response.
 
-**How to apply:** Keep `dist` tracked for Plesk pulls, use `/dist/public` as the document root relative to the application root, use `dist/index.cjs` as the startup file, and provide `SUPABASE_NEW_DATABASE_URL` plus `SESSION_SECRET` as server environment variables.
+**How to apply:** Keep `dist` tracked for Plesk pulls, use `/dist/public` as the document root relative to the application root, use `dist/index.cjs` as the startup file, and provide `NEON_DATABASE_URL` plus `SESSION_SECRET` as server environment variables.
 
 Plesk can serve the current static `index.html` while its Node.js process is failing; a working `/` is not proof that login or API routes work. The downloadable `plesk-deploy-bundle.zip` is separate from GitHub's tracked `dist` and can become stale. A GitHub push alone may not pull the new files or restart Node.
 
