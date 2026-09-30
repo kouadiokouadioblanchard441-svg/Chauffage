@@ -39,6 +39,7 @@ const configKeys = [
   "CLOUDPAY_PAYMENT_TYPE",
   "CLOUDPAY_AMOUNT_CURRENCY",
   "CLOUDPAY_API_BASE_URL",
+  "CLOUDPAY_DEPOSIT_PATH",
   "CLOUDPAY_LIVE_ACTIVATION_CONFIRMED",
 ] as const;
 const savedConfig = Object.fromEntries(configKeys.map((key) => [key, process.env[key]]));
@@ -83,7 +84,7 @@ try {
     returnUrl: "https://merchant.example/robotpay",
   });
   const webDeposit = requests[0];
-  assert.equal(webDeposit.url.toString(), "https://gateway.example/api/pay/transfer");
+  assert.equal(webDeposit.url.toString(), "https://gateway.example/api/transfer");
   assert.equal(webDeposit.fields.get("merchant"), "merchant-test");
   assert.equal(webDeposit.fields.get("payment_type"), "2");
   assert.equal(webDeposit.fields.get("amount"), "3500.00");
@@ -96,6 +97,7 @@ try {
   );
   assert.equal(webDeposit.fields.get("sign"), signCloudPayFields(webSignFields, "test-signing-secret"));
 
+  process.env.CLOUDPAY_DEPOSIT_PATH = "/api/pay/transfer";
   process.env.CLOUDPAY_PAYMENT_TYPE = "1";
   const qrResult = await cloudPayCreateDeposit({
     orderId: "CPD-test-qr",
@@ -122,6 +124,20 @@ try {
       returnUrl: "https://merchant.example/robotpay",
     }),
     /GCash/,
+  );
+  assert.equal(requests.length, 2);
+
+  process.env.CLOUDPAY_DEPOSIT_PATH = "/api/invalid";
+  await assert.rejects(
+    () => cloudPayCreateDeposit({
+      orderId: "CPD-test-invalid-path",
+      amount: 250,
+      bankCode: "gcash",
+      customerAccount: "+639171234567",
+      callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
+      returnUrl: "https://merchant.example/robotpay",
+    }),
+    /CLOUDPAY_DEPOSIT_PATH/,
   );
   assert.equal(requests.length, 2);
 
