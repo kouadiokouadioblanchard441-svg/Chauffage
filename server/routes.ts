@@ -594,8 +594,7 @@ export async function registerRoutes(
           /^\/api\/admin\/channels\/\d+$/.test(path))) ||
       (req.method === "POST" && /^\/api\/admin\/withdrawals\/\d+\/inpay$/.test(path)) ||
       (req.method === "POST" &&
-        (/^\/api\/admin\/withdrawals\/\d+\/approve$/.test(path) ||
-          /^\/api\/banker\/withdrawals\/\d+\/approve$/.test(path)));
+        /^\/api\/banker\/withdrawals\/\d+\/approve$/.test(path));
 
     if (isDisabledPaymentInitiation) {
       return res.status(410).json({

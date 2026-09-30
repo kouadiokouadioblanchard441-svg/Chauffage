@@ -7,6 +7,12 @@ Do not make live CloudPay/Galaxy requests using the credential exposed in chat. 
 
 The merchant-specific connection sheet gives the deposit path `/api/transfer`, while the earlier protocol screenshots show `/api/pay/transfer`. Keep only these documented paths selectable, default to the merchant-specific path, and confirm the production path with Galaxy before live activation.
 
+The user supplied `dmxping.online` as the Plesk production hostname. CloudPay callbacks require HTTPS; configure `PUBLIC_APP_URL=https://dmxping.online` in Plesk only, not in Replit's shared development environment.
+
+**Why:** An insecure callback URL fails the app's CloudPay checks, and pointing shared development settings at production can send test flows to the live site.
+
+**How to apply:** Keep the Plesk callback and return URLs on the HTTPS domain, and leave Replit development URLs separate.
+
 For deposits, derive `payment_type` from the selected merchant-confirmed bank code rather than a single global payment-type setting. Keep deposit mappings separate from the broader bank-code list used for withdrawals.
 
 **Why:** `payment_type` and `bank_code` form a merchant-specific API pair; guessing one can reject a deposit or send the user through the wrong payment flow.
