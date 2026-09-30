@@ -80,6 +80,13 @@ export function isCloudPayConfigured(): boolean {
   }
 }
 
+export function isCloudPayDepositEnabled(cloudpayEnabled: string | undefined): boolean {
+  if (cloudpayEnabled === "true") return true;
+  return process.env.NODE_ENV === "development" &&
+    process.env.CLOUDPAY_DEV_PREVIEW_ENABLED?.trim().toLowerCase() === "true" &&
+    isCloudPayConfigured();
+}
+
 function compareAscii(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }

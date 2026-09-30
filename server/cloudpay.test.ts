@@ -6,6 +6,7 @@ import {
   cloudPayCreatePayout,
   formatCloudPayAmount,
   isCloudPayConfigured,
+  isCloudPayDepositEnabled,
   mapCloudPayStatus,
   signCloudPayFields,
   verifyCloudPaySignature,
@@ -60,9 +61,11 @@ const configKeys = [
   "CLOUDPAY_AMOUNT_CURRENCY",
   "CLOUDPAY_API_BASE_URL",
   "CLOUDPAY_DEPOSIT_PATH",
+  "CLOUDPAY_DEV_PREVIEW_ENABLED",
   "CLOUDPAY_LIVE_ACTIVATION_CONFIRMED",
 ] as const;
 const savedConfig = Object.fromEntries(configKeys.map((key) => [key, process.env[key]]));
+const savedNodeEnv = process.env.NODE_ENV;
 const originalFetch = globalThis.fetch;
 const requests: Array<{ url: URL; fields: URLSearchParams }> = [];
 const responses = [
@@ -77,6 +80,7 @@ for (const [key, value] of Object.entries({
   CLOUDPAY_SIGNING_SECRET: "test-signing-secret",
   CLOUDPAY_AMOUNT_CURRENCY: "PHP",
   CLOUDPAY_API_BASE_URL: "https://gateway.example",
+  CLOUDPAY_DEV_PREVIEW_ENABLED: "true",
   CLOUDPAY_LIVE_ACTIVATION_CONFIRMED: "true",
 })) {
   process.env[key] = value;
@@ -96,6 +100,16 @@ globalThis.fetch = (async (input, init) => {
 }) as typeof fetch;
 
 try {
+  process.env.NODE_ENV = "development";
+  assert.equal(isCloudPayDepositEnabled(undefined), true);
+  process.env.NODE_ENV = "production";
+  assert.equal(isCloudPayDepositEnabled(undefined), false);
+  assert.equal(isCloudPayDepositEnabled("true"), true);
+  process.env.NODE_ENV = "development";
+  process.env.CLOUDPAY_DEV_PREVIEW_ENABLED = "false";
+  assert.equal(isCloudPayDepositEnabled(undefined), false);
+  process.env.CLOUDPAY_DEV_PREVIEW_ENABLED = "true";
+
   await cloudPayCreateDeposit({
     orderId: "CPD-test-web",
     amount: 3500,
@@ -211,6 +225,8 @@ try {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
+  if (savedNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = savedNodeEnv;
 }
 
 console.log("CloudPay contract tests passed.");

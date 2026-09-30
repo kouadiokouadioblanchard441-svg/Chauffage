@@ -83,6 +83,7 @@ import {
   getCloudPayMerchantId,
   getCloudPaySigningSecret,
   isCloudPayConfigured,
+  isCloudPayDepositEnabled,
   validateCloudPayConfig,
   verifyCloudPaySignature,
 } from "./cloudpay";
@@ -357,7 +358,7 @@ function getAssignedDepositMethods(
   country: string,
   settings: Record<string, string>,
 ): DepositMethodId[] {
-  return isPhilippinesCountryCode(country) && settings.cloudpayEnabled === "true"
+  return isPhilippinesCountryCode(country) && isCloudPayDepositEnabled(settings.cloudpayEnabled)
     ? ["cloudpay"]
     : [];
 }
@@ -366,7 +367,7 @@ function isDepositProviderGloballyEnabled(
   method: DepositMethodId,
   settings: Record<string, string>,
 ): boolean {
-  return method === "cloudpay" && settings.cloudpayEnabled === "true";
+  return method === "cloudpay" && isCloudPayDepositEnabled(settings.cloudpayEnabled);
 }
 
 function isDepositMethodConfigured(
