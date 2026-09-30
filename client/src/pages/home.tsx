@@ -110,18 +110,18 @@ export default function HomePage() {
     return Number.isFinite(value) ? value : fallback;
   };
   const minimumDeposit = Math.max(3500, parseIntegerSetting("minDeposit", 3500));
-  const minimumWithdrawal = parseIntegerSetting("minWithdrawal", 800);
+  const minimumWithdrawal = parseIntegerSetting("minWithdrawal", 60);
   const withdrawalFee = parseDecimalSetting("withdrawalFees", 16);
-  const withdrawalStartHour = parseIntegerSetting("withdrawalStartHour", 9);
-  const withdrawalEndHour = parseIntegerSetting("withdrawalEndHour", 17);
-  const maxWithdrawalsPerDay = parseIntegerSetting("maxWithdrawalsPerDay", 1);
+  const withdrawalStartHour = parseIntegerSetting("withdrawalStartHour", 0);
+  const withdrawalEndHour = parseIntegerSetting("withdrawalEndHour", 24);
+  const maxWithdrawalsPerDay = parseIntegerSetting("maxWithdrawalsPerDay", 3);
   const withdrawalPrepaymentEnabled = settings?.withdrawalPrepaymentEnabled === "true";
   const popupRules = [
     `Minimum deposit: ${formatPopupMoney(minimumDeposit)}.`,
     `Minimum withdrawal: ${formatPopupMoney(minimumWithdrawal)}.`,
     `Withdrawal fee: ${withdrawalFee.toLocaleString("en-PH", { maximumFractionDigits: 2 })}% of the requested amount. The estimated net amount after fees is shown before confirmation.`,
     `Daily withdrawal limit: ${maxWithdrawalsPerDay} request${maxWithdrawalsPerDay === 1 ? "" : "s"} per day.`,
-    `Withdrawal hours: ${withdrawalStartHour}:00 to ${withdrawalEndHour}:00.`,
+    `Withdrawal hours: ${String(withdrawalStartHour).padStart(2, "0")}:00 to ${String(withdrawalEndHour).padStart(2, "0")}:00.`,
     "Processing time: usually within 2 hours and, exceptionally, up to 24 hours.",
     ...(withdrawalPrepaymentEnabled
       ? ["Prepayment: 25% of the requested amount before processing."]

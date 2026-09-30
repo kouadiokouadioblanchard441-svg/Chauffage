@@ -225,10 +225,10 @@ export class DatabaseStorage implements IStorage {
     const hashedPassword = await bcrypt.hash(data.password!, 10);
 
     // Get signup bonus from settings (default 1000)
-    let signupBonus = "1000";
+    let signupBonus = "30";
     try {
       const settings = await this.getSettings();
-      signupBonus = settings.signupBonus || "1000";
+      signupBonus = settings.signupBonus || "30";
     } catch {}
 
     const [user] = await db.insert(users).values({
@@ -418,8 +418,8 @@ export class DatabaseStorage implements IStorage {
 
     const settings = await this.getSettings();
     const level1Rate = parseFloat(settings.level1Commission || "25") / 100;
-    const level2Rate = parseFloat(settings.level2Commission || "4") / 100;
-    const level3Rate = parseFloat(settings.level3Commission || "1") / 100;
+    const level2Rate = parseFloat(settings.level2Commission || "3") / 100;
+    const level3Rate = parseFloat(settings.level3Commission || "2") / 100;
 
     // Level 1
     const level1User = await this.getUserByReferralCode(user.referredBy);

@@ -7,17 +7,31 @@ export default function RulesPage() {
   const { data: settings } = useQuery<Record<string, string>>({
     queryKey: ["/api/settings"],
   });
+  const { data: products = [] } = useQuery<Array<{
+    price: number;
+    dailyEarnings: number;
+    cycleDays: number;
+    isFree: boolean;
+    isActive: boolean;
+  }>>({
+    queryKey: ["/api/products"],
+  });
 
-  const signupBonus = settings?.signupBonus || "1000";
+  const signupBonus = settings?.signupBonus || "30";
   const minDeposit = settings?.minDeposit || "3500";
-  const minWithdrawal = settings?.minWithdrawal || "800";
+  const minWithdrawal = settings?.minWithdrawal || "60";
   const withdrawalFees = settings?.withdrawalFees || "16";
-  const withdrawalStartHour = settings?.withdrawalStartHour || "9";
-  const withdrawalEndHour = settings?.withdrawalEndHour || "17";
-  const maxWithdrawalsPerDay = settings?.maxWithdrawalsPerDay || "1";
+  const withdrawalStartHour = settings?.withdrawalStartHour || "0";
+  const withdrawalEndHour = settings?.withdrawalEndHour || "24";
+  const maxWithdrawalsPerDay = settings?.maxWithdrawalsPerDay || "3";
   const lv1 = settings?.level1Commission || "25";
-  const lv2 = settings?.level2Commission || "4";
-  const lv3 = settings?.level3Commission || "1";
+  const lv2 = settings?.level2Commission || "3";
+  const lv3 = settings?.level3Commission || "2";
+  const activePaidProducts = products.filter((product) => product.isActive && !product.isFree);
+  const minimumProductPrice = activePaidProducts.length
+    ? Math.min(...activePaidProducts.map((product) => product.price))
+    : null;
+  const cycleLengths = Array.from(new Set(activePaidProducts.map((product) => product.cycleDays))).sort((a, b) => a - b);
 
   return (
     <main className="cp-rules-page">
@@ -38,7 +52,7 @@ export default function RulesPage() {
           <ul>
             <li>Each user may own multiple investment products at the same time.</li>
             <li>Earnings are generated daily and credited to your account balance every 24 hours.</li>
-            <li>The standard investment cycle is 80 days unless otherwise stated for special products.</li>
+            <li>Investment cycle: {cycleLengths.length === 1 ? `${cycleLengths[0]} days` : "see the duration shown on each product"}.</li>
           </ul>
         </section>
 
@@ -46,10 +60,10 @@ export default function RulesPage() {
           <h2>2. Deposits and withdrawals</h2>
           <ul>
             <li>The minimum deposit is {parseInt(minDeposit).toLocaleString("en-PH")} PHP.</li>
-            <li>The minimum product purchase is 4,500 PHP.</li>
+            {minimumProductPrice !== null && <li>The minimum product purchase is {minimumProductPrice.toLocaleString("en-PH")} PHP.</li>}
             <li>The minimum withdrawal is {parseInt(minWithdrawal).toLocaleString("en-PH")} PHP.</li>
             <li>Withdrawal fees are set at {withdrawalFees}% to cover transaction and maintenance costs.</li>
-            <li>Withdrawals are processed between {withdrawalStartHour}:00 and {withdrawalEndHour}:00 on business days.</li>
+            <li>Withdrawals are available between {String(withdrawalStartHour).padStart(2, "0")}:00 and {String(withdrawalEndHour).padStart(2, "0")}:00.</li>
             <li>Limit of {maxWithdrawalsPerDay} withdrawal(s) per user per day.</li>
           </ul>
         </section>

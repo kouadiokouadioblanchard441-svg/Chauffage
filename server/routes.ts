@@ -2413,7 +2413,7 @@ export async function registerRoutes(
       }
 
       const settingsForWithdrawal = await storage.getSettings();
-      const minWithdrawal = parseInt(settingsForWithdrawal.minWithdrawal || "800");
+      const minWithdrawal = parseInt(settingsForWithdrawal.minWithdrawal || "60");
       const withdrawalPrepaymentEnabled = settingsForWithdrawal.withdrawalPrepaymentEnabled === "true";
       if (!Number.isInteger(numericAmount) || numericAmount < minWithdrawal) {
         return res.status(400).json({ message: `Minimum amount: ${minWithdrawal} PHP` });
@@ -2494,7 +2494,7 @@ export async function registerRoutes(
 
       const todayCount = await storage.getUserWithdrawalCountToday(user.id);
       const settingsForMax = await storage.getSettings();
-      const maxPerDay = parseInt(settingsForMax.maxWithdrawalsPerDay || "1");
+      const maxPerDay = parseInt(settingsForMax.maxWithdrawalsPerDay || "3");
       if (todayCount >= maxPerDay) {
         return res.status(400).json({ message: `Maximum ${maxPerDay} withdrawal${maxPerDay > 1 ? 's' : ''} per day` });
       }
@@ -2800,8 +2800,8 @@ export async function registerRoutes(
         support2Label: settings.support2Label || "Customer support 2",
         channelLabel: settings.channelLabel || "Official channel",
         groupLabel: settings.groupLabel || "Discussion group",
-        withdrawalStartHour: settings.withdrawalStartHour || "9",
-        withdrawalEndHour: settings.withdrawalEndHour || "17",
+        withdrawalStartHour: settings.withdrawalStartHour || "0",
+        withdrawalEndHour: settings.withdrawalEndHour || "24",
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2813,10 +2813,10 @@ export async function registerRoutes(
       const settings = await storage.getSettings();
       res.json({
         withdrawalFees: parseFloat(settings.withdrawalFees || "16"),
-        withdrawalStartHour: parseInt(settings.withdrawalStartHour || "9"),
-        withdrawalEndHour: parseInt(settings.withdrawalEndHour || "17"),
-        maxWithdrawalsPerDay: parseInt(settings.maxWithdrawalsPerDay || "1"),
-        minWithdrawal: parseInt(settings.minWithdrawal || "800"),
+        withdrawalStartHour: parseInt(settings.withdrawalStartHour || "0"),
+        withdrawalEndHour: parseInt(settings.withdrawalEndHour || "24"),
+        maxWithdrawalsPerDay: parseInt(settings.maxWithdrawalsPerDay || "3"),
+        minWithdrawal: parseInt(settings.minWithdrawal || "60"),
         withdrawalPrepaymentEnabled: settings.withdrawalPrepaymentEnabled === "true",
       });
     } catch (error: any) {

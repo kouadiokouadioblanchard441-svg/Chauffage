@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, tasks, paymentChannels, platformSettings, countries } from "@shared/schema";
+import { users, tasks, paymentChannels, platformSettings, countries, products } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { eq, sql } from "drizzle-orm";
 
@@ -142,7 +142,8 @@ export async function seed() {
     console.log("Philippines activated; all other country records preserved as inactive");
   }
 
-  // Product and staking catalogs are administered in the panel; do not seed hardcoded catalog entries.
+  // Product and staking catalogs are normally administered in the panel. Only the
+  // explicitly authorized, one-time VIP version migration below changes this catalog.
 
   // Seed tasks only if table is empty (first install only — never overwrite admin changes)
   const existingTasks = await db.select().from(tasks);
@@ -214,16 +215,16 @@ export async function seed() {
     { key: "channelEnabled", value: "true" },
     { key: "groupEnabled", value: "true" },
     { key: "minDeposit", value: "3500" },
-    { key: "minWithdrawal", value: "800" },
+    { key: "minWithdrawal", value: "60" },
     { key: "withdrawalFees", value: "16" },
-    { key: "withdrawalStartHour", value: "9" },
-    { key: "withdrawalEndHour", value: "17" },
-    { key: "maxWithdrawalsPerDay", value: "1" },
+    { key: "withdrawalStartHour", value: "0" },
+    { key: "withdrawalEndHour", value: "24" },
+    { key: "maxWithdrawalsPerDay", value: "3" },
     { key: "withdrawalPrepaymentEnabled", value: "false" },
     { key: "level1Commission", value: "25" },
-    { key: "level2Commission", value: "4" },
-    { key: "level3Commission", value: "1" },
-    { key: "signupBonus", value: "1000" },
+    { key: "level2Commission", value: "3" },
+    { key: "level3Commission", value: "2" },
+    { key: "signupBonus", value: "30" },
     { key: "soleaspayEnabled", value: "false" },
     { key: "soleaspayCountries", value: "" },
     { key: "soleaspayChannelName", value: "SoleaPay" },
@@ -284,26 +285,149 @@ export async function seed() {
     console.log("Withdrawal fee setting migrated to 16%");
   }
 
-  const signupBonusMigrationKey = "migration_signup_bonus_1000_applied";
+  const signupBonusMigrationKey = "migration_signup_bonus_30_applied";
   if (!existingSettings.some((setting) => setting.key === signupBonusMigrationKey)) {
     await db.update(platformSettings)
-      .set({ value: "1000", modifiedAt: new Date() })
+      .set({ value: "30", modifiedAt: new Date() })
       .where(eq(platformSettings.key, "signupBonus"));
     await db.insert(platformSettings)
       .values({ key: signupBonusMigrationKey, value: "true" })
       .onConflictDoNothing();
-     console.log("Signup bonus setting migrated to 1000 PHP");
+    console.log("Signup bonus setting migrated to 30 PHP");
   }
 
-  const minimumWithdrawalMigrationKey = "migration_min_withdrawal_800_applied";
+  const minimumWithdrawalMigrationKey = "migration_min_withdrawal_60_applied";
   if (!existingSettings.some((setting) => setting.key === minimumWithdrawalMigrationKey)) {
     await db.update(platformSettings)
-      .set({ value: "800", modifiedAt: new Date() })
+      .set({ value: "60", modifiedAt: new Date() })
       .where(eq(platformSettings.key, "minWithdrawal"));
     await db.insert(platformSettings)
       .values({ key: minimumWithdrawalMigrationKey, value: "true" })
       .onConflictDoNothing();
-     console.log("Minimum withdrawal setting migrated to 800 PHP");
+    console.log("Minimum withdrawal setting migrated to 60 PHP");
+  }
+
+  const vipCatalogMigrationKey = "migration_vip_catalog_future_terms_v1";
+  if (!existingSettings.some((setting) => setting.key === vipCatalogMigrationKey)) {
+    const vipPlans = [
+      { tier: 1, price: 200, dailyEarnings: 30 },
+      { tier: 2, price: 500, dailyEarnings: 75 },
+      { tier: 3, price: 1000, dailyEarnings: 145 },
+      { tier: 4, price: 2500, dailyEarnings: 360 },
+      { tier: 5, price: 5000, dailyEarnings: 730 },
+      { tier: 6, price: 7500, dailyEarnings: 1070 },
+      { tier: 7, price: 10000, dailyEarnings: 1450 },
+      { tier: 8, price: 20000, dailyEarnings: 2860 },
+    ].map((plan) => ({ ...plan, cycleDays: 125, totalReturn: plan.dailyEarnings * 125 }));
+    let createdCount = 0;
+    let reusedCount = 0;
+    let deactivatedCount = 0;
+
+    await db.transaction(async (tx) => {
+      const appliedMarker = await tx.select({ id: platformSettings.id })
+        .from(platformSettings)
+        .where(eq(platformSettings.key, vipCatalogMigrationKey))
+        .limit(1);
+      if (appliedMarker.length > 0) return;
+
+      const currentProducts = await tx.select().from(products);
+      const getVipTier = (name: string): number | null => {
+        const match = name.trim().toLowerCase().replace(/[\s_-]+/g, "").match(/^vip([1-8])$/);
+        return match ? Number(match[1]) : null;
+      };
+      const existingPlanByTier = new Map<number, (typeof currentProducts)[number]>();
+
+      for (const plan of vipPlans) {
+        const exactMatches = currentProducts
+          .filter((product) =>
+            !product.isFree &&
+            getVipTier(product.name) === plan.tier &&
+            product.price === plan.price &&
+            product.dailyEarnings === plan.dailyEarnings &&
+            product.cycleDays === plan.cycleDays &&
+            product.totalReturn === plan.totalReturn
+          )
+          .sort((a, b) => Number(b.isActive) - Number(a.isActive) || b.id - a.id);
+        if (exactMatches[0]) existingPlanByTier.set(plan.tier, exactMatches[0]);
+      }
+
+      const keptProductIds = new Set(
+        Array.from(existingPlanByTier.values(), (product) => product.id),
+      );
+      for (const product of currentProducts) {
+        if (!product.isFree && product.isActive && !keptProductIds.has(product.id)) {
+          await tx.update(products)
+            .set({ isActive: false })
+            .where(eq(products.id, product.id));
+          deactivatedCount += 1;
+        }
+      }
+
+      for (const plan of vipPlans) {
+        const existingPlan = existingPlanByTier.get(plan.tier);
+        if (existingPlan) {
+          await tx.update(products)
+            .set({ isActive: true, sortOrder: plan.tier })
+            .where(eq(products.id, existingPlan.id));
+          reusedCount += 1;
+          continue;
+        }
+
+        const previousTierProduct = currentProducts
+          .filter((product) => getVipTier(product.name) === plan.tier)
+          .sort((a, b) => b.id - a.id)[0];
+        await tx.insert(products).values({
+          name: `VIP${plan.tier}`,
+          price: plan.price,
+          dailyEarnings: plan.dailyEarnings,
+          cycleDays: plan.cycleDays,
+          totalReturn: plan.totalReturn,
+          imageUrl: previousTierProduct?.imageUrl ?? null,
+          isFree: false,
+          isActive: true,
+          sortOrder: plan.tier,
+        });
+        createdCount += 1;
+      }
+
+      const vipSettings = [
+        { key: "level1Commission", value: "25" },
+        { key: "level2Commission", value: "3" },
+        { key: "level3Commission", value: "2" },
+        { key: "signupBonus", value: "30" },
+        { key: "minWithdrawal", value: "60" },
+        { key: "withdrawalStartHour", value: "0" },
+        { key: "withdrawalEndHour", value: "24" },
+        { key: "maxWithdrawalsPerDay", value: "3" },
+      ];
+      for (const setting of vipSettings) {
+        const existingSetting = await tx.select({ id: platformSettings.id })
+          .from(platformSettings)
+          .where(eq(platformSettings.key, setting.key))
+          .limit(1);
+        if (existingSetting.length > 0) {
+          await tx.update(platformSettings)
+            .set({ value: setting.value, modifiedAt: new Date() })
+            .where(eq(platformSettings.key, setting.key));
+        } else {
+          await tx.insert(platformSettings).values({
+            ...setting,
+            modifiedAt: new Date(),
+          });
+        }
+      }
+
+      await tx.insert(platformSettings)
+        .values({ key: vipCatalogMigrationKey, value: "true", modifiedAt: new Date() })
+        .onConflictDoNothing();
+    });
+
+    console.log(
+      `[VIP catalog] migration complete: ${createdCount} new plans, ${reusedCount} matching plans kept, ${deactivatedCount} previous paid plans deactivated; referral, signup, and withdrawal settings updated.`,
+    );
+    console.log(
+      `[VIP catalog] ${vipPlans.map((plan) => `VIP${plan.tier}: PHP ${plan.price} / PHP ${plan.dailyEarnings} daily / PHP ${plan.totalReturn} total / ${plan.cycleDays} days`).join("; ")}`,
+    );
   }
 
   // Preserve existing payment settings. Deposit routes are configured explicitly

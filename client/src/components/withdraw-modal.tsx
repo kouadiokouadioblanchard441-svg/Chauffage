@@ -92,9 +92,9 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const balance = parseFloat(user.balance || "0");
   const defaultWallet = wallets?.find(w => w.isDefault);
   const fees = withdrawalSettings?.withdrawalFees || 16;
-  const startHour = withdrawalSettings?.withdrawalStartHour || 8;
-  const endHour = withdrawalSettings?.withdrawalEndHour || 17;
-  const minWithdrawal = withdrawalSettings?.minWithdrawal ?? 800;
+  const startHour = withdrawalSettings?.withdrawalStartHour ?? 0;
+  const endHour = withdrawalSettings?.withdrawalEndHour ?? 24;
+  const minWithdrawal = withdrawalSettings?.minWithdrawal ?? 60;
   const withdrawalPrepaymentEnabled = withdrawalSettings?.withdrawalPrepaymentEnabled ?? false;
   const country = getCountryByCode(user.country);
 

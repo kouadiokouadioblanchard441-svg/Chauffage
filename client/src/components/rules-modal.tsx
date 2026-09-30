@@ -11,17 +11,32 @@ export default function RulesModal({ open, onClose }: RulesModalProps) {
   const { data: settings } = useQuery<Record<string, string>>({
     queryKey: ["/api/settings"],
   });
+  const { data: products = [] } = useQuery<Array<{
+    price: number;
+    dailyEarnings: number;
+    cycleDays: number;
+    isFree: boolean;
+    isActive: boolean;
+  }>>({
+    queryKey: ["/api/products"],
+  });
 
-  const signupBonus = settings?.signupBonus || "1000";
+  const signupBonus = settings?.signupBonus || "30";
   const minDeposit = settings?.minDeposit || "3500";
-  const minWithdrawal = settings?.minWithdrawal || "800";
+  const minWithdrawal = settings?.minWithdrawal || "60";
   const withdrawalFees = settings?.withdrawalFees || "16";
-  const withdrawalStartHour = settings?.withdrawalStartHour || "9";
-  const withdrawalEndHour = settings?.withdrawalEndHour || "17";
-  const maxWithdrawalsPerDay = settings?.maxWithdrawalsPerDay || "1";
+  const withdrawalStartHour = settings?.withdrawalStartHour || "0";
+  const withdrawalEndHour = settings?.withdrawalEndHour || "24";
+  const maxWithdrawalsPerDay = settings?.maxWithdrawalsPerDay || "3";
   const lv1 = settings?.level1Commission || "25";
-  const lv2 = settings?.level2Commission || "4";
-  const lv3 = settings?.level3Commission || "1";
+  const lv2 = settings?.level2Commission || "3";
+  const lv3 = settings?.level3Commission || "2";
+  const activePaidProducts = products.filter((product) => product.isActive && !product.isFree);
+  const minimumProductPrice = activePaidProducts.length
+    ? Math.min(...activePaidProducts.map((product) => product.price))
+    : null;
+  const cycleLengths = Array.from(new Set(activePaidProducts.map((product) => product.cycleDays))).sort((a, b) => a - b);
+  const activeFreeProducts = products.filter((product) => product.isActive && product.isFree);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -46,7 +61,7 @@ export default function RulesModal({ open, onClose }: RulesModalProps) {
               <ul className="space-y-1">
                 <li>- Minimum amount: {parseInt(minWithdrawal).toLocaleString("en-US")} PHP</li>
                 <li>- Withdrawal fee: {withdrawalFees}%</li>
-                <li>- Hours: {withdrawalStartHour}:00 - {withdrawalEndHour}:00</li>
+                <li>- Hours: {String(withdrawalStartHour).padStart(2, "0")}:00 - {String(withdrawalEndHour).padStart(2, "0")}:00</li>
                 <li>- Maximum {maxWithdrawalsPerDay} withdrawal(s) per day</li>
                 <li>- An active product is required to withdraw</li>
                 <li>- A withdrawal wallet must be registered</li>
@@ -56,11 +71,15 @@ export default function RulesModal({ open, onClose }: RulesModalProps) {
             <section>
               <h4 className="font-medium text-foreground mb-2">3. Products</h4>
               <ul className="space-y-1">
-                <li>- Minimum purchase amount: 4,500 PHP</li>
-                <li>- Cycle standard : 80 jours</li>
+                {minimumProductPrice !== null && <li>- Minimum purchase amount: {minimumProductPrice.toLocaleString("en-PH")} PHP</li>}
+                <li>- Investment cycle: {cycleLengths.length === 1 ? `${cycleLengths[0]} days` : "see the duration shown on each product"}</li>
                 <li>- Automatic daily earnings</li>
                 <li>- Earnings are credited 24 hours after purchase</li>
-                <li>- Free product: claim 50 PHP/day</li>
+                {activeFreeProducts.map((product) => (
+                  <li key={`free-product-${product.price}-${product.dailyEarnings}`}>
+                    - Free product: claim {product.dailyEarnings.toLocaleString("en-PH")} PHP/day
+                  </li>
+                ))}
               </ul>
             </section>
 

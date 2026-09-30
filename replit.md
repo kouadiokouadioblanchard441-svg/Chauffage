@@ -65,9 +65,9 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Database
-- **PostgreSQL**: Supabase is the application's only database, configured with `SUPABASE_NEW_DATABASE_URL`.
+- **PostgreSQL**: The application uses the user's single Neon database through `NEON_DATABASE_URL` for application data and sessions in both Replit and Plesk.
 - **Drizzle ORM**: Type-safe database queries and schema management
-- The previous database is retained but is not read or written by the application.
+- `SUPABASE_SOURCE_DATABASE_URL` is not used by the application runtime.
 
 ### Frontend Libraries
 - **Radix UI**: Accessible UI primitives (dialogs, dropdowns, tabs, etc.)
@@ -85,13 +85,13 @@ Preferred communication style: Simple, everyday language.
 - **TypeScript**: Type checking across full stack
 
 ### Environment Variables Required
-- `SUPABASE_NEW_DATABASE_URL`: Supabase PostgreSQL connection string used for application data, sessions, and schema changes
+- `NEON_DATABASE_URL`: the single Neon PostgreSQL database used by the application in Replit and Plesk
 - `SESSION_SECRET`: Secret for session encryption (required)
 
 ## Running on Replit
 
 ### Prerequisites
-- Configure `SUPABASE_NEW_DATABASE_URL` and `SESSION_SECRET` as Replit Secrets.
+- Configure `NEON_DATABASE_URL` and `SESSION_SECRET` as Replit Secrets.
 
 ### First-time setup
 ```bash
@@ -100,7 +100,7 @@ npm run db:push      # create/update the schema in the configured Supabase datab
 npm run dev          # start the development server on port 5000
 ```
 
-The Supabase schema is managed from `shared/schema.ts` with Drizzle. On first start, the app seeds countries, tasks, payment channels, and platform settings when empty. Product and staking catalogs are created and managed from the admin panel; the application does not insert hardcoded catalog entries.
+The PostgreSQL schema is managed from `shared/schema.ts` with Drizzle. On first start, the app seeds countries, tasks, payment channels, and platform settings when empty. Product and staking catalogs are normally administered in the panel. A specifically authorized, one-time catalog migration may add new product versions; it must preserve old product rows referenced by existing purchases and only deactivate them for future sales.
 
 ### Initial administrator
 The initial administrator is created only when `ADMIN_PASSWORD` is configured as a secret. Existing administrator records keep their own login password; startup only ensures the configured admin role and PIN.

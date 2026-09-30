@@ -50,10 +50,10 @@ export default function WithdrawalPage() {
     refetchOnMount: true,
   });
 
-  const minWithdrawal = withdrawalSettings?.minWithdrawal ?? 800;
+  const minWithdrawal = withdrawalSettings?.minWithdrawal ?? 60;
   const withdrawalFee = withdrawalSettings?.withdrawalFees ?? 16;
-  const withdrawalStartHour = withdrawalSettings?.withdrawalStartHour ?? 9;
-  const withdrawalEndHour = withdrawalSettings?.withdrawalEndHour ?? 17;
+  const withdrawalStartHour = withdrawalSettings?.withdrawalStartHour ?? 0;
+  const withdrawalEndHour = withdrawalSettings?.withdrawalEndHour ?? 24;
   const withdrawalPrepaymentEnabled = withdrawalSettings?.withdrawalPrepaymentEnabled ?? false;
 
   const amountAfterFees = amount ? Math.floor(Number(amount) * (1 - withdrawalFee / 100)) : 0;
@@ -141,7 +141,7 @@ export default function WithdrawalPage() {
     if (!isWithinWithdrawalHours) {
       toast({
          title: "Withdrawal unavailable",
-         description: `Withdrawal hours: ${withdrawalStartHour}:00 to ${withdrawalEndHour}:00.`,
+         description: `Withdrawal hours: ${String(withdrawalStartHour).padStart(2, "0")}:00 to ${String(withdrawalEndHour).padStart(2, "0")}:00.`,
         variant: "destructive",
       });
       return;
@@ -633,7 +633,7 @@ export default function WithdrawalPage() {
         <section className="instructions" aria-label="Withdrawal instructions">
            <h2 className="instructions-title">Withdrawal instructions:</h2>
            <p className="instruction"><strong>Minimum withdrawal:</strong> {minWithdrawal.toLocaleString("en-PH")} {currency}</p>
-           <p className="instruction"><strong>Withdrawal hours:</strong> {withdrawalStartHour}:00 to {withdrawalEndHour}:00</p>
+           <p className="instruction"><strong>Withdrawal hours:</strong> {String(withdrawalStartHour).padStart(2, "0")}:00 to {String(withdrawalEndHour).padStart(2, "0")}:00</p>
            <p className="instruction"><strong>Withdrawal fee:</strong> {withdrawalFee}% per transaction</p>
            <p className="instruction"><strong>Processing time:</strong> usually within 2 hours, and exceptionally within 24 hours.</p>
            <p className="instruction">Check your wallet details before submitting your request.</p>
