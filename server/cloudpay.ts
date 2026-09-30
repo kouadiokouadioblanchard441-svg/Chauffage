@@ -9,7 +9,6 @@ type CloudPayConfig = {
   merchantId: string;
   signingSecret: string;
   paymentType: string;
-  depositPath: string;
 };
 
 const DOCUMENTED_PAYMENT_TYPES = new Set(["1", "2", "3", "7"]);
@@ -33,7 +32,6 @@ function getCloudPayConfig(): CloudPayConfig {
   const paymentType = process.env.CLOUDPAY_PAYMENT_TYPE?.trim() || "";
   const amountCurrency = process.env.CLOUDPAY_AMOUNT_CURRENCY?.trim().toUpperCase() || "";
   const rawBaseUrl = process.env.CLOUDPAY_API_BASE_URL?.trim() || "";
-  const depositPath = process.env.CLOUDPAY_DEPOSIT_PATH?.trim() || DEFAULT_DEPOSIT_PATH;
 
   if (!merchantId) missing.push("CLOUDPAY_MERCHANT_ID");
   if (!signingSecret) missing.push("CLOUDPAY_SIGNING_SECRET");
@@ -52,10 +50,6 @@ function getCloudPayConfig(): CloudPayConfig {
   if (!DOCUMENTED_PAYMENT_TYPES.has(paymentType)) {
     throw new Error("CLOUDPAY_PAYMENT_TYPE must be one of the documented Galaxy values: 1, 2, 3, or 7");
   }
-  if (!DOCUMENTED_DEPOSIT_PATHS.has(depositPath)) {
-    throw new Error("CLOUDPAY_DEPOSIT_PATH must be /api/transfer or /api/pay/transfer");
-  }
-
   let baseUrl: URL;
   try {
     baseUrl = new URL(rawBaseUrl);
@@ -69,7 +63,15 @@ function getCloudPayConfig(): CloudPayConfig {
   baseUrl.search = "";
   baseUrl.hash = "";
 
-  return { baseUrl, merchantId, signingSecret, paymentType, depositPath };
+  return { baseUrl, merchantId, signingSecret, paymentType };
+}
+
+function getCloudPayDepositPath(): string {
+  const depositPath = process.env.CLOUDPAY_DEPOSIT_PATH?.trim() || DEFAULT_DEPOSIT_PATH;
+  if (!DOCUMENTED_DEPOSIT_PATHS.has(depositPath)) {
+    throw new Error("CLOUDPAY_DEPOSIT_PATH must be /api/transfer or /api/pay/transfer");
+  }
+  return depositPath;
 }
 
 export function validateCloudPayConfig(): void {
@@ -226,7 +228,7 @@ export async function cloudPayCreateDeposit(input: {
     }
     fields.customer_bank_card_account = input.customerAccount.trim();
   }
-  const payload = await postCloudPay(config.depositPath, fields);
+  const payload = await postCloudPay(getCloudPayDepositPath(), fields);
   const redirectUrl = typeof payload.redirect_url === "string" ? payload.redirect_url : undefined;
   const qrCandidates = [payload.qrcode_url, payload.gcashqr, payload.gcash_qr_url, payload.qr_code];
   const rawQr = qrCandidates.find((value): value is string => typeof value === "string" && value.trim().length > 0)?.trim();
