@@ -54,3 +54,17 @@ mtime_ms = 1790188923435
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:5b5a68ec-a699-4053-b777-28a59e6c3126/a9dc5970-b1c8-4d1e-a2bd-610ed217c734/a9139812-12d1-48fe-a9a4-d040c5c3b20e"
 storage_version_token = "1790188949360342"
 content_type = "image/png"
+
+[[outputs]]
+id = "Wixg-wdmebvlrtgz3QCR_"
+uri = "file://plesk-deploy-bundle-neon-fix.zip"
+type = "unspecified"
+title = "Archive Plesk corrigée — Neon"
+description = "Build dist corrigé, prêt à être récupéré par Plesk. Contient dist, package.json et package-lock.json; aucun secret n’est inclus."
+logical_id = "8d47f2f1-65a5-40f3-86a5-45328dd5a36d"
+content_hash = "sha256:10304b4acab1cb1ace9a0dd1c806b964f350fe4283928fe477acc17ad6125208"
+size = 9019862
+mtime_ms = 1790756505100
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:2f6a68ca-562c-4fc7-8216-902c56f3f8c3/8d47f2f1-65a5-40f3-86a5-45328dd5a36d/fe644114-b95b-40a8-a5e3-15c19582efd1"
+storage_version_token = "1790756546219337"
+content_type = "application/octet-stream"
