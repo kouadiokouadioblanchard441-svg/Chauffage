@@ -25,7 +25,7 @@ interface DepositProviderInfo {
 export default function DepositModal({ open, onClose }: DepositModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [amount, setAmount] = useState("3500");
+  const [amount, setAmount] = useState("200");
 
   const { data: settings } = useQuery<Record<string, string>>({
     queryKey: ["/api/settings"],
@@ -47,7 +47,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
     retry: false,
   });
 
-  const minimumAmount = Math.max(3500, Number.parseInt(settings?.minDeposit || "3500", 10) || 3500);
+  const minimumAmount = Math.max(200, Number.parseInt(settings?.minDeposit || "200", 10) || 200);
   const numericAmount = Number(amount);
   const checkoutAvailable = country === "PH" && providerInfo?.provider === "cloudpay";
 

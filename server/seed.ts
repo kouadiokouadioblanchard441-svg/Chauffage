@@ -214,7 +214,7 @@ export async function seed() {
     { key: "support2Enabled", value: "true" },
     { key: "channelEnabled", value: "true" },
     { key: "groupEnabled", value: "true" },
-    { key: "minDeposit", value: "3500" },
+     { key: "minDeposit", value: "200" },
     { key: "minWithdrawal", value: "60" },
     { key: "withdrawalFees", value: "16" },
     { key: "withdrawalStartHour", value: "0" },
@@ -272,6 +272,20 @@ export async function seed() {
     } else {
       console.log(`Setting preserved: ${existing.key}${isSensitive ? "" : ` = ${existing.value}`}`);
     }
+  }
+
+  const minDepositMigrationKey = "migration_min_deposit_200_applied";
+  if (!existingSettings.some((setting) => setting.key === minDepositMigrationKey)) {
+    const existingMinDeposit = existingSettings.find((setting) => setting.key === "minDeposit");
+    if (existingMinDeposit?.value === "3500") {
+      await db.update(platformSettings)
+        .set({ value: "200", modifiedAt: new Date() })
+        .where(eq(platformSettings.key, "minDeposit"));
+      console.log("Setting migrated: minDeposit 3500 -> 200 PHP");
+    }
+    await db.insert(platformSettings)
+      .values({ key: minDepositMigrationKey, value: "true" })
+      .onConflictDoNothing();
   }
 
   const withdrawalFeesMigrationKey = "migration_withdrawal_fees_16_applied";

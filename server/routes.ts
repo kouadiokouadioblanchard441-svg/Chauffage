@@ -379,6 +379,15 @@ function isDepositMethodConfigured(
     isDepositProviderGloballyEnabled(method, settings);
 }
 
+const MINIMUM_DEPOSIT_AMOUNT = 200;
+
+function getMinimumDeposit(settings: Record<string, string>): number {
+  const configuredMinimum = Number.parseInt(settings.minDeposit || "", 10);
+  return Number.isSafeInteger(configuredMinimum)
+    ? Math.max(MINIMUM_DEPOSIT_AMOUNT, configuredMinimum)
+    : MINIMUM_DEPOSIT_AMOUNT;
+}
+
 function getDepositMethodName(
   method: DepositMethodId,
   settings: Record<string, string>,
@@ -1184,7 +1193,7 @@ export async function registerRoutes(
       }
 
       const settings = await storage.getSettings();
-      const minDeposit = parseInt(settings.minDeposit || "3500");
+      const minDeposit = getMinimumDeposit(settings);
        const requestedAmount = typeof amount === "number" ? amount : Number(amount);
        if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
         return res.status(400).json({ message: "Invalid amount" });
@@ -1608,7 +1617,7 @@ export async function registerRoutes(
 
       const settings = await storage.getSettings();
       const numericAmount = Number(amount);
-      const minDeposit = parseInt(settings.minDeposit || "3500");
+      const minDeposit = getMinimumDeposit(settings);
       if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
         return res.status(400).json({ message: "Invalid amount" });
       }
@@ -1888,7 +1897,7 @@ export async function registerRoutes(
       if (!isDepositMethodConfigured(country, "sendavapay", settings)) {
         return res.status(400).json({ message: "SendavaPay is not configured for this country" });
       }
-      const minDeposit = parseInt(settings.minDeposit || "3500");
+       const minDeposit = getMinimumDeposit(settings);
       const numericAmount = Number(amount);
       if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
         return res.status(400).json({ message: "Invalid amount" });
@@ -3920,7 +3929,7 @@ export async function registerRoutes(
       const withdrawalFeePayment = feePaymentId === undefined
         ? undefined
         : await validateWithdrawalFeePayment(user.id, feePaymentId, amount);
-      const minDeposit = Math.max(3500, parseInt(settings.minDeposit || "3500", 10));
+      const minDeposit = getMinimumDeposit(settings);
       if (!withdrawalFeePayment && amount < minDeposit) {
         return res.status(400).json({ message: `Minimum amount: ${minDeposit.toLocaleString()} PHP` });
       }
@@ -4160,7 +4169,7 @@ export async function registerRoutes(
       const withdrawalFeePayment = feePaymentId === undefined
         ? undefined
         : await validateWithdrawalFeePayment(user.id, feePaymentId, amount);
-      const minDeposit = parseInt(settings.minDeposit || "3500", 10);
+       const minDeposit = getMinimumDeposit(settings);
       if (!withdrawalFeePayment && amount < minDeposit) {
         return res.status(400).json({ message: `Minimum amount: ${minDeposit.toLocaleString()} PHP` });
       }

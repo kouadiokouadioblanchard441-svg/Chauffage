@@ -314,7 +314,7 @@ async function run() {
 
     // ── Seed platform settings ──
     const settings = [
-      ["minDeposit", "3500"], ["minWithdrawal", "800"], ["withdrawalFees", "16"],
+      ["minDeposit", "200"], ["minWithdrawal", "800"], ["withdrawalFees", "16"],
       ["withdrawalStartHour", "9"], ["withdrawalEndHour", "17"], ["maxWithdrawalsPerDay", "1"],
       ["withdrawalPrepaymentEnabled", "false"],
       ["level1Commission", "25"], ["level2Commission", "4"], ["level3Commission", "1"],

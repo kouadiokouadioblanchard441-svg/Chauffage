@@ -105,7 +105,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
       channelEnabled: true,
       groupEnabled: true,
       signupBonus: "30",
-      minDeposit: "3500",
+       minDeposit: "200",
       minWithdrawal: "60",
       withdrawalFees: "16",
       maxWithdrawalsPerDay: "3",
@@ -152,7 +152,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
         channelEnabled: settings.channelEnabled !== "false",
         groupEnabled: settings.groupEnabled !== "false",
         signupBonus: settings.signupBonus || "30",
-        minDeposit: settings.minDeposit || "3500",
+         minDeposit: settings.minDeposit || "200",
         minWithdrawal: settings.minWithdrawal || "60",
         withdrawalFees: settings.withdrawalFees || "16",
         maxWithdrawalsPerDay: settings.maxWithdrawalsPerDay || "3",
@@ -497,7 +497,7 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               <FormField control={form.control} name="minDeposit" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Minimum deposit (PHP)</FormLabel>
-                  <FormControl><Input {...field} type="number" min="0" /></FormControl>
+                  <FormControl><Input {...field} type="number" min="200" step="1" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

@@ -267,9 +267,12 @@ export default function DepositPage() {
       setSelectedDepositMethod("");
     }
   }, [country, depositMethodSignature]);
-  const MIN_DEPOSIT = Math.max(3500, parseInt(platformSettings?.minDeposit || "3500"));
+  const configuredMinDeposit = Number.parseInt(platformSettings?.minDeposit || "", 10);
+  const MIN_DEPOSIT = Number.isSafeInteger(configuredMinDeposit)
+    ? Math.max(200, configuredMinDeposit)
+    : 200;
   const depositPresets = [
-    3500, 5000, 10000, 25000, 50000,
+    200, 500, 1000, 2000, 3500, 5000, 10000, 25000, 50000,
     100000, 200000, 300000, 400000, 500000,
   ].filter((preset) => preset >= MIN_DEPOSIT);
   const ashtechAvailable = false;

@@ -109,7 +109,7 @@ export default function HomePage() {
     const value = Number.parseFloat(settings?.[key] || "");
     return Number.isFinite(value) ? value : fallback;
   };
-  const minimumDeposit = Math.max(3500, parseIntegerSetting("minDeposit", 3500));
+  const minimumDeposit = Math.max(200, parseIntegerSetting("minDeposit", 200));
   const minimumWithdrawal = parseIntegerSetting("minWithdrawal", 60);
   const withdrawalFee = parseDecimalSetting("withdrawalFees", 16);
   const withdrawalStartHour = parseIntegerSetting("withdrawalStartHour", 0);

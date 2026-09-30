@@ -22,7 +22,7 @@ export default function RulesModal({ open, onClose }: RulesModalProps) {
   });
 
   const signupBonus = settings?.signupBonus || "30";
-  const minDeposit = settings?.minDeposit || "3500";
+  const minDeposit = settings?.minDeposit || "200";
   const minWithdrawal = settings?.minWithdrawal || "60";
   const withdrawalFees = settings?.withdrawalFees || "16";
   const withdrawalStartHour = settings?.withdrawalStartHour || "0";
