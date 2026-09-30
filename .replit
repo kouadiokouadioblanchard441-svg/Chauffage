@@ -69,3 +69,5 @@ CLOUDPAY_API_BASE_URL = "https://cloud.la2568.site/"
 CLOUDPAY_AMOUNT_CURRENCY = "PHP"
 
 [userenv.development]
+CLOUDPAY_DEPOSIT_PATH = "/api/transfer"
+CLOUDPAY_LIVE_ACTIVATION_CONFIRMED = "true"
