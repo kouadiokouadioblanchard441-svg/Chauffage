@@ -26,3 +26,9 @@ Replit's workspace Git Provider authentication is separate from its connected Gi
 **Why:** GitHub API access through the connector succeeded while the workspace's configured Git remote rejected its native push credentials.
 
 **How to apply:** When `git push --dry-run` fails authentication against the configured upstream, reconnect the Git Provider before changing application code or asking the user to paste a token.
+
+The production listener must start before database seeding finishes. While seeding is pending or failed, keep health checks responsive, reject application APIs with 503, and do not run financial background jobs.
+
+**Why:** Waiting for Neon before opening the port can make Plesk/Passenger return its generic 500 page without reaching Express, even when the static homepage still loads.
+
+**How to apply:** Keep startup independent from the seed promise; expose readiness separately from database connectivity and start earnings, cleanup, reconciliation, and other side-effecting jobs only after a successful seed.
