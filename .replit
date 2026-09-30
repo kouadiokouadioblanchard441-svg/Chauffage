@@ -64,5 +64,6 @@ timeoutMs = 120000
 
 [userenv.shared]
 ADMIN_COUNTRY = "CI"
+CLOUDPAY_MERCHANT_ID = "2208"
 
 [userenv.development]
