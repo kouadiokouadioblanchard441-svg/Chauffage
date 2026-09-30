@@ -545,6 +545,13 @@ export async function registerRoutes(
   app.get("/api/health", async (_req, res) => {
     try {
       await pool.query("SELECT 1");
+      const startupState = _req.app.locals.startupState ?? "ready";
+      if (startupState !== "ready") {
+        return res.status(503).json({
+          status: startupState,
+          database: "connected",
+        });
+      }
       res.status(200).json({ status: "ok", database: "connected" });
     } catch (error) {
       console.error(
