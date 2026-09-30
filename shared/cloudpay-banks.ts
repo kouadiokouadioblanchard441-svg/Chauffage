@@ -100,6 +100,15 @@ export const CLOUDPAY_DEPOSIT_METHODS: readonly CloudPayDepositMethod[] = [
   { code: "mya", name: "GCash H5 QRPH", paymentType: "7", aliases: ["GCash", "GCash QRPH"] },
 ];
 
+// Withdrawal form labels for the three CloudPay deposit channels. They map to
+// existing payout bank codes; they do not change the merchant-specific deposit
+// payment_type/bank_code pairs above.
+export const CLOUDPAY_WITHDRAWAL_METHOD_ALIASES = [
+  { name: "GoTyme QRPH", bankCode: "GOT" },
+  { name: "PayMaya Direct", bankCode: "PMP" },
+  { name: "GCash H5 QRPH", bankCode: "gcash" },
+] as const;
+
 function normalizeBankValue(value: string): string {
   return value.trim().toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -116,10 +125,14 @@ export function resolveCloudPayDepositMethod(value: string): CloudPayDepositMeth
 export function resolveCloudPayBankCode(value: string): string | undefined {
   const normalized = normalizeBankValue(value);
   if (!normalized) return undefined;
-  return CLOUDPAY_BANKS.find((bank) =>
+  const bank = CLOUDPAY_BANKS.find((bank) =>
     [bank.code, bank.name, ...(bank.aliases || [])]
       .some((candidate) => normalizeBankValue(candidate) === normalized),
   )?.code;
+  if (bank) return bank;
+  return CLOUDPAY_WITHDRAWAL_METHOD_ALIASES.find(
+    (method) => normalizeBankValue(method.name) === normalized,
+  )?.bankCode;
 }
 
 export function getCloudPayBank(code: string): CloudPayBank | undefined {

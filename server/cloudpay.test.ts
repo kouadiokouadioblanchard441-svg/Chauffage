@@ -14,6 +14,10 @@ import {
   resolveCloudPayBankCode,
   resolveCloudPayDepositMethod,
 } from "@shared/cloudpay-banks";
+import {
+  getWithdrawalMethods,
+  isAllowedWithdrawalMethod,
+} from "@shared/withdrawal-methods";
 
 const secret = "test-signing-secret";
 const fields = { merchant: "merchant-1", amount: "3500.00", order_id: "CPD-1-2" };
@@ -33,7 +37,15 @@ assert.equal(cloudPayAmountMatches("3500.00", 3500), true);
 assert.equal(cloudPayAmountMatches("3500.01", 3500), false);
 assert.equal(resolveCloudPayBankCode("PayMaya"), "PMP");
 assert.equal(resolveCloudPayBankCode("GCash"), "gcash");
+assert.equal(resolveCloudPayBankCode("GoTyme QRPH"), "GOT");
+assert.equal(resolveCloudPayBankCode("PayMaya Direct"), "PMP");
+assert.equal(resolveCloudPayBankCode("GCash H5 QRPH"), "gcash");
 assert.equal(resolveCloudPayBankCode("not a bank"), undefined);
+for (const method of ["GoTyme QRPH", "PayMaya Direct", "GCash H5 QRPH"]) {
+  assert.ok(getWithdrawalMethods("PH").includes(method));
+  assert.equal(isAllowedWithdrawalMethod("PH", method), true);
+}
+assert.equal(getWithdrawalMethods("US").length, 0);
 assert.equal(resolveCloudPayDepositMethod("GoTyme QR")?.code, "got");
 assert.equal(resolveCloudPayDepositMethod("got")?.paymentType, "1");
 assert.equal(resolveCloudPayDepositMethod("PayMaya Direct")?.paymentType, "3");

@@ -1,4 +1,7 @@
-import { CLOUDPAY_BANKS } from "./cloudpay-banks";
+import {
+  CLOUDPAY_BANKS,
+  CLOUDPAY_WITHDRAWAL_METHOD_ALIASES,
+} from "./cloudpay-banks";
 
 export function getWithdrawalMethods(
   countryCode: string,
@@ -6,7 +9,10 @@ export function getWithdrawalMethods(
 ): string[] {
   const country = countryCode.trim().toUpperCase();
   if (country !== "PH") return [];
-  return CLOUDPAY_BANKS.map(({ name }) => name);
+  return [
+    ...CLOUDPAY_BANKS.map(({ name }) => name),
+    ...CLOUDPAY_WITHDRAWAL_METHOD_ALIASES.map(({ name }) => name),
+  ];
 }
 
 export function isAllowedWithdrawalMethod(
