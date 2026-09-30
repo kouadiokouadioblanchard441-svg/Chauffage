@@ -897,9 +897,9 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               <p className="font-semibold">
                 {settings?.cloudpayConfigured === "true" ? "Server configuration is complete" : "Server configuration is incomplete"}
               </p>
-              <p>Set <code>CLOUDPAY_MERCHANT_ID</code> and a newly issued <code>CLOUDPAY_SIGNING_SECRET</code> in Replit Secrets. Do not reuse the key previously posted in chat or paste secrets into this settings page. If production runs on Plesk, configure its secret environment separately after key rotation.</p>
-              <p>Also set <code>CLOUDPAY_PAYMENT_TYPE</code> to the merchant-approved value and confirm the merchant account accepts PHP by setting <code>CLOUDPAY_AMOUNT_CURRENCY=PHP</code>. The app blocks CloudPay until this currency confirmation is present.</p>
-              <p><code>CLOUDPAY_API_BASE_URL</code> is optional and defaults to the documented host. Configure the callback URL as <code>/api/webhooks/cloudpay</code>. New deposits and payouts use CloudPay only.</p>
+              <p>Use the merchant-assigned <code>CLOUDPAY_MERCHANT_ID</code> and a newly issued <code>CLOUDPAY_SIGNING_SECRET</code> stored in Replit Secrets. Do not reuse the key previously posted in chat or paste credentials into this settings page. If production runs on Plesk, configure the rotated secret there separately.</p>
+              <p>Set <code>CLOUDPAY_PAYMENT_TYPE</code> to the merchant-approved code: <code>1</code> QR Code (GCash only, payer GCash number required), <code>2</code> WEB_H5, <code>3</code> Fast Direct, or <code>7</code> Original channel. Confirm the merchant account accepts PHP before setting <code>CLOUDPAY_AMOUNT_CURRENCY=PHP</code>.</p>
+              <p><code>CLOUDPAY_API_BASE_URL</code> must be the exact HTTPS gateway host assigned by Galaxy; the guide uses a placeholder. Configure callback <code>/api/webhooks/cloudpay</code>. CloudPay remains blocked until <code>CLOUDPAY_LIVE_ACTIVATION_CONFIRMED=true</code> after key rotation, currency/payment-type approval, and any production egress-IP allowlisting.</p>
             </div>
           </CardContent>
         </Card>

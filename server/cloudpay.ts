@@ -11,6 +11,8 @@ type CloudPayConfig = {
   paymentType: string;
 };
 
+const DOCUMENTED_PAYMENT_TYPES = new Set(["1", "2", "3", "7"]);
+
 export class CloudPayError extends Error {
   requestMayHaveReachedProvider: boolean;
 
@@ -27,14 +29,15 @@ function getCloudPayConfig(): CloudPayConfig {
   const signingSecret = process.env.CLOUDPAY_SIGNING_SECRET?.trim() || "";
   const paymentType = process.env.CLOUDPAY_PAYMENT_TYPE?.trim() || "";
   const amountCurrency = process.env.CLOUDPAY_AMOUNT_CURRENCY?.trim().toUpperCase() || "";
-  const rawBaseUrl = process.env.CLOUDPAY_API_BASE_URL?.trim() || "https://cloud.la2568.site";
+  const rawBaseUrl = process.env.CLOUDPAY_API_BASE_URL?.trim() || "";
 
   if (!merchantId) missing.push("CLOUDPAY_MERCHANT_ID");
   if (!signingSecret) missing.push("CLOUDPAY_SIGNING_SECRET");
   if (!paymentType) missing.push("CLOUDPAY_PAYMENT_TYPE");
   if (!amountCurrency) missing.push("CLOUDPAY_AMOUNT_CURRENCY");
-  if (!process.env.CLOUDPAY_API_BASE_URL?.trim()) {
-    // The documented host is the default, but it can be overridden in Secrets.
+  if (!rawBaseUrl) missing.push("CLOUDPAY_API_BASE_URL");
+  if (process.env.CLOUDPAY_LIVE_ACTIVATION_CONFIRMED?.trim().toLowerCase() !== "true") {
+    missing.push("CLOUDPAY_LIVE_ACTIVATION_CONFIRMED");
   }
   if (missing.length) {
     throw new Error(`CloudPay configuration is incomplete: ${missing.join(", ")}`);
@@ -42,8 +45,8 @@ function getCloudPayConfig(): CloudPayConfig {
   if (amountCurrency !== "PHP") {
     throw new Error("CloudPay is disabled until CLOUDPAY_AMOUNT_CURRENCY is confirmed as PHP");
   }
-  if (!/^[A-Za-z0-9_-]{1,12}$/.test(paymentType)) {
-    throw new Error("CLOUDPAY_PAYMENT_TYPE must match a documented Galaxy payment type");
+  if (!DOCUMENTED_PAYMENT_TYPES.has(paymentType)) {
+    throw new Error("CLOUDPAY_PAYMENT_TYPE must be one of the documented Galaxy values: 1, 2, 3, or 7");
   }
 
   let baseUrl: URL;
@@ -64,6 +67,10 @@ function getCloudPayConfig(): CloudPayConfig {
 
 export function validateCloudPayConfig(): void {
   getCloudPayConfig();
+}
+
+export function getCloudPayPaymentType(): string {
+  return getCloudPayConfig().paymentType;
 }
 
 export function isCloudPayConfigured(): boolean {
@@ -188,24 +195,33 @@ export async function cloudPayCreateDeposit(input: {
   orderId: string;
   amount: number;
   bankCode: string;
-  customerAccount: string;
-  notifyUrl: string;
+  customerAccount?: string;
+  callbackUrl: string;
   returnUrl: string;
 }): Promise<CloudPayDepositResult> {
   const config = getCloudPayConfig();
   const bankCode = resolveCloudPayBankCode(input.bankCode);
   if (!bankCode) throw new Error("Unsupported CloudPay bank or e-wallet");
-  const payload = await postCloudPay("/api/transfer", {
+  const fields: CloudPayFields = {
     order_id: input.orderId,
     amount: formatCloudPayAmount(input.amount),
     payment_type: config.paymentType,
     bank_code: bankCode,
-    customer_bank_card_account: input.customerAccount,
-    notify_url: input.notifyUrl,
+    callback_url: input.callbackUrl,
     return_url: input.returnUrl,
-  });
+  };
+  if (config.paymentType === "1") {
+    if (bankCode !== "gcash") {
+      throw new Error("Galaxy QR payments require the GCash payment method");
+    }
+    if (!input.customerAccount?.trim()) {
+      throw new Error("Galaxy QR payments require the payer's GCash account");
+    }
+    fields.customer_bank_card_account = input.customerAccount.trim();
+  }
+  const payload = await postCloudPay("/api/pay/transfer", fields);
   const redirectUrl = typeof payload.redirect_url === "string" ? payload.redirect_url : undefined;
-  const qrCandidates = [payload.qrcode_url, payload.gcash_qr_url, payload.qr_code];
+  const qrCandidates = [payload.qrcode_url, payload.gcashqr, payload.gcash_qr_url, payload.qr_code];
   const rawQr = qrCandidates.find((value): value is string => typeof value === "string" && value.trim().length > 0)?.trim();
   let qrCode: string | undefined;
   if (rawQr?.startsWith("data:image/")) {
@@ -248,13 +264,15 @@ export async function cloudPayCreatePayout(input: {
   bankCode: string;
   accountNumber: string;
   accountName: string;
+  callbackUrl: string;
 }): Promise<void> {
   const bankCode = resolveCloudPayBankCode(input.bankCode);
   if (!bankCode) throw new Error("Unsupported CloudPay bank or e-wallet");
   await postCloudPay("/api/daifu", {
     order_id: input.orderId,
-    amount: formatCloudPayAmount(input.amount),
-    bank_code: bankCode,
+    total_amount: formatCloudPayAmount(input.amount),
+    callback_url: input.callbackUrl,
+    bank: bankCode,
     bank_card_account: input.accountNumber,
     bank_card_name: input.accountName,
     bank_card_remark: "no",

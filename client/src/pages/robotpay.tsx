@@ -10,7 +10,7 @@ import { sanitizeDepositDisplayText } from "@/lib/deposit-display";
 import type { PaymentNumber } from "@shared/schema";
 
 type Provider = "ashtech" | "sendavapay" | "soleaspay" | "clapay" | "cloudpay";
-type Operator = { id?: string; name?: string; operator?: string; slug?: string; code?: string; requiresOtp?: boolean; status?: string; provider?: Provider; manualNumber?: PaymentNumber };
+type Operator = { id?: string; name?: string; operator?: string; slug?: string; code?: string; requiresOtp?: boolean; requiresPayerPhone?: boolean; status?: string; provider?: Provider; manualNumber?: PaymentNumber };
 type ProviderInfo = { provider: Provider; name: string; providers?: Array<{ provider: Provider; name: string }> };
 type SoleaspayServiceResponse = {
   enabled: boolean;
@@ -122,6 +122,7 @@ const provider: Provider = isLegacyReturn
   ? forcedProvider
   : providerInfo?.provider || "cloudpay";
   const activeProvider = operator?.provider || provider;
+  const requiresPayerPhone = activeProvider !== "cloudpay" || Boolean(operator?.requiresPayerPhone);
 const availableProviders = isLegacyReturn
   ? []
   : providerInfo?.providers || (providerInfo ? [{ provider: providerInfo.provider, name: providerInfo.name }] : []);
@@ -208,6 +209,7 @@ const availableProviders = isLegacyReturn
   }));
   const { data: cloudPayBanksData, isLoading: cloudPayBanksLoading } = useQuery<{
     banks: Array<{ id: string; name: string; provider: "cloudpay" }>;
+    requiresPayerPhone?: boolean;
   }>({
     queryKey: ["/api/cloudpay/banks", country],
     queryFn: async () => {
@@ -221,6 +223,7 @@ const availableProviders = isLegacyReturn
   const cloudPayOperators: Operator[] = (cloudPayBanksData?.banks || []).map((bank) => ({
     id: bank.id,
     name: bank.name,
+    requiresPayerPhone: cloudPayBanksData?.requiresPayerPhone ?? false,
     provider: "cloudpay",
   }));
 const operators: Operator[] = isLegacyReturn ? [] : cloudPayOperators;
@@ -319,7 +322,7 @@ const operators: Operator[] = isLegacyReturn ? [] : cloudPayOperators;
         amount,
         country,
         bankCode: operator.id,
-        phone: paymentPhone,
+        phone: operator.requiresPayerPhone ? paymentPhone : undefined,
         feePaymentId,
         withdrawalAmount,
       });
@@ -457,7 +460,7 @@ const operators: Operator[] = isLegacyReturn ? [] : cloudPayOperators;
   }, [user?.phone]);
 
   const submitPhone = () => {
-      if (!phone.trim()) { toast({ title: "Number required", description: "Enter the Mobile Money number used.", variant: "destructive" }); return; }
+      if (requiresPayerPhone && !phone.trim()) { toast({ title: "Number required", description: "Enter the Mobile Money number used.", variant: "destructive" }); return; }
   if (
     isLegacyReturn ||
     activeProvider !== "cloudpay" ||
@@ -656,12 +659,16 @@ const operators: Operator[] = isLegacyReturn ? [] : cloudPayOperators;
                   </button>
                 </section>
               )}
-              <label htmlFor="robotpay-payer-phone" className="block text-sm font-semibold text-[#111827]">Payer phone</label>
-              <div className="flex items-center rounded-[11px] border-2 border-[#111827] px-3 shadow-[0_2px_5px_rgba(17,24,39,0.1)] transition focus-within:border-[#FF7A14] focus-within:ring-2 focus-within:ring-[#FF7A14]/20">
-                <Phone className="h-4 w-4 text-[#111827]" />
-                <span className="shrink-0 border-r border-gray-300 pr-2 text-[#111827]">+{phonePrefix}</span>
-                <input id="robotpay-payer-phone" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 12))} type="tel" inputMode="numeric" className="w-full px-3 py-2.5 text-[#111827] outline-none" />
-              </div>
+              {requiresPayerPhone && (
+                <>
+                  <label htmlFor="robotpay-payer-phone" className="block text-sm font-semibold text-[#111827]">Payer phone</label>
+                  <div className="flex items-center rounded-[11px] border-2 border-[#111827] px-3 shadow-[0_2px_5px_rgba(17,24,39,0.1)] transition focus-within:border-[#FF7A14] focus-within:ring-2 focus-within:ring-[#FF7A14]/20">
+                    <Phone className="h-4 w-4 text-[#111827]" />
+                    <span className="shrink-0 border-r border-gray-300 pr-2 text-[#111827]">+{phonePrefix}</span>
+                    <input id="robotpay-payer-phone" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 12))} type="tel" inputMode="numeric" className="w-full px-3 py-2.5 text-[#111827] outline-none" />
+                  </div>
+                </>
+              )}
               {activeProvider === "clapay" && operator?.requiresOtp && (
                 <div className="text-left">
                   <label htmlFor="robotpay-clapay-operator-otp" className="mb-1.5 block text-sm font-semibold text-[#111827]">
@@ -702,7 +709,7 @@ const operators: Operator[] = isLegacyReturn ? [] : cloudPayOperators;
               )}
               <div className="flex items-center justify-center gap-3 pt-1">
               <button onClick={() => { setOperator(null); setStep(0); }} className="flex-1 rounded-[11px] border-2 border-[#111827] bg-white py-2.5 font-semibold text-[#111827] shadow-[0_3px_0_#111827] transition active:translate-y-[2px] active:shadow-[0_1px_0_#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A14] focus-visible:ring-offset-2">Back</button>
-               <button onClick={submitPhone} disabled={busy || !phone.trim() || (activeProvider === "clapay" && !!operator?.requiresOtp && !clapayOperatorOtp.trim()) || (!!operator?.manualNumber && !manualTransactionReference.trim())} className="flex-1 rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] py-2.5 font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition duration-150 hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A14] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : operator?.manualNumber ? "Verify" : "Continue"}</button>
+              <button onClick={submitPhone} disabled={busy || (requiresPayerPhone && !phone.trim()) || (activeProvider === "clapay" && !!operator?.requiresOtp && !clapayOperatorOtp.trim()) || (!!operator?.manualNumber && !manualTransactionReference.trim())} className="flex-1 rounded-[11px] border-2 border-[#111827] bg-[#FF7A14] py-2.5 font-bold text-[#111827] shadow-[0_3px_0_#111827,0_5px_10px_rgba(17,24,39,0.16)] transition duration-150 hover:brightness-95 active:translate-y-[2px] active:shadow-[0_1px_0_#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7A14] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">{busy ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : operator?.manualNumber ? "Verify" : "Continue"}</button>
               </div>
             </div>
           )}
