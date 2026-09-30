@@ -5,13 +5,15 @@ import {
   cloudPayCreateDeposit,
   cloudPayCreatePayout,
   formatCloudPayAmount,
-  getCloudPayPaymentType,
   isCloudPayConfigured,
   mapCloudPayStatus,
   signCloudPayFields,
   verifyCloudPaySignature,
 } from "./cloudpay";
-import { resolveCloudPayBankCode } from "@shared/cloudpay-banks";
+import {
+  resolveCloudPayBankCode,
+  resolveCloudPayDepositMethod,
+} from "@shared/cloudpay-banks";
 
 const secret = "test-signing-secret";
 const fields = { merchant: "merchant-1", amount: "3500.00", order_id: "CPD-1-2" };
@@ -32,11 +34,17 @@ assert.equal(cloudPayAmountMatches("3500.01", 3500), false);
 assert.equal(resolveCloudPayBankCode("PayMaya"), "PMP");
 assert.equal(resolveCloudPayBankCode("GCash"), "gcash");
 assert.equal(resolveCloudPayBankCode("not a bank"), undefined);
+assert.equal(resolveCloudPayDepositMethod("GoTyme QR")?.code, "got");
+assert.equal(resolveCloudPayDepositMethod("got")?.paymentType, "1");
+assert.equal(resolveCloudPayDepositMethod("PayMaya Direct")?.paymentType, "3");
+assert.equal(resolveCloudPayDepositMethod("PMP")?.paymentType, "3");
+assert.equal(resolveCloudPayDepositMethod("GCash")?.code, "mya");
+assert.equal(resolveCloudPayDepositMethod("mya")?.paymentType, "7");
+assert.equal(resolveCloudPayDepositMethod("bpi"), undefined);
 
 const configKeys = [
   "CLOUDPAY_MERCHANT_ID",
   "CLOUDPAY_SIGNING_SECRET",
-  "CLOUDPAY_PAYMENT_TYPE",
   "CLOUDPAY_AMOUNT_CURRENCY",
   "CLOUDPAY_API_BASE_URL",
   "CLOUDPAY_DEPOSIT_PATH",
@@ -47,6 +55,7 @@ const originalFetch = globalThis.fetch;
 const requests: Array<{ url: URL; fields: URLSearchParams }> = [];
 const responses = [
   { status: 1, redirect_url: "https://checkout.example/pay", qrcode_url: "https://checkout.example/qr.png" },
+  { status: 1, qrcode_url: "https://checkout.example/gotyme-qr.png" },
   { status: 1, gcashqr: "https://checkout.example/gcash-qr.png" },
   { status: 1 },
 ];
@@ -54,7 +63,6 @@ const responses = [
 for (const [key, value] of Object.entries({
   CLOUDPAY_MERCHANT_ID: "merchant-test",
   CLOUDPAY_SIGNING_SECRET: "test-signing-secret",
-  CLOUDPAY_PAYMENT_TYPE: "2",
   CLOUDPAY_AMOUNT_CURRENCY: "PHP",
   CLOUDPAY_API_BASE_URL: "https://gateway.example",
   CLOUDPAY_LIVE_ACTIVATION_CONFIRMED: "true",
@@ -86,7 +94,7 @@ try {
   const webDeposit = requests[0];
   assert.equal(webDeposit.url.toString(), "https://gateway.example/api/transfer");
   assert.equal(webDeposit.fields.get("merchant"), "merchant-test");
-  assert.equal(webDeposit.fields.get("payment_type"), "2");
+  assert.equal(webDeposit.fields.get("payment_type"), "3");
   assert.equal(webDeposit.fields.get("amount"), "3500.00");
   assert.equal(webDeposit.fields.get("bank_code"), "PMP");
   assert.equal(webDeposit.fields.get("callback_url"), "https://merchant.example/api/webhooks/cloudpay");
@@ -98,48 +106,59 @@ try {
   assert.equal(webDeposit.fields.get("sign"), signCloudPayFields(webSignFields, "test-signing-secret"));
 
   process.env.CLOUDPAY_DEPOSIT_PATH = "/api/pay/transfer";
-  process.env.CLOUDPAY_PAYMENT_TYPE = "1";
   const qrResult = await cloudPayCreateDeposit({
     orderId: "CPD-test-qr",
     amount: 250,
-    bankCode: "gcash",
-    customerAccount: "+639171234567",
+    bankCode: "got",
     callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
     returnUrl: "https://merchant.example/robotpay",
   });
   const qrDeposit = requests[1];
   assert.equal(qrDeposit.url.toString(), "https://gateway.example/api/pay/transfer");
   assert.equal(qrDeposit.fields.get("payment_type"), "1");
-  assert.equal(qrDeposit.fields.get("bank_code"), "gcash");
-  assert.equal(qrDeposit.fields.get("customer_bank_card_account"), "+639171234567");
-  assert.equal(qrResult.qrCode, "https://checkout.example/gcash-qr.png");
+  assert.equal(qrDeposit.fields.get("bank_code"), "got");
+  assert.equal(qrDeposit.fields.get("customer_bank_card_account"), null);
+  assert.equal(qrResult.qrCode, "https://checkout.example/gotyme-qr.png");
+
+  process.env.CLOUDPAY_DEPOSIT_PATH = "/api/transfer";
+  const gcashQrResult = await cloudPayCreateDeposit({
+    orderId: "CPD-test-gcash-qrph",
+    amount: 300,
+    bankCode: "mya",
+    callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
+    returnUrl: "https://merchant.example/robotpay",
+  });
+  const gcashQrDeposit = requests[2];
+  assert.equal(gcashQrDeposit.url.toString(), "https://gateway.example/api/transfer");
+  assert.equal(gcashQrDeposit.fields.get("payment_type"), "7");
+  assert.equal(gcashQrDeposit.fields.get("bank_code"), "mya");
+  assert.equal(gcashQrDeposit.fields.get("customer_bank_card_account"), null);
+  assert.equal(gcashQrResult.qrCode, "https://checkout.example/gcash-qr.png");
 
   await assert.rejects(
     () => cloudPayCreateDeposit({
-      orderId: "CPD-test-invalid-qr",
+      orderId: "CPD-test-unmapped-bank",
       amount: 250,
-      bankCode: "PMP",
-      customerAccount: "+639171234567",
+      bankCode: "bpi",
       callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
       returnUrl: "https://merchant.example/robotpay",
     }),
-    /GCash/,
+    /Unsupported CloudPay deposit method/,
   );
-  assert.equal(requests.length, 2);
+  assert.equal(requests.length, 3);
 
   process.env.CLOUDPAY_DEPOSIT_PATH = "/api/invalid";
   await assert.rejects(
     () => cloudPayCreateDeposit({
       orderId: "CPD-test-invalid-path",
       amount: 250,
-      bankCode: "gcash",
-      customerAccount: "+639171234567",
+      bankCode: "PMP",
       callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
       returnUrl: "https://merchant.example/robotpay",
     }),
     /CLOUDPAY_DEPOSIT_PATH/,
   );
-  assert.equal(requests.length, 2);
+  assert.equal(requests.length, 3);
 
   await cloudPayCreatePayout({
     orderId: "CPW-test",
@@ -149,7 +168,7 @@ try {
     accountName: "Test Account",
     callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
   });
-  const payout = requests[2];
+  const payout = requests[3];
   assert.equal(payout.url.toString(), "https://gateway.example/api/daifu");
   assert.equal(payout.fields.get("total_amount"), "100.25");
   assert.equal(payout.fields.get("callback_url"), "https://merchant.example/api/webhooks/cloudpay");
@@ -162,7 +181,6 @@ try {
 
   process.env.CLOUDPAY_LIVE_ACTIVATION_CONFIRMED = "false";
   assert.equal(isCloudPayConfigured(), false);
-  assert.throws(() => getCloudPayPaymentType(), /CLOUDPAY_LIVE_ACTIVATION_CONFIRMED/);
   await assert.rejects(
     () => cloudPayCreateDeposit({
       orderId: "CPD-test-disabled",
@@ -173,7 +191,7 @@ try {
     }),
     /CLOUDPAY_LIVE_ACTIVATION_CONFIRMED/,
   );
-  assert.equal(requests.length, 3);
+  assert.equal(requests.length, 4);
 } finally {
   globalThis.fetch = originalFetch;
   for (const key of configKeys) {

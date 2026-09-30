@@ -84,8 +84,33 @@ export const CLOUDPAY_BANKS: readonly CloudPayBank[] = [
   { code: "UDB", name: "UnionDigital Bank" },
 ];
 
+export type CloudPayDepositMethod = {
+  code: string;
+  name: string;
+  paymentType: "1" | "3" | "7";
+  aliases?: readonly string[];
+  requiresPayerPhone?: boolean;
+};
+
+// Merchant-confirmed Galaxy deposit mappings. Keep these separate from the
+// broader bank-code list used for withdrawals.
+export const CLOUDPAY_DEPOSIT_METHODS: readonly CloudPayDepositMethod[] = [
+  { code: "got", name: "GoTyme QRPH", paymentType: "1", aliases: ["GoTyme QR"] },
+  { code: "PMP", name: "PayMaya Direct", paymentType: "3", aliases: ["PayMaya", "Maya Direct"] },
+  { code: "mya", name: "GCash H5 QRPH", paymentType: "7", aliases: ["GCash", "GCash QRPH"] },
+];
+
 function normalizeBankValue(value: string): string {
   return value.trim().toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+export function resolveCloudPayDepositMethod(value: string): CloudPayDepositMethod | undefined {
+  const normalized = normalizeBankValue(value);
+  if (!normalized) return undefined;
+  return CLOUDPAY_DEPOSIT_METHODS.find((method) =>
+    [method.code, method.name, ...(method.aliases || [])]
+      .some((candidate) => normalizeBankValue(candidate) === normalized),
+  );
 }
 
 export function resolveCloudPayBankCode(value: string): string | undefined {

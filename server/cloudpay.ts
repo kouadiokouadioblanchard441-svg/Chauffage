@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { resolveCloudPayBankCode } from "@shared/cloudpay-banks";
+import { resolveCloudPayBankCode, resolveCloudPayDepositMethod } from "@shared/cloudpay-banks";
 
 export type CloudPayStatus = "pending" | "approved" | "rejected";
 export type CloudPayFields = Record<string, string | number | null | undefined>;
@@ -8,10 +8,8 @@ type CloudPayConfig = {
   baseUrl: URL;
   merchantId: string;
   signingSecret: string;
-  paymentType: string;
 };
 
-const DOCUMENTED_PAYMENT_TYPES = new Set(["1", "2", "3", "7"]);
 const DOCUMENTED_DEPOSIT_PATHS = new Set(["/api/transfer", "/api/pay/transfer"]);
 const DEFAULT_DEPOSIT_PATH = "/api/transfer";
 
@@ -29,13 +27,11 @@ function getCloudPayConfig(): CloudPayConfig {
   const missing: string[] = [];
   const merchantId = process.env.CLOUDPAY_MERCHANT_ID?.trim() || "";
   const signingSecret = process.env.CLOUDPAY_SIGNING_SECRET?.trim() || "";
-  const paymentType = process.env.CLOUDPAY_PAYMENT_TYPE?.trim() || "";
   const amountCurrency = process.env.CLOUDPAY_AMOUNT_CURRENCY?.trim().toUpperCase() || "";
   const rawBaseUrl = process.env.CLOUDPAY_API_BASE_URL?.trim() || "";
 
   if (!merchantId) missing.push("CLOUDPAY_MERCHANT_ID");
   if (!signingSecret) missing.push("CLOUDPAY_SIGNING_SECRET");
-  if (!paymentType) missing.push("CLOUDPAY_PAYMENT_TYPE");
   if (!amountCurrency) missing.push("CLOUDPAY_AMOUNT_CURRENCY");
   if (!rawBaseUrl) missing.push("CLOUDPAY_API_BASE_URL");
   if (process.env.CLOUDPAY_LIVE_ACTIVATION_CONFIRMED?.trim().toLowerCase() !== "true") {
@@ -46,9 +42,6 @@ function getCloudPayConfig(): CloudPayConfig {
   }
   if (amountCurrency !== "PHP") {
     throw new Error("CloudPay is disabled until CLOUDPAY_AMOUNT_CURRENCY is confirmed as PHP");
-  }
-  if (!DOCUMENTED_PAYMENT_TYPES.has(paymentType)) {
-    throw new Error("CLOUDPAY_PAYMENT_TYPE must be one of the documented Galaxy values: 1, 2, 3, or 7");
   }
   let baseUrl: URL;
   try {
@@ -63,7 +56,7 @@ function getCloudPayConfig(): CloudPayConfig {
   baseUrl.search = "";
   baseUrl.hash = "";
 
-  return { baseUrl, merchantId, signingSecret, paymentType };
+  return { baseUrl, merchantId, signingSecret };
 }
 
 function getCloudPayDepositPath(): string {
@@ -76,10 +69,6 @@ function getCloudPayDepositPath(): string {
 
 export function validateCloudPayConfig(): void {
   getCloudPayConfig();
-}
-
-export function getCloudPayPaymentType(): string {
-  return getCloudPayConfig().paymentType;
 }
 
 export function isCloudPayConfigured(): boolean {
@@ -208,23 +197,20 @@ export async function cloudPayCreateDeposit(input: {
   callbackUrl: string;
   returnUrl: string;
 }): Promise<CloudPayDepositResult> {
-  const config = getCloudPayConfig();
-  const bankCode = resolveCloudPayBankCode(input.bankCode);
-  if (!bankCode) throw new Error("Unsupported CloudPay bank or e-wallet");
+  getCloudPayConfig();
+  const method = resolveCloudPayDepositMethod(input.bankCode);
+  if (!method) throw new Error("Unsupported CloudPay deposit method");
   const fields: CloudPayFields = {
     order_id: input.orderId,
     amount: formatCloudPayAmount(input.amount),
-    payment_type: config.paymentType,
-    bank_code: bankCode,
+    payment_type: method.paymentType,
+    bank_code: method.code,
     callback_url: input.callbackUrl,
     return_url: input.returnUrl,
   };
-  if (config.paymentType === "1") {
-    if (bankCode !== "gcash") {
-      throw new Error("Galaxy QR payments require the GCash payment method");
-    }
+  if (method.requiresPayerPhone) {
     if (!input.customerAccount?.trim()) {
-      throw new Error("Galaxy QR payments require the payer's GCash account");
+      throw new Error("This Galaxy payment method requires the payer's phone number");
     }
     fields.customer_bank_card_account = input.customerAccount.trim();
   }

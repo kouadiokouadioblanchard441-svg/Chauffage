@@ -208,8 +208,7 @@ const availableProviders = isLegacyReturn
     provider: "clapay",
   }));
   const { data: cloudPayBanksData, isLoading: cloudPayBanksLoading } = useQuery<{
-    banks: Array<{ id: string; name: string; provider: "cloudpay" }>;
-    requiresPayerPhone?: boolean;
+    banks: Array<{ id: string; name: string; provider: "cloudpay"; requiresPayerPhone?: boolean }>;
   }>({
     queryKey: ["/api/cloudpay/banks", country],
     queryFn: async () => {
@@ -223,7 +222,7 @@ const availableProviders = isLegacyReturn
   const cloudPayOperators: Operator[] = (cloudPayBanksData?.banks || []).map((bank) => ({
     id: bank.id,
     name: bank.name,
-    requiresPayerPhone: cloudPayBanksData?.requiresPayerPhone ?? false,
+    requiresPayerPhone: bank.requiresPayerPhone ?? false,
     provider: "cloudpay",
   }));
 const operators: Operator[] = isLegacyReturn ? [] : cloudPayOperators;

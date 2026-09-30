@@ -6,7 +6,11 @@ import { storage } from "./storage";
 import bcrypt from "bcrypt";
 import { registerSchema, loginSchema, depositSchema, walletSchema, phoneNumberSchema } from "@shared/schema";
 import { getWithdrawalMethods, isAllowedWithdrawalMethod } from "@shared/withdrawal-methods";
-import { CLOUDPAY_BANKS, getCloudPayBank, resolveCloudPayBankCode } from "@shared/cloudpay-banks";
+import {
+  CLOUDPAY_DEPOSIT_METHODS,
+  resolveCloudPayBankCode,
+  resolveCloudPayDepositMethod,
+} from "@shared/cloudpay-banks";
 import { z } from "zod";
 import ConnectPgSimple from "connect-pg-simple";
 import { 
@@ -76,7 +80,6 @@ import {
   cloudPayCreatePayout,
   cloudPayQuery,
   getCloudPayMerchantId,
-  getCloudPayPaymentType,
   getCloudPaySigningSecret,
   isCloudPayConfigured,
   validateCloudPayConfig,
@@ -3934,19 +3937,14 @@ export async function registerRoutes(
         return res.status(400).json({ message: `Minimum amount: ${minDeposit.toLocaleString()} PHP` });
       }
 
-      const paymentType = getCloudPayPaymentType();
-      const requiresPayerPhone = paymentType === "1";
-      const bankCode = resolveCloudPayBankCode(String(req.body.bankCode || ""));
-      const bank = bankCode ? getCloudPayBank(bankCode) : undefined;
-      if (!bankCode || !bank) return res.status(400).json({ message: "Select a supported bank or e-wallet" });
-      if (requiresPayerPhone && bankCode !== "gcash") {
-        return res.status(400).json({ message: "Galaxy QR payments are only available for GCash." });
-      }
+      const depositMethod = resolveCloudPayDepositMethod(String(req.body.bankCode || ""));
+      if (!depositMethod) return res.status(400).json({ message: "Select a supported CloudPay deposit method" });
+      const requiresPayerPhone = Boolean(depositMethod.requiresPayerPhone);
       const parsedPhone = requiresPayerPhone
         ? phoneNumberSchema.safeParse(String(req.body.phone || "").trim())
         : undefined;
       if (requiresPayerPhone && !parsedPhone?.success) {
-        return res.status(400).json({ message: "Enter a valid Philippines GCash phone number" });
+        return res.status(400).json({ message: "Enter a valid Philippines payer phone number" });
       }
 
       const deposit = await storage.createDeposit({
@@ -3955,7 +3953,7 @@ export async function registerRoutes(
         accountName: user.fullName,
         accountNumber: parsedPhone?.success ? parsedPhone.data : "",
         country,
-        paymentMethod: bank.name,
+        paymentMethod: depositMethod.name,
         status: "processing",
         withdrawalFeePaymentId: withdrawalFeePayment?.id,
       });
@@ -3980,7 +3978,7 @@ export async function registerRoutes(
       const payment = await cloudPayCreateDeposit({
         orderId,
         amount,
-        bankCode,
+        bankCode: depositMethod.code,
         customerAccount: parsedPhone?.success ? parsedPhone.data : undefined,
         callbackUrl,
         returnUrl: returnUrl.toString(),
@@ -4400,13 +4398,13 @@ export async function registerRoutes(
       if (!isDepositMethodConfigured(country, "cloudpay", settings) || !isCloudPayConfigured()) {
         return res.status(403).json({ message: "This payment method is unavailable" });
       }
-      const paymentType = getCloudPayPaymentType();
-      const banks = paymentType === "1"
-        ? CLOUDPAY_BANKS.filter(({ code }) => code === "gcash")
-        : CLOUDPAY_BANKS;
       return res.json({
-        requiresPayerPhone: paymentType === "1",
-        banks: banks.map(({ code, name }) => ({ id: code, name, provider: "cloudpay" })),
+        banks: CLOUDPAY_DEPOSIT_METHODS.map((method) => ({
+          id: method.code,
+          name: method.name,
+          provider: "cloudpay",
+          requiresPayerPhone: Boolean(method.requiresPayerPhone),
+        })),
       });
     } catch (error: any) {
       return res.status(500).json({ message: error.message || "Unable to load payment methods" });
