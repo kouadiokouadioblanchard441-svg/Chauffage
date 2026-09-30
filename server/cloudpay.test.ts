@@ -163,6 +163,17 @@ try {
   process.env.CLOUDPAY_LIVE_ACTIVATION_CONFIRMED = "false";
   assert.equal(isCloudPayConfigured(), false);
   assert.throws(() => getCloudPayPaymentType(), /CLOUDPAY_LIVE_ACTIVATION_CONFIRMED/);
+  await assert.rejects(
+    () => cloudPayCreateDeposit({
+      orderId: "CPD-test-disabled",
+      amount: 200,
+      bankCode: "PMP",
+      callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
+      returnUrl: "https://merchant.example/robotpay",
+    }),
+    /CLOUDPAY_LIVE_ACTIVATION_CONFIRMED/,
+  );
+  assert.equal(requests.length, 3);
 } finally {
   globalThis.fetch = originalFetch;
   for (const key of configKeys) {
