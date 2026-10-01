@@ -2,6 +2,7 @@ import { db } from "./db";
 import { users, tasks, paymentChannels, platformSettings, countries, products } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { eq, sql } from "drizzle-orm";
+import { isCloudPayConfigured } from "./cloudpay";
 
 export async function seed() {
   console.log("Seeding database...");
@@ -328,6 +329,42 @@ export async function seed() {
         .onConflictDoNothing();
     });
     console.log("Signup bonus disabled; existing balances were preserved");
+  }
+
+  const cloudPayProductionActivationMigrationKey = "migration_cloudpay_production_activation_v1";
+  if (process.env.NODE_ENV === "production") {
+    if (!isCloudPayConfigured()) {
+      console.warn("[CloudPay] Production deposits remain disabled because the server configuration is incomplete");
+    } else if (!existingSettings.some((setting) => setting.key === cloudPayProductionActivationMigrationKey)) {
+      await db.transaction(async (tx) => {
+        const applied = await tx.select({ id: platformSettings.id })
+          .from(platformSettings)
+          .where(eq(platformSettings.key, cloudPayProductionActivationMigrationKey))
+          .limit(1);
+        if (applied.length > 0) return;
+
+        const cloudPaySetting = await tx.select({ id: platformSettings.id })
+          .from(platformSettings)
+          .where(eq(platformSettings.key, "cloudpayEnabled"))
+          .limit(1);
+        if (cloudPaySetting.length > 0) {
+          await tx.update(platformSettings)
+            .set({ value: "true", modifiedAt: new Date() })
+            .where(eq(platformSettings.key, "cloudpayEnabled"));
+        } else {
+          await tx.insert(platformSettings).values({
+            key: "cloudpayEnabled",
+            value: "true",
+            modifiedAt: new Date(),
+          });
+        }
+
+        await tx.insert(platformSettings)
+          .values({ key: cloudPayProductionActivationMigrationKey, value: "true", modifiedAt: new Date() })
+          .onConflictDoNothing();
+      });
+      console.log("[CloudPay] Production deposits enabled for Philippines after configuration validation");
+    }
   }
 
   const minimumWithdrawalMigrationKey = "migration_min_withdrawal_60_applied";
