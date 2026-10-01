@@ -21,6 +21,12 @@ Before pushing, inspect every outgoing commit for uploaded screenshots or other 
 
 **How to apply:** Review the full range from the upstream branch to `HEAD` before pushing. If an unpublished commit contains a sensitive attachment, remove it from the entire outgoing history before attempting the push.
 
+Plesk runs pnpm 12, which blocks dependency lifecycle scripts unless the application root has an explicit `allowBuilds` map in `pnpm-workspace.yaml`. Approve only `bcrypt`, `bufferutil`, and `esbuild` for this bundle; `onlyBuiltDependencies` is ignored by pnpm 11.23 and newer.
+
+**Why:** Plesk's install failed with `ERR_PNPM_IGNORED_BUILDS` for those packages, preventing the installed runtime dependencies from being ready.
+
+**How to apply:** Generate `dist/pnpm-workspace.yaml` alongside the Plesk package manifest and lockfile, then verify the deployment bundle contains all three files before pushing.
+
 Historical Plesk instructions and bundles used `SUPABASE_NEW_DATABASE_URL`, while the current runtime reads `NEON_DATABASE_URL`. Plesk has since been reported to contain the current variable name, but its value's target and successful connectivity are not verified.
 
 **Why:** A provider-level confirmation does not prove that Plesk exposes the exact variable the build expects or that the connection succeeds. A mismatch can prevent startup; switching to another database can make production users and payment history appear missing.

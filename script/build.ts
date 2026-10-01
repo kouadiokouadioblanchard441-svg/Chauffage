@@ -73,6 +73,18 @@ async function buildAll() {
     `${JSON.stringify(pleskPackage, null, 2)}\n`,
   );
   await copyFile("pnpm-lock.yaml", "dist/pnpm-lock.yaml");
+  // Plesk uses pnpm 12, which blocks dependency lifecycle scripts by default.
+  // Approve only the native packages required by this application's bundle.
+  await writeFile(
+    "dist/pnpm-workspace.yaml",
+    [
+      "allowBuilds:",
+      "  bcrypt: true",
+      "  bufferutil: true",
+      "  esbuild: true",
+      "",
+    ].join("\n"),
+  );
 }
 
 buildAll().catch((err) => {
