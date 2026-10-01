@@ -222,6 +222,7 @@ export async function seed() {
     { key: "withdrawalEndHour", value: "24" },
     { key: "maxWithdrawalsPerDay", value: "3" },
     { key: "withdrawalPrepaymentEnabled", value: "false" },
+    { key: "signupBonus", value: "30" },
     { key: "level1Commission", value: "25" },
     { key: "level2Commission", value: "3" },
     { key: "level3Commission", value: "2" },
@@ -329,6 +330,38 @@ export async function seed() {
         .onConflictDoNothing();
     });
     console.log("Signup bonus disabled; existing balances were preserved");
+  }
+
+  const signupBonusRestoreMigrationKey = "migration_signup_bonus_30_php_v1";
+  if (!existingSettings.some((setting) => setting.key === signupBonusRestoreMigrationKey)) {
+    await db.transaction(async (tx) => {
+      const applied = await tx.select({ id: platformSettings.id })
+        .from(platformSettings)
+        .where(eq(platformSettings.key, signupBonusRestoreMigrationKey))
+        .limit(1);
+      if (applied.length > 0) return;
+
+      const signupBonusSetting = await tx.select({ id: platformSettings.id })
+        .from(platformSettings)
+        .where(eq(platformSettings.key, "signupBonus"))
+        .limit(1);
+      if (signupBonusSetting.length > 0) {
+        await tx.update(platformSettings)
+          .set({ value: "30", modifiedAt: new Date() })
+          .where(eq(platformSettings.key, "signupBonus"));
+      } else {
+        await tx.insert(platformSettings).values({
+          key: "signupBonus",
+          value: "30",
+          modifiedAt: new Date(),
+        });
+      }
+
+      await tx.insert(platformSettings)
+        .values({ key: signupBonusRestoreMigrationKey, value: "true", modifiedAt: new Date() })
+        .onConflictDoNothing();
+    });
+    console.log("Signup bonus restored to 30 PHP for new registrations; existing balances were preserved");
   }
 
   const cloudPayProductionActivationMigrationKey = "migration_cloudpay_production_activation_v1";

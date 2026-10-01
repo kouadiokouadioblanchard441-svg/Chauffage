@@ -225,14 +225,35 @@ export class DatabaseStorage implements IStorage {
     const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const hashedPassword = await bcrypt.hash(data.password!, 10);
 
-    const [user] = await db.insert(users).values({
-      ...data,
-      password: hashedPassword,
-      referralCode,
-      balance: "0",
-    } as any).returning();
+    return db.transaction(async (tx) => {
+      const [signupBonusSetting] = await tx.select({ value: platformSettings.value })
+        .from(platformSettings)
+        .where(eq(platformSettings.key, "signupBonus"))
+        .limit(1);
+      const signupBonus = Number(signupBonusSetting?.value ?? "30");
+      if (!Number.isSafeInteger(signupBonus) || signupBonus < 0) {
+        throw new Error("The signup bonus must be configured as a non-negative whole PHP amount.");
+      }
+      const signupBonusAmount = signupBonus.toFixed(2);
 
-    return user;
+      const [user] = await tx.insert(users).values({
+        ...data,
+        password: hashedPassword,
+        referralCode,
+        balance: signupBonusAmount,
+      } as any).returning();
+
+      if (signupBonus > 0) {
+        await tx.insert(transactions).values({
+          userId: user.id,
+          type: "signup_bonus",
+          amount: signupBonusAmount,
+          description: "Registration bonus",
+        });
+      }
+
+      return user;
+    });
   }
 
   async updateUser(id: number, data: Partial<User>): Promise<User> {

@@ -318,7 +318,7 @@ async function run() {
       ["withdrawalStartHour", "9"], ["withdrawalEndHour", "17"], ["maxWithdrawalsPerDay", "1"],
       ["withdrawalPrepaymentEnabled", "false"],
       ["level1Commission", "25"], ["level2Commission", "4"], ["level3Commission", "1"],
-      ["signupBonus", "0"], ["soleaspayEnabled", "false"], ["soleaspayCountries", ""],
+      ["signupBonus", "30"], ["soleaspayEnabled", "false"], ["soleaspayCountries", ""],
       ["soleaspayChannelName", "Westpay"], ["omnipayEnabled", "false"],
       ["omnipayChannelName", "OmniPay"], ["omnipayCallbackKey", ""],
        ["ashtechEnabled", "false"], ["ashtechChannelName", "AshtechPay"],

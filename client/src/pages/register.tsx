@@ -89,7 +89,7 @@ export default function RegisterPage() {
         password: data.password,
         invitationCode: data.invitationCode,
       });
-       toast({ title: "Registration successful!", description: "Welcome to ChargePoint!" });
+       toast({ title: "Registration successful!", description: "Welcome to ChargePoint! Your 30 PHP registration bonus has been added." });
       navigate("/");
     } catch (error: any) {
       toast({ title: "Unable to register", description: error.message || "Check your information and try again.", variant: "destructive" });
@@ -132,6 +132,7 @@ export default function RegisterPage() {
          .auth-reference .auth-error { margin: -10px 0 -6px 4px; color: #b42318; font-size: 13px; font-weight: 600; line-height: 1.35; }
           .auth-reference .auth-illustration-frame { width: 100%; margin: 4px auto 23px; overflow: hidden; border: 2px solid #111827; border-radius: 12px; background: #fff; box-shadow: 0 5px 0 #111827, 0 10px 18px rgba(17, 24, 39, .18); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
          .auth-reference .auth-illustration { display: block; width: 100%; height: auto; -webkit-user-drag: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+          .auth-register .auth-bonus { margin: -8px 0 18px; color: #374151; font-size: 15px; font-weight: 700; line-height: 1.4; text-align: center; }
         @media (max-width: 370px) {
           .auth-register .auth-panel { padding-right: 22px; padding-left: 22px; }
           .auth-reference .auth-field { height: 64px; }
@@ -148,6 +149,7 @@ export default function RegisterPage() {
           <div className="auth-illustration-frame" onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()}>
              <img className="auth-illustration" src={registerIllustration} alt="ChargePoint home charger and charging station" draggable={false} />
           </div>
+          <p className="auth-bonus">New accounts receive a 30 PHP registration bonus.</p>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <input type="hidden" {...form.register("country")} />
 
