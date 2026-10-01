@@ -15,6 +15,12 @@ Plesk can serve the current static `index.html` while its Node.js process is fai
 
 **How to apply:** Verify `/` and a real API route independently. After updating GitHub, confirm Plesk pulled the branch and restarted Node before diagnosing the live result; keep the ZIP refreshed when it is the chosen deployment source.
 
+Before pushing, inspect every outgoing commit for uploaded screenshots or other attachments. Removing a sensitive image only in a later commit does not remove it from earlier commits; rewrite unpublished history to exclude it.
+
+**Why:** A Plesk screenshot containing credentials was present in a local commit even though it was not part of the application change.
+
+**How to apply:** Review the full range from the upstream branch to `HEAD` before pushing. If an unpublished commit contains a sensitive attachment, remove it from the entire outgoing history before attempting the push.
+
 Historical Plesk instructions and bundles used `SUPABASE_NEW_DATABASE_URL`, while the current runtime reads `NEON_DATABASE_URL`. Plesk has since been reported to contain the current variable name, but its value's target and successful connectivity are not verified.
 
 **Why:** A provider-level confirmation does not prove that Plesk exposes the exact variable the build expects or that the connection succeeds. A mismatch can prevent startup; switching to another database can make production users and payment history appear missing.
