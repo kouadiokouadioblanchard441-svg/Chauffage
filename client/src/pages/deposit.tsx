@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, fetchWithStartupRetry } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   ChevronLeft, Info, Copy, CheckCircle, Upload, Phone, Loader2,
@@ -246,7 +246,7 @@ export default function DepositPage() {
     useQuery<{ country: string; methods: DepositMethodChoice[] }>({
       queryKey: ["/api/deposit/methods", country],
       queryFn: async () => {
-        const response = await fetch(`/api/deposit/methods/${encodeURIComponent(country)}`, {
+        const response = await fetchWithStartupRetry(`/api/deposit/methods/${encodeURIComponent(country)}`, {
           credentials: "include",
         });
         const result = await response.json();
@@ -289,7 +289,7 @@ export default function DepositPage() {
   const { data: paymentNumbersList = [], isLoading: numbersLoading } = useQuery<PaymentNumber[]>({
     queryKey: ["/api/payment-numbers", country],
     queryFn: async () => {
-      const res = await fetch(`/api/payment-numbers?country=${country}`, { credentials: "include" });
+      const res = await fetchWithStartupRetry(`/api/payment-numbers?country=${country}`, { credentials: "include" });
        if (!res.ok) throw new Error("Unable to load payment numbers");
       return res.json();
     },
@@ -300,7 +300,7 @@ export default function DepositPage() {
   const { data: svOperatorsData, isLoading: svOperatorsLoading } = useQuery<{ success: boolean; data: SvOperator[] }>({
     queryKey: ["/api/sendavapay/operators", svCountry],
     queryFn: async () => {
-      const res = await fetch(`/api/sendavapay/operators/${svCountry}`, { credentials: "include" });
+      const res = await fetchWithStartupRetry(`/api/sendavapay/operators/${svCountry}`, { credentials: "include" });
        if (!res.ok) throw new Error("Unable to load SendavaPay operators");
       return res.json();
     },
@@ -311,7 +311,7 @@ export default function DepositPage() {
   const { data: ashtechCountries = [], isLoading: ashtechCountriesLoading } = useQuery<AshtechCountry[]>({
     queryKey: ["/api/ashtechpay/countries"],
     queryFn: async () => {
-      const res = await fetch("/api/ashtechpay/countries", { credentials: "include" });
+      const res = await fetchWithStartupRetry("/api/ashtechpay/countries", { credentials: "include" });
       if (!res.ok) throw new Error("Unable to load operators");
       return res.json();
     },
@@ -329,7 +329,7 @@ export default function DepositPage() {
     if (step !== "sv-waiting" || !svDepositId || !svPolling) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/deposits/${svDepositId}/sendavapay-status`, { credentials: "include" });
+        const res = await fetchWithStartupRetry(`/api/deposits/${svDepositId}/sendavapay-status`, { credentials: "include" });
         const data = await res.json();
         setSvStatus(data.status);
         if (data.status === "approved") {
@@ -364,7 +364,7 @@ export default function DepositPage() {
     if (step !== "ashtech-waiting" || !ashtechDepositId || !ashtechPolling) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/deposits/${ashtechDepositId}/ashtechpay-status`, { credentials: "include" });
+        const res = await fetchWithStartupRetry(`/api/deposits/${ashtechDepositId}/ashtechpay-status`, { credentials: "include" });
         const data = await res.json();
         setAshtechStatus(data.status);
         if (data.status === "approved") {
@@ -443,7 +443,7 @@ export default function DepositPage() {
     if (step !== "soleaspay-waiting" || !soleaspayDepositId || !soleaspayPolling) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/deposits/${soleaspayDepositId}/verify`, { credentials: "include" });
+        const res = await fetchWithStartupRetry(`/api/deposits/${soleaspayDepositId}/verify`, { credentials: "include" });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Unable to verify SoleaPay payment");
         if (data.status) setSoleaspayStatus(data.status);
