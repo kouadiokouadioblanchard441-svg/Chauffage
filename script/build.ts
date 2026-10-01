@@ -1,6 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile } from "fs/promises";
+import { copyFile, rm, readFile, writeFile } from "fs/promises";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -59,6 +59,20 @@ async function buildAll() {
     external: externals,
     logLevel: "info",
   });
+
+  // Plesk's application root is the dist directory, so its package manager
+  // needs the manifest and lockfile beside the startup file.
+  const pleskPackage = {
+    ...pkg,
+    scripts: {
+      start: "NODE_ENV=production node index.cjs",
+    },
+  };
+  await writeFile(
+    "dist/package.json",
+    `${JSON.stringify(pleskPackage, null, 2)}\n`,
+  );
+  await copyFile("pnpm-lock.yaml", "dist/pnpm-lock.yaml");
 }
 
 buildAll().catch((err) => {
