@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { User } from "@shared/schema";
-import { apiRequest } from "./queryClient";
+import { apiRequest, fetchWithStartupRetry } from "./queryClient";
 
 interface AuthContextType {
   user: User | null;
@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const response = await fetch("/api/auth/me", { credentials: "include" });
+      const response = await fetchWithStartupRetry("/api/auth/me", { credentials: "include" });
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);

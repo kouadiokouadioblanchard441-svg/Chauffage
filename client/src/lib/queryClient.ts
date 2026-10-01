@@ -1,5 +1,44 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const STARTUP_RETRY_LIMIT = 3;
+const STARTUP_MESSAGE = "Application initialization is not complete";
+
+async function isStartupResponse(response: Response): Promise<boolean> {
+  if (response.status !== 503) return false;
+
+  try {
+    const body = await response.clone().json();
+    return body?.status === "starting" && body?.message === STARTUP_MESSAGE;
+  } catch {
+    return false;
+  }
+}
+
+function getStartupRetryDelay(response: Response): number {
+  const retryAfterSeconds = Number(response.headers.get("Retry-After"));
+  if (!Number.isFinite(retryAfterSeconds) || retryAfterSeconds <= 0) return 5000;
+  return Math.min(Math.max(retryAfterSeconds * 1000, 1000), 10000);
+}
+
+export async function fetchWithStartupRetry(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  let retries = 0;
+
+  while (true) {
+    const response = await fetch(input, init);
+    if (retries >= STARTUP_RETRY_LIMIT || !(await isStartupResponse(response))) {
+      return response;
+    }
+
+    // Plesk may route a request to a Passenger worker that is still starting.
+    // This exact 503 is returned before API handlers run, so retrying it is safe.
+    retries += 1;
+    await new Promise((resolve) => setTimeout(resolve, getStartupRetryDelay(response)));
+  }
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = await res.text();
@@ -23,7 +62,7 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const res = await fetchWithStartupRetry(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -40,7 +79,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const res = await fetchWithStartupRetry(queryKey.join("/") as string, {
       credentials: "include",
     });
 
