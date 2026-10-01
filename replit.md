@@ -69,6 +69,12 @@ Preferred communication style: Simple, everyday language.
 - **Drizzle ORM**: Type-safe database queries and schema management
 - `SUPABASE_SOURCE_DATABASE_URL` is not used by the application runtime.
 
+### Plesk deployment layout
+- Application root: `dist`
+- Document root: `dist/public`
+- Startup file: `index.cjs`
+- The build emits `dist/package.json` and `dist/pnpm-lock.yaml` so Plesk can install dependencies from the configured application root.
+
 ### Frontend Libraries
 - **Radix UI**: Accessible UI primitives (dialogs, dropdowns, tabs, etc.)
 - **TanStack Query**: Server state management and caching
