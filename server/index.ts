@@ -110,9 +110,11 @@ app.use((req, res, next) => {
     });
 
   // Keep Plesk's startup probe responsive while the database is initializing.
-  // The health endpoint remains available; application APIs wait for a
-  // successful seed so account and financial operations cannot race it.
-  app.use((req, res, next) => {
+  // Plesk can route requests to a newly spawned Node process while another
+  // process is already ready. Wait for this process's seed instead of making
+  // normal API requests fail immediately during that startup window.
+  // The health endpoint remains available so the process can still be probed.
+  app.use(async (req, res, next) => {
     if (
       !req.path.startsWith("/api") ||
       req.path === "/api/health" ||
@@ -120,6 +122,19 @@ app.use((req, res, next) => {
     ) {
       return next();
     }
+
+    let startupTimeout: NodeJS.Timeout | undefined;
+    const seedReady = await Promise.race([
+      seedPromise,
+      new Promise<boolean>((resolve) => {
+        startupTimeout = setTimeout(() => resolve(false), 30_000);
+      }),
+    ]);
+    if (startupTimeout) clearTimeout(startupTimeout);
+    if (seedReady && app.locals.startupState === "ready") {
+      return next();
+    }
+
     res.setHeader("Retry-After", "5");
     return res.status(503).json({
       status: app.locals.startupState,
