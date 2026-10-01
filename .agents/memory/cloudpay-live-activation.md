@@ -15,9 +15,9 @@ The user supplied `dmxping.online` as the Plesk production hostname. CloudPay ca
 
 For deposits, derive `payment_type` from the selected merchant-confirmed bank code rather than a single global payment-type setting. Keep deposit mappings separate from the broader bank-code list used for withdrawals.
 
-**Why:** `payment_type` and `bank_code` form a merchant-specific API pair; guessing one can reject a deposit or send the user through the wrong payment flow.
+**Why:** `payment_type` and `bank_code` form a merchant-specific API pair; guessing one can reject a deposit or send the user through the wrong payment flow. The Galaxy QR contract also marks the payer account as required, so omitting it can reject GoTyme QR even when the pair is correct.
 
-**How to apply:** Offer only the confirmed pairs (1/`got`, 3/`PMP`, 7/`mya`). Keep type 2 unavailable until Galaxy supplies its exact bank-code mapping.
+**How to apply:** Offer only the confirmed pairs (1/`got`, 3/`PMP`, 7/`mya`). For type 1/`got`, collect the payer's Philippines phone/account and send it as `customer_bank_card_account`; keep types 3/`PMP` and 7/`mya` unchanged. Keep type 2 unavailable until Galaxy supplies its exact bank-code mapping.
 
 **Why:** A path-version mismatch can route deposits to an unsupported endpoint or leave them unreconciled.
 

@@ -89,13 +89,14 @@ export type CloudPayDepositMethod = {
   name: string;
   paymentType: "1" | "3" | "7";
   aliases?: readonly string[];
+  // Galaxy's QR interface requires the payer's account number for this method.
   requiresPayerPhone?: boolean;
 };
 
 // Merchant-confirmed Galaxy deposit mappings. Keep these separate from the
 // broader bank-code list used for withdrawals.
 export const CLOUDPAY_DEPOSIT_METHODS: readonly CloudPayDepositMethod[] = [
-  { code: "got", name: "GoTyme QRPH", paymentType: "1", aliases: ["GoTyme QR"] },
+  { code: "got", name: "GoTyme QRPH", paymentType: "1", aliases: ["GoTyme QR"], requiresPayerPhone: true },
   { code: "PMP", name: "PayMaya Direct", paymentType: "3", aliases: ["PayMaya", "Maya Direct"] },
   { code: "mya", name: "GCash H5 QRPH", paymentType: "7", aliases: ["GCash", "GCash QRPH"] },
 ];

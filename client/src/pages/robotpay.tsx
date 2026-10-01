@@ -660,11 +660,13 @@ const operators: Operator[] = isLegacyReturn ? [] : cloudPayOperators;
               )}
               {requiresPayerPhone && (
                 <>
-                  <label htmlFor="robotpay-payer-phone" className="block text-sm font-semibold text-[#111827]">Payer phone</label>
+                  <label htmlFor="robotpay-payer-phone" className="block text-sm font-semibold text-[#111827]">
+                    Payer phone <span className="text-red-500">*</span>
+                  </label>
                   <div className="flex items-center rounded-[11px] border-2 border-[#111827] px-3 shadow-[0_2px_5px_rgba(17,24,39,0.1)] transition focus-within:border-[#FF7A14] focus-within:ring-2 focus-within:ring-[#FF7A14]/20">
                     <Phone className="h-4 w-4 text-[#111827]" />
                     <span className="shrink-0 border-r border-gray-300 pr-2 text-[#111827]">+{phonePrefix}</span>
-                    <input id="robotpay-payer-phone" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 12))} type="tel" inputMode="numeric" className="w-full px-3 py-2.5 text-[#111827] outline-none" />
+                    <input id="robotpay-payer-phone" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 12))} type="tel" inputMode="numeric" required aria-required="true" className="w-full px-3 py-2.5 text-[#111827] outline-none" />
                   </div>
                 </>
               )}
