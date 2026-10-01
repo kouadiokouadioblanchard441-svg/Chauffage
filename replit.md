@@ -73,7 +73,7 @@ Preferred communication style: Simple, everyday language.
 - Application root: `dist`
 - Document root: `dist/public`
 - Startup file: `index.cjs`
-- The build emits `dist/package.json` and `dist/pnpm-lock.yaml` so Plesk can install dependencies from the configured application root.
+- The build emits `dist/package.json`, `dist/pnpm-lock.yaml`, and `dist/pnpm-workspace.yaml` so Plesk can install dependencies from the configured application root. The workspace file explicitly allows pnpm 12 lifecycle scripts for `bcrypt`, `bufferutil`, and `esbuild`.
 
 ### Frontend Libraries
 - **Radix UI**: Accessible UI primitives (dialogs, dropdowns, tabs, etc.)
