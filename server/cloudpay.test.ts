@@ -62,6 +62,7 @@ const configKeys = [
   "CLOUDPAY_AMOUNT_CURRENCY",
   "CLOUDPAY_API_BASE_URL",
   "CLOUDPAY_DEPOSIT_PATH",
+  "PUBLIC_APP_URL",
   "CLOUDPAY_DEV_PREVIEW_ENABLED",
   "CLOUDPAY_LIVE_ACTIVATION_CONFIRMED",
 ] as const;
@@ -87,6 +88,7 @@ for (const [key, value] of Object.entries({
   CLOUDPAY_API_BASE_URL: "https://gateway.example",
   CLOUDPAY_DEV_PREVIEW_ENABLED: "true",
   CLOUDPAY_LIVE_ACTIVATION_CONFIRMED: "true",
+  PUBLIC_APP_URL: "https://merchant.example",
 })) {
   process.env[key] = value;
 }
@@ -179,6 +181,7 @@ try {
   assert.equal(requests.length, 3);
 
   process.env.CLOUDPAY_DEPOSIT_PATH = "/api/invalid";
+  assert.equal(isCloudPayConfigured(), false);
   await assert.rejects(
     () => cloudPayCreateDeposit({
       orderId: "CPD-test-invalid-path",
@@ -244,6 +247,15 @@ try {
     /CLOUDPAY_LIVE_ACTIVATION_CONFIRMED/,
   );
   assert.equal(requests.length, 5);
+
+  process.env.CLOUDPAY_LIVE_ACTIVATION_CONFIRMED = "true";
+  process.env.NODE_ENV = "production";
+  delete process.env.PUBLIC_APP_URL;
+  assert.equal(isCloudPayConfigured(), false);
+  process.env.PUBLIC_APP_URL = "http://merchant.example";
+  assert.equal(isCloudPayConfigured(), false);
+  process.env.PUBLIC_APP_URL = "https://merchant.example";
+  assert.equal(isCloudPayConfigured(), true);
 } finally {
   globalThis.fetch = originalFetch;
   for (const key of configKeys) {

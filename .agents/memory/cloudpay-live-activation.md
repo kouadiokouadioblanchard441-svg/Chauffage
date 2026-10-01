@@ -38,3 +38,9 @@ Treat an explicit provider `status: 0` during initiation as a provider rejection
 **Why:** Blindly changing a confirmed contract or retrying a live request can create duplicate or misrouted payments, while the provider's rejection reason distinguishes payload, merchant, signature, and allowlist issues.
 
 **How to apply:** Capture the provider's safe error detail, verify it against the merchant contract and account configuration, and only then change the request or settings. Do not issue another live initiation as an agent-side test.
+
+On 2026-10-01, the user explicitly authorized enabling real CloudPay deposits for Philippines accounts on Plesk. This does not authorize creating a real test payment.
+
+**Why:** Production checkout activation was explicitly approved, but live financial transactions remain unsuitable as agent-side verification.
+
+**How to apply:** Enable production checkout only after the Plesk runtime validates its required CloudPay configuration; do not use Replit preview settings as evidence of Plesk configuration.

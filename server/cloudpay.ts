@@ -37,11 +37,13 @@ function getCloudPayConfig(): CloudPayConfig {
   const signingSecret = process.env.CLOUDPAY_SIGNING_SECRET?.trim() || "";
   const amountCurrency = process.env.CLOUDPAY_AMOUNT_CURRENCY?.trim().toUpperCase() || "";
   const rawBaseUrl = process.env.CLOUDPAY_API_BASE_URL?.trim() || "";
+  const publicAppUrl = process.env.PUBLIC_APP_URL?.trim() || "";
 
   if (!merchantId) missing.push("CLOUDPAY_MERCHANT_ID");
   if (!signingSecret) missing.push("CLOUDPAY_SIGNING_SECRET");
   if (!amountCurrency) missing.push("CLOUDPAY_AMOUNT_CURRENCY");
   if (!rawBaseUrl) missing.push("CLOUDPAY_API_BASE_URL");
+  if (process.env.NODE_ENV === "production" && !publicAppUrl) missing.push("PUBLIC_APP_URL");
   if (process.env.CLOUDPAY_LIVE_ACTIVATION_CONFIRMED?.trim().toLowerCase() !== "true") {
     missing.push("CLOUDPAY_LIVE_ACTIVATION_CONFIRMED");
   }
@@ -60,6 +62,17 @@ function getCloudPayConfig(): CloudPayConfig {
   if (baseUrl.protocol !== "https:" || baseUrl.username || baseUrl.password) {
     throw new Error("CLOUDPAY_API_BASE_URL must be an HTTPS URL without embedded credentials");
   }
+  if (process.env.NODE_ENV === "production" && publicAppUrl) {
+    let parsedPublicAppUrl: URL;
+    try {
+      parsedPublicAppUrl = new URL(publicAppUrl);
+    } catch {
+      throw new Error("PUBLIC_APP_URL must be a valid HTTPS URL for CloudPay callbacks");
+    }
+    if (parsedPublicAppUrl.protocol !== "https:" || parsedPublicAppUrl.username || parsedPublicAppUrl.password) {
+      throw new Error("PUBLIC_APP_URL must be an HTTPS URL without embedded credentials");
+    }
+  }
   baseUrl.pathname = "/";
   baseUrl.search = "";
   baseUrl.hash = "";
@@ -77,11 +90,13 @@ function getCloudPayDepositPath(): string {
 
 export function validateCloudPayConfig(): void {
   getCloudPayConfig();
+  getCloudPayDepositPath();
 }
 
 export function isCloudPayConfigured(): boolean {
   try {
     getCloudPayConfig();
+    getCloudPayDepositPath();
     return true;
   } catch {
     return false;
