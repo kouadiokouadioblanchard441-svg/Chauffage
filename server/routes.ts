@@ -305,7 +305,7 @@ const PUBLIC_SETTING_KEYS = new Set([
   "channelLink", "channelType", "channelLabel", "popupButtonLabel",
   "groupLink", "groupType", "groupLabel", "noticeText",
   "supportEnabled", "support2Enabled", "channelEnabled", "groupEnabled",
-  "signupBonus", "minDeposit", "minWithdrawal", "withdrawalFees",
+  "minDeposit", "minWithdrawal", "withdrawalFees",
   "maxWithdrawalsPerDay", "withdrawalStartHour", "withdrawalEndHour",
   "withdrawalPrepaymentEnabled",
   "level1Commission", "level2Commission", "level3Commission",

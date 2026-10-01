@@ -21,7 +21,6 @@ export default function RulesModal({ open, onClose }: RulesModalProps) {
     queryKey: ["/api/products"],
   });
 
-  const signupBonus = settings?.signupBonus || "30";
   const minDeposit = settings?.minDeposit || "200";
   const minWithdrawal = settings?.minWithdrawal || "60";
   const withdrawalFees = settings?.withdrawalFees || "16";
@@ -93,10 +92,6 @@ export default function RulesModal({ open, onClose }: RulesModalProps) {
               </ul>
             </section>
 
-            <section>
-              <h4 className="font-medium text-foreground mb-2">5. Signup bonus</h4>
-              <p>Each new member receives a {parseInt(signupBonus).toLocaleString("en-US")} PHP signup bonus.</p>
-            </section>
           </div>
         </ScrollArea>
       </DialogContent>

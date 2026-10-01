@@ -224,7 +224,6 @@ export async function seed() {
     { key: "level1Commission", value: "25" },
     { key: "level2Commission", value: "3" },
     { key: "level3Commission", value: "2" },
-    { key: "signupBonus", value: "30" },
     { key: "soleaspayEnabled", value: "false" },
     { key: "soleaspayCountries", value: "" },
     { key: "soleaspayChannelName", value: "SoleaPay" },
@@ -299,15 +298,36 @@ export async function seed() {
     console.log("Withdrawal fee setting migrated to 16%");
   }
 
-  const signupBonusMigrationKey = "migration_signup_bonus_30_applied";
-  if (!existingSettings.some((setting) => setting.key === signupBonusMigrationKey)) {
-    await db.update(platformSettings)
-      .set({ value: "30", modifiedAt: new Date() })
-      .where(eq(platformSettings.key, "signupBonus"));
-    await db.insert(platformSettings)
-      .values({ key: signupBonusMigrationKey, value: "true" })
-      .onConflictDoNothing();
-    console.log("Signup bonus setting migrated to 30 PHP");
+  const signupBonusDisabledMigrationKey = "migration_signup_bonus_disabled_v1";
+  if (!existingSettings.some((setting) => setting.key === signupBonusDisabledMigrationKey)) {
+    await db.transaction(async (tx) => {
+      const applied = await tx.select({ id: platformSettings.id })
+        .from(platformSettings)
+        .where(eq(platformSettings.key, signupBonusDisabledMigrationKey))
+        .limit(1);
+      if (applied.length > 0) return;
+
+      const signupBonusSetting = await tx.select({ id: platformSettings.id })
+        .from(platformSettings)
+        .where(eq(platformSettings.key, "signupBonus"))
+        .limit(1);
+      if (signupBonusSetting.length > 0) {
+        await tx.update(platformSettings)
+          .set({ value: "0", modifiedAt: new Date() })
+          .where(eq(platformSettings.key, "signupBonus"));
+      } else {
+        await tx.insert(platformSettings).values({
+          key: "signupBonus",
+          value: "0",
+          modifiedAt: new Date(),
+        });
+      }
+
+      await tx.insert(platformSettings)
+        .values({ key: signupBonusDisabledMigrationKey, value: "true", modifiedAt: new Date() })
+        .onConflictDoNothing();
+    });
+    console.log("Signup bonus disabled; existing balances were preserved");
   }
 
   const minimumWithdrawalMigrationKey = "migration_min_withdrawal_60_applied";
@@ -408,7 +428,6 @@ export async function seed() {
         { key: "level1Commission", value: "25" },
         { key: "level2Commission", value: "3" },
         { key: "level3Commission", value: "2" },
-        { key: "signupBonus", value: "30" },
         { key: "minWithdrawal", value: "60" },
         { key: "withdrawalStartHour", value: "0" },
         { key: "withdrawalEndHour", value: "24" },

@@ -17,7 +17,6 @@ export default function RulesPage() {
     queryKey: ["/api/products"],
   });
 
-  const signupBonus = settings?.signupBonus || "30";
   const minDeposit = settings?.minDeposit || "200";
   const minWithdrawal = settings?.minWithdrawal || "60";
   const withdrawalFees = settings?.withdrawalFees || "16";
@@ -79,14 +78,7 @@ export default function RulesPage() {
         </section>
 
         <section className="cp-rules-section">
-          <h2>4. Sign-up bonus</h2>
-          <ul>
-            <li>Each new member receives {parseInt(signupBonus).toLocaleString("en-PH")} PHP as a sign-up bonus.</li>
-          </ul>
-        </section>
-
-        <section className="cp-rules-section">
-          <h2>5. Security</h2>
+          <h2>4. Security</h2>
           <ul>
             <li>You are responsible for keeping your password secure.</li>
             <li>Never share your login credentials with third parties.</li>
