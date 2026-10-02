@@ -330,8 +330,11 @@ const operators: Operator[] = isLegacyReturn ? [] : cloudPayOperators;
       return data as { depositId: number; redirectUrl?: string; qrCode?: string; message?: string };
     },
     onSuccess: (data) => {
+      if (data.redirectUrl) {
+        window.location.assign(data.redirectUrl);
+        return;
+      }
       setDepositId(data.depositId);
-      setRedirectUrl(data.redirectUrl || "");
       setCloudPayQrCode(data.qrCode || "");
       setMessage(sanitizeDepositDisplayText(data.message, "Complete the payment using the bank or e-wallet instructions."));
       setStatus("processing");
