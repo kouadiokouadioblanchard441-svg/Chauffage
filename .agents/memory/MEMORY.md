@@ -21,4 +21,4 @@
 - [Telegram bot polling](telegram-bot-polling.md) — Run one production getUpdates poller per bot token; parallel pollers conflict.
 - [External payment configuration rollback](external-payment-config-rollback.md) — Restoring payment source files from GitHub does not undo provider settings already persisted in external Supabase.
 - [Clapay contract configuration](clapay-contract-configuration.md) — Keep secrets in Plesk, confirm via the authenticated API, and preserve uncertain initiations for signed-callback reconciliation.
-- [CloudPay live-activation gate](cloudpay-live-activation.md) — Never use the credential exposed in chat; confirm PHP support and the merchant-approved payment type before live requests.
+- [CloudPay live-activation gate](cloudpay-live-activation.md) — Use Galaxy’s hosted `redirect_url`; verify whether it selects methods or requires app-supplied `payment_type` and `bank_code`.

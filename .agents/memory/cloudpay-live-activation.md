@@ -45,8 +45,8 @@ On 2026-10-01, the user explicitly authorized enabling real CloudPay deposits fo
 
 **How to apply:** Enable production checkout only after the Plesk runtime validates its required CloudPay configuration; do not use Replit preview settings as evidence of Plesk configuration.
 
-The user requires deposit payment methods to be fetched directly from CloudPay rather than served from a hardcoded application list. Galaxy System API 3.0.5 documents `/api/transfer`, `/api/daifu`, `/api/query`, `/api/me`, and `/api/receipt`, but no payment-method catalog endpoint.
+The user clarified that deposit checkout should be hosted by Galaxy rather than presenting a locally hardcoded method catalog. Galaxy System API 3.0.5 says a successful `/api/transfer` response includes `redirect_url` for the payment page, but the request still requires `payment_type` and `bank_code`. The document does not state whether Galaxy's hosted page can select a method without those values.
 
-**Why:** A static app list can become stale and does not meet the user's integration requirement; guessing an undocumented endpoint or using `/api/transfer` to discover options could initiate a real payment.
+**Why:** A hosted redirect is not itself a method-list API, and guessing a generic checkout payload or payment-type/bank-code pair could reject or misroute a real payment.
 
-**How to apply:** Only add runtime catalog loading once Galaxy provides a documented list endpoint and response contract. Until then, do not invent a route or make a discovery call to a transaction endpoint; explain that the supplied contract cannot satisfy live catalog retrieval.
+**How to apply:** Use the documented initiation request and returned hosted checkout URL only with merchant-confirmed parameters. Before removing local method selection, confirm whether Galaxy's hosted page selects the channel and the exact request contract for that flow. Never call `/api/transfer` as a discovery request.
