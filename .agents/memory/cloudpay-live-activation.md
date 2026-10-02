@@ -44,3 +44,9 @@ On 2026-10-01, the user explicitly authorized enabling real CloudPay deposits fo
 **Why:** Production checkout activation was explicitly approved, but live financial transactions remain unsuitable as agent-side verification.
 
 **How to apply:** Enable production checkout only after the Plesk runtime validates its required CloudPay configuration; do not use Replit preview settings as evidence of Plesk configuration.
+
+The user requires deposit payment methods to be fetched directly from CloudPay rather than served from a hardcoded application list. Galaxy System API 3.0.5 documents `/api/transfer`, `/api/daifu`, `/api/query`, `/api/me`, and `/api/receipt`, but no payment-method catalog endpoint.
+
+**Why:** A static app list can become stale and does not meet the user's integration requirement; guessing an undocumented endpoint or using `/api/transfer` to discover options could initiate a real payment.
+
+**How to apply:** Only add runtime catalog loading once Galaxy provides a documented list endpoint and response contract. Until then, do not invent a route or make a discovery call to a transaction endpoint; explain that the supplied contract cannot satisfy live catalog retrieval.
