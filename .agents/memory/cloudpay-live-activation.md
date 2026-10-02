@@ -50,3 +50,9 @@ The user confirmed that customers choose a deposit channel in the app and then c
 **Why:** The documented flow creates a hosted payment session, while a live channel catalog is a separate capability absent from the supplied API contract.
 
 **How to apply:** Keep app-side selection and use the returned hosted checkout URL with merchant-confirmed mappings. Do not claim the list is dynamic or invent a catalog endpoint; ask Galaxy for the documented channel-list API before implementing provider-sourced options. Never call `/api/transfer` as a discovery request.
+
+Before asking the user for CloudPay URLs or documentation, inspect the already supplied Galaxy API document and endpoint list; do not request the same information again.
+
+**Why:** Repeating requests for URLs and documentation the user had already provided caused frustration.
+
+**How to apply:** Search current uploads and conversation context first, then ask only for a specific contract detail that is genuinely absent.
