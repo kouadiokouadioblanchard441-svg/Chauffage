@@ -56,3 +56,9 @@ Before asking the user for CloudPay URLs or documentation, inspect the already s
 **Why:** Repeating requests for URLs and documentation the user had already provided caused frustration.
 
 **How to apply:** Search current uploads and conversation context first, then ask only for a specific contract detail that is genuinely absent.
+
+Complete CloudPay validation in Replit development before moving the change to production.
+
+**Why:** The user specified that development testing in Replit comes first and production follows only after everything is verified.
+
+**How to apply:** Keep changes in Replit while checking the build, automated tests, authenticated customer flow, and provider callback/reconciliation. Do not claim live end-to-end readiness from mocked tests; a real payment, if required, must be initiated by the merchant, not by the agent.
