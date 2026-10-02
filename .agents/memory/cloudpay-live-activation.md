@@ -45,8 +45,8 @@ On 2026-10-01, the user explicitly authorized enabling real CloudPay deposits fo
 
 **How to apply:** Enable production checkout only after the Plesk runtime validates its required CloudPay configuration; do not use Replit preview settings as evidence of Plesk configuration.
 
-The user clarified that deposit checkout should be hosted by Galaxy rather than presenting a locally hardcoded method catalog. Galaxy System API 3.0.5 says a successful `/api/transfer` response includes `redirect_url` for the payment page, but the request still requires `payment_type` and `bank_code`. The document does not state whether Galaxy's hosted page can select a method without those values.
+The user confirmed that customers choose a deposit channel in the app and then continue to Galaxy's hosted checkout. They also require the app's channel list to come directly from CloudPay. Galaxy System API 3.0.5 documents `POST /api/transfer` with required `payment_type` and `bank_code`, returning `redirect_url` for the payment page, but no channel-catalog endpoint.
 
-**Why:** A hosted redirect is not itself a method-list API, and guessing a generic checkout payload or payment-type/bank-code pair could reject or misroute a real payment.
+**Why:** The documented flow creates a hosted payment session, while a live channel catalog is a separate capability absent from the supplied API contract.
 
-**How to apply:** Use the documented initiation request and returned hosted checkout URL only with merchant-confirmed parameters. Before removing local method selection, confirm whether Galaxy's hosted page selects the channel and the exact request contract for that flow. Never call `/api/transfer` as a discovery request.
+**How to apply:** Keep app-side selection and use the returned hosted checkout URL with merchant-confirmed mappings. Do not claim the list is dynamic or invent a catalog endpoint; ask Galaxy for the documented channel-list API before implementing provider-sourced options. Never call `/api/transfer` as a discovery request.
