@@ -905,13 +905,13 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               <p className="font-semibold">
                 {settings?.cloudpayConfigured === "true" ? "Server configuration is complete" : "Server configuration is incomplete"}
               </p>
-              <p>Use the merchant-assigned <code>CLOUDPAY_MERCHANT_ID</code> and a newly issued <code>CLOUDPAY_SIGNING_SECRET</code> stored in Replit Secrets. Do not reuse the key previously posted in chat or paste credentials into this settings page. If production runs on Plesk, configure the rotated secret there separately.</p>
+              <p>For production, Plesk is the source of truth for CloudPay credentials and runtime settings. Configure them in Plesk's Node.js environment; Replit Secrets apply only to development. This admin panel reports what the running server reads but does not store provider keys in the app database. The signing secret is never displayed. Do not reuse an exposed key or paste credentials into this page.</p>
               <p>Galaxy-confirmed deposit methods: <code>1</code> GoTyme QRPH (<code>got</code>), <code>3</code> PayMaya Direct (<code>PMP</code>), and <code>7</code> GCash H5 QRPH (<code>mya</code>). The gateway receives the matching payment type and bank code for the selected method. Code <code>2</code> is approved on the account but is not exposed until Galaxy supplies its bank-code mapping. The account currency is PHP.</p>
               <p><code>CLOUDPAY_API_BASE_URL</code> must be the exact HTTPS gateway host assigned by Galaxy; the guide uses a placeholder. Configure callback <code>/api/webhooks/cloudpay</code>. CloudPay remains blocked until the replacement secret is stored, Galaxy confirms the active deposit path, any required production egress-IP allowlisting is complete, and live activation is explicitly approved. Code <code>2</code> stays unavailable until its bank-code mapping is supplied.</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 space-y-2">
               <p className="font-semibold">Environment read by this server</p>
-              <p className="text-slate-600">Live process values for the server answering this page. The signing secret itself is never shown.</p>
+              <p className="text-slate-600">Read-only process values for the server answering this page. In production, these come from Plesk; the signing secret is never shown or stored by this panel.</p>
               {cloudPayRuntimeLoading ? (
                 <p>Checking current server environment…</p>
               ) : cloudPayRuntimeError || !cloudPayRuntime ? (

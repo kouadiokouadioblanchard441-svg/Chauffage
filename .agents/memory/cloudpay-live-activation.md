@@ -3,7 +3,7 @@ name: CloudPay live-activation gate
 description: Merchant confirmations and credential rotation required before CloudPay/Galaxy live calls.
 ---
 
-Do not make live CloudPay/Galaxy requests using the credential exposed in chat. Require a newly issued signing secret stored through Replit Secrets first. The user confirmed the merchant account uses PHP and that payment types 1, 2, 3, and 7 are authorized. The merchant supplied these specific deposit mappings: type 1 + `bank_code=got` = GoTyme QRPH; type 3 + `bank_code=PMP` = PayMaya Direct; type 7 + `bank_code=mya` = GCash H5 QRPH. Type 2 has no supplied bank-code mapping and must remain unavailable until Galaxy provides it. These merchant-specific mappings supersede generic documentation descriptions that conflict with them. Confirm any required production egress-IP allowlisting with the provider.
+Do not make live CloudPay/Galaxy requests using the credential exposed in chat. Require a newly issued signing secret in the target runtime: Replit Secrets for development and Plesk's environment for production. The user confirmed the merchant account uses PHP and that payment types 1, 2, 3, and 7 are authorized. The merchant supplied these specific deposit mappings: type 1 + `bank_code=got` = GoTyme QRPH; type 3 + `bank_code=PMP` = PayMaya Direct; type 7 + `bank_code=mya` = GCash H5 QRPH. Type 2 has no supplied bank-code mapping and must remain unavailable until Galaxy provides it. These merchant-specific mappings supersede generic documentation descriptions that conflict with them. Confirm any required production egress-IP allowlisting with the provider.
 
 The merchant-specific connection sheet gives the deposit path `/api/transfer`, while the earlier protocol screenshots show `/api/pay/transfer`. Keep only these documented paths selectable, default to the merchant-specific path, and confirm the production path with Galaxy before live activation.
 
@@ -12,6 +12,12 @@ The user supplied `dmxping.online` as the Plesk production hostname. CloudPay ca
 **Why:** An insecure callback URL fails the app's CloudPay checks, and pointing shared development settings at production can send test flows to the live site.
 
 **How to apply:** Keep the Plesk callback and return URLs on the HTTPS domain, and leave Replit development URLs separate.
+
+For production CloudPay credentials and runtime settings, Plesk is the source of truth. The admin panel may show read-only runtime diagnostics, but must not duplicate these values in the application database; the existing admin activation toggle remains separate.
+
+**Why:** On 2026-10-03, the user chose Plesk-only storage to avoid conflicting credential copies; the signing secret must not be exposed in the admin UI.
+
+**How to apply:** Read production provider configuration from the Plesk Node.js process environment. Show only safe diagnostic fields and whether the signing secret is present, never its value.
 
 For deposits, derive `payment_type` from the selected merchant-confirmed bank code rather than a single global payment-type setting. Keep deposit mappings separate from the broader bank-code list used for withdrawals.
 
