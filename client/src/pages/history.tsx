@@ -200,8 +200,11 @@ export default function HistoryPage() {
       userId: user.id,
       type: "registration",
       amount: "0",
-        description: "Registration",
-      createdAt: user.createdAt,
+      description: "Registration",
+      createdAt:
+        user.createdAt instanceof Date
+          ? user.createdAt.toISOString()
+          : String(user.createdAt),
     },
   ].sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime());
 

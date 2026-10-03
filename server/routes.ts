@@ -161,6 +161,16 @@ function getBlockedIps(value: string | undefined): string[] {
   }
 }
 
+function getSingleRouteParam(value: string | string[] | undefined): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value.length === 1) return value[0] ?? "";
+  return "";
+}
+
+function parseRouteId(value: string | string[] | undefined): number {
+  return Number.parseInt(getSingleRouteParam(value), 10);
+}
+
 const BLOCKED_IP_CACHE_TTL_MS = 15_000;
 let blockedIpsCache: { values: string[]; expiresAt: number } | null = null;
 
@@ -170,7 +180,7 @@ async function getCachedBlockedIps(): Promise<string[]> {
     return blockedIpsCache.values;
   }
 
-  const values = getBlockedIps(await storage.getSetting("blockedIps"));
+  const values = getBlockedIps((await storage.getSetting("blockedIps")) ?? undefined);
   blockedIpsCache = { values, expiresAt: now + BLOCKED_IP_CACHE_TTL_MS };
   return values;
 }
@@ -811,7 +821,7 @@ export async function registerRoutes(
 
   app.post("/api/products/:id/purchase", requireAuth, async (req, res) => {
     try {
-      const productId = parseInt(req.params.id);
+      const productId = parseRouteId(req.params.id);
       const product = await storage.getProduct(productId);
       
       if (!product) {
@@ -837,7 +847,7 @@ export async function registerRoutes(
 
   app.post("/api/products/:id/claim-free", requireAuth, async (req, res) => {
     try {
-      const productId = parseInt(req.params.id);
+      const productId = parseRouteId(req.params.id);
       const product = await storage.getProduct(productId);
       
       if (!product || !product.isFree) {
@@ -1026,7 +1036,7 @@ export async function registerRoutes(
 
   app.post("/api/staking/purchase/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteId(req.params.id);
       const staking = await storage.purchaseStaking(req.session.userId!, id);
       res.json(staking);
     } catch (error: any) {
@@ -1077,7 +1087,7 @@ export async function registerRoutes(
 
   app.put("/api/admin/staking/products/:id", requireAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteId(req.params.id);
       const { name, description, price, returnAmount, lockDays, launchDate, imageUrl, isActive } = req.body;
       const sp = await storage.updateStakingProduct(id, {
         name, description,
@@ -1095,7 +1105,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/staking/products/:id", requireAdmin, async (req, res) => {
     try {
-      await storage.deleteStakingProduct(parseInt(req.params.id));
+      await storage.deleteStakingProduct(parseRouteId(req.params.id));
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1158,7 +1168,7 @@ export async function registerRoutes(
 
   app.put("/api/admin/payment-numbers/:id", requireAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteId(req.params.id);
       const { ownerName, phone, paymentLink, operatorName, country, logoUrl, isActive } = req.body;
       const normalizedLink = typeof paymentLink === "string" ? paymentLink.trim() : "";
       let normalizedPhone: string | null | undefined;
@@ -1187,7 +1197,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/payment-numbers/:id", requireAdmin, async (req, res) => {
     try {
-      await storage.deletePaymentNumber(parseInt(req.params.id));
+      await storage.deletePaymentNumber(parseRouteId(req.params.id));
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1531,7 +1541,7 @@ export async function registerRoutes(
   // Verify payment status (Soleaspay)
   app.get("/api/deposits/:id/verify", requireAuth, async (req, res) => {
     try {
-      const depositId = parseInt(req.params.id);
+      const depositId = parseRouteId(req.params.id);
       const deposit = await storage.getDeposit(depositId);
       
       if (!deposit) {
@@ -1897,10 +1907,11 @@ export async function registerRoutes(
   app.get("/api/sendavapay/operators/:country", requireAuth, async (req, res) => {
     try {
       const settings = await storage.getSettings();
-      if (!isDepositMethodConfigured(req.params.country, "sendavapay", settings)) {
+      const countryParam = getSingleRouteParam(req.params.country);
+      if (!isDepositMethodConfigured(countryParam, "sendavapay", settings)) {
         return res.status(403).json({ success: false, message: "SendavaPay is not configured for this country" });
       }
-      const svCountry = toSendavapayCountry(req.params.country);
+      const svCountry = toSendavapayCountry(countryParam);
       const r = await fetch(`${getSendavapayApiBaseUrl()}/operators/${svCountry}`);
       const data = await r.json();
       res.json(data);
@@ -2101,7 +2112,7 @@ export async function registerRoutes(
   // Poll payment status using GET /payment-status/:reference (lighter than verify-payment)
   app.get("/api/deposits/:id/sendavapay-status", requireAuth, async (req, res) => {
     try {
-      const depositId = parseInt(req.params.id);
+      const depositId = parseRouteId(req.params.id);
       const deposit = await storage.getDeposit(depositId);
       if (!deposit) return res.status(404).json({ message: "Deposit not found" });
       if (deposit.userId !== req.session.userId) return res.status(403).json({ message: "Access denied" });
@@ -2657,7 +2668,7 @@ export async function registerRoutes(
 
   app.delete("/api/wallets/:id", requireAuth, async (req, res) => {
     try {
-      await storage.deleteWallet(parseInt(req.params.id));
+      await storage.deleteWallet(parseRouteId(req.params.id));
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2666,7 +2677,7 @@ export async function registerRoutes(
 
   app.patch("/api/wallets/:id/default", requireAuth, async (req, res) => {
     try {
-      await storage.setDefaultWallet(req.session.userId!, parseInt(req.params.id));
+      await storage.setDefaultWallet(req.session.userId!, parseRouteId(req.params.id));
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2706,7 +2717,7 @@ export async function registerRoutes(
 
   app.post("/api/tasks/:id/claim", requireAuth, async (req, res) => {
     try {
-      await storage.claimTask(req.session.userId!, parseInt(req.params.id));
+      await storage.claimTask(req.session.userId!, parseRouteId(req.params.id));
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2914,7 +2925,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/deposits/:id/approve", requireAdmin, async (req, res) => {
     try {
-      const deposit = await storage.claimAdminDepositApproval(parseInt(req.params.id), req.session.userId!);
+      const deposit = await storage.claimAdminDepositApproval(parseRouteId(req.params.id), req.session.userId!);
       if (!deposit) return res.status(409).json({ message: "This deposit is already approved" });
 
       const user = await storage.getUser(deposit.userId);
@@ -2948,7 +2959,7 @@ export async function registerRoutes(
   app.post("/api/admin/deposits/:id/reject", requireAdmin, async (req, res) => {
     try {
       const { ban } = req.body;
-      const deposit = await storage.updateDeposit(parseInt(req.params.id), {
+      const deposit = await storage.updateDeposit(parseRouteId(req.params.id), {
         status: "rejected",
         processedAt: new Date(),
         processedBy: req.session.userId,
@@ -3210,7 +3221,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/withdrawals/:id/inpay", requireAdmin, async (req, res) => {
     try {
-      const withdrawalId = parseInt(req.params.id);
+      const withdrawalId = parseRouteId(req.params.id);
       const allWithdrawals = await storage.getWithdrawals();
       const withdrawal = allWithdrawals.find((item) => item.id === withdrawalId);
       if (!withdrawal) return res.status(404).json({ message: "Withdrawal not found" });
@@ -3284,7 +3295,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/users/:id/team", requireAdmin, async (req, res) => {
     try {
-      const userId = parseInt(req.params.id);
+      const userId = parseRouteId(req.params.id);
       const team = await storage.getDetailedTeam(userId);
       res.json(team);
     } catch (error: any) {
@@ -3294,7 +3305,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/users/:id/:action", requireAdmin, async (req, res) => {
     try {
-      const userId = parseInt(req.params.id);
+      const userId = parseRouteId(req.params.id);
       const action = req.params.action;
       const { value } = req.body;
       const adminUser = await storage.getUser(req.session.userId!);
@@ -3409,7 +3420,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/users/:id/products", requireAdmin, async (req, res) => {
     try {
-      const userId = parseInt(req.params.id);
+      const userId = parseRouteId(req.params.id);
       const userProductsList = await storage.getAllUserProducts(userId);
       res.json(userProductsList.map(up => ({
         id: up.userProduct.id,
@@ -3532,7 +3543,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/products/:id", requireAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteId(req.params.id);
       await storage.deleteProduct(id);
       await storage.logAdminAction(req.session.userId!, "delete_product", null, `Product ${id} deleted`);
       res.json({ success: true });
@@ -3565,7 +3576,7 @@ export async function registerRoutes(
 
   app.patch("/api/admin/channels/:id", requireAdmin, async (req, res) => {
     try {
-      const channel = await storage.updatePaymentChannel(parseInt(req.params.id), {
+      const channel = await storage.updatePaymentChannel(parseRouteId(req.params.id), {
         ...req.body,
         modifiedBy: req.session.userId,
       });
@@ -3578,7 +3589,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/channels/:id", requireAdmin, async (req, res) => {
     try {
-      await storage.deletePaymentChannel(parseInt(req.params.id));
+      await storage.deletePaymentChannel(parseRouteId(req.params.id));
       await storage.logAdminAction(req.session.userId!, "delete_channel", null, `Channel deleted`);
       res.json({ success: true });
     } catch (error: any) {
@@ -3661,7 +3672,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/blocked-ips/:ip", requireAdmin, async (req, res) => {
     try {
-      const ip = decodeURIComponent(req.params.ip);
+      const ip = decodeURIComponent(getSingleRouteParam(req.params.ip));
       const blockedIps = await getCachedBlockedIps();
       const nextIps = blockedIps.filter((value) => value !== ip);
       await storage.setSetting("blockedIps", JSON.stringify(nextIps), req.session.userId);
@@ -3801,7 +3812,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/gift-codes/:id", requireAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteId(req.params.id);
       await storage.deleteGiftCode(id);
       await storage.logAdminAction(req.session.userId!, "delete_gift_code", null, `Gift code deleted: #${id}`);
       res.json({ success: true });
@@ -4495,7 +4506,7 @@ export async function registerRoutes(
 
   app.put("/api/admin/countries/:id", requireAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteId(req.params.id);
       const { code, name, currency, phonePrefix, operators, isActive } = req.body;
       const updateData: any = {};
       if (name !== undefined) updateData.name = name;
@@ -4512,7 +4523,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/countries/:id", requireAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseRouteId(req.params.id);
       await storage.deleteCountry(id);
       res.json({ success: true });
     } catch (error: any) {
@@ -4543,7 +4554,7 @@ export async function registerRoutes(
 
   app.post("/api/banker/deposits/:id/approve", requireBanker, async (req, res) => {
     try {
-      const deposit = await storage.updateDeposit(parseInt(req.params.id), {
+      const deposit = await storage.updateDeposit(parseRouteId(req.params.id), {
         status: "approved",
         processedAt: new Date(),
         processedBy: req.session.userId,
@@ -4563,7 +4574,7 @@ export async function registerRoutes(
 
   app.post("/api/banker/deposits/:id/reject", requireBanker, async (req, res) => {
     try {
-      const deposit = await storage.updateDeposit(parseInt(req.params.id), {
+      const deposit = await storage.updateDeposit(parseRouteId(req.params.id), {
         status: "rejected",
         processedAt: new Date(),
         processedBy: req.session.userId,
@@ -4579,9 +4590,9 @@ export async function registerRoutes(
   app.post("/api/banker/withdrawals/:id/approve", requireBanker, async (req, res) => {
     try {
       const allWithdrawals = await storage.getWithdrawals();
-      const withdrawalData = allWithdrawals.find(w => w.id === parseInt(req.params.id));
+      const withdrawalData = allWithdrawals.find(w => w.id === parseRouteId(req.params.id));
       if (!withdrawalData) return res.status(404).json({ message: "Withdrawal not found" });
-      const withdrawal = await storage.updateWithdrawal(parseInt(req.params.id), {
+      const withdrawal = await storage.updateWithdrawal(parseRouteId(req.params.id), {
         status: "approved",
         processedAt: new Date(),
         processedBy: req.session.userId,
