@@ -81,6 +81,7 @@ import {
   cloudPayCreatePayout,
   cloudPayQuery,
   getCloudPayMerchantId,
+  getCloudPayRuntimeDiagnostics,
   getCloudPaySigningSecret,
   isCloudPayConfigured,
   isCloudPayDepositEnabled,
@@ -3616,6 +3617,11 @@ export async function registerRoutes(
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+
+  app.get("/api/admin/cloudpay/runtime-config", requireAdmin, (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(getCloudPayRuntimeDiagnostics());
   });
 
   app.get("/api/admin/inpay/balance/:country", requireAdmin, async (req, res) => {

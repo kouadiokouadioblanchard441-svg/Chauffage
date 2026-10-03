@@ -6,6 +6,7 @@ import {
   cloudPayCreateDeposit,
   cloudPayCreatePayout,
   formatCloudPayAmount,
+  getCloudPayRuntimeDiagnostics,
   isCloudPayConfigured,
   isCloudPayDepositEnabled,
   mapCloudPayStatus,
@@ -98,6 +99,16 @@ for (const [key, value] of Object.entries({
 })) {
   process.env[key] = value;
 }
+
+const runtimeDiagnostics = getCloudPayRuntimeDiagnostics();
+assert.equal(runtimeDiagnostics.merchantId, "merchant-test");
+assert.equal(runtimeDiagnostics.signingSecretConfigured, true);
+assert.equal(runtimeDiagnostics.amountCurrency, "PHP");
+assert.equal(runtimeDiagnostics.gatewayHost, "gateway.example");
+assert.equal(runtimeDiagnostics.depositPath, "/api/transfer");
+assert.equal(runtimeDiagnostics.publicAppHost, "merchant.example");
+assert.equal(runtimeDiagnostics.configured, true);
+assert.equal(JSON.stringify(runtimeDiagnostics).includes(secret), false);
 
 globalThis.fetch = (async (input, init) => {
   requests.push({

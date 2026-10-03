@@ -15,6 +15,18 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Save, Link, Clock, Users, Zap } from "lucide-react";
 
 type AdminCountry = { code: string; name: string; isActive: boolean };
+type CloudPayRuntimeDiagnostics = {
+  runtime: string;
+  merchantId: string | null;
+  signingSecretConfigured: boolean;
+  amountCurrency: string | null;
+  gatewayHost: string | null;
+  depositPath: string;
+  publicAppHost: string | null;
+  liveActivationConfirmed: boolean;
+  configured: boolean;
+  configurationError?: string;
+};
 
 const NETWORKS = [
   { value: "telegram", label: "Telegram" },
@@ -81,6 +93,14 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
   });
   const { data: countries = [], isLoading: countriesLoading } = useQuery<AdminCountry[]>({
     queryKey: ["/api/admin/countries"],
+  });
+  const {
+    data: cloudPayRuntime,
+    isLoading: cloudPayRuntimeLoading,
+    isError: cloudPayRuntimeError,
+  } = useQuery<CloudPayRuntimeDiagnostics>({
+    queryKey: ["/api/admin/cloudpay/runtime-config"],
+    retry: false,
   });
 
   const form = useForm<SettingsForm>({
@@ -888,6 +908,34 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
               <p>Use the merchant-assigned <code>CLOUDPAY_MERCHANT_ID</code> and a newly issued <code>CLOUDPAY_SIGNING_SECRET</code> stored in Replit Secrets. Do not reuse the key previously posted in chat or paste credentials into this settings page. If production runs on Plesk, configure the rotated secret there separately.</p>
               <p>Galaxy-confirmed deposit methods: <code>1</code> GoTyme QRPH (<code>got</code>), <code>3</code> PayMaya Direct (<code>PMP</code>), and <code>7</code> GCash H5 QRPH (<code>mya</code>). The gateway receives the matching payment type and bank code for the selected method. Code <code>2</code> is approved on the account but is not exposed until Galaxy supplies its bank-code mapping. The account currency is PHP.</p>
               <p><code>CLOUDPAY_API_BASE_URL</code> must be the exact HTTPS gateway host assigned by Galaxy; the guide uses a placeholder. Configure callback <code>/api/webhooks/cloudpay</code>. CloudPay remains blocked until the replacement secret is stored, Galaxy confirms the active deposit path, any required production egress-IP allowlisting is complete, and live activation is explicitly approved. Code <code>2</code> stays unavailable until its bank-code mapping is supplied.</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 space-y-2">
+              <p className="font-semibold">Environment read by this server</p>
+              <p className="text-slate-600">Live process values for the server answering this page. The signing secret itself is never shown.</p>
+              {cloudPayRuntimeLoading ? (
+                <p>Checking current server environment…</p>
+              ) : cloudPayRuntimeError || !cloudPayRuntime ? (
+                <p className="text-amber-800">Unable to read the runtime configuration. Refresh the page or check administrator access.</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                    <p><span className="font-medium">Runtime:</span> {cloudPayRuntime.runtime}</p>
+                    <p><span className="font-medium">Merchant ID read:</span> {cloudPayRuntime.merchantId || "Not set"}</p>
+                    <p><span className="font-medium">Gateway host:</span> {cloudPayRuntime.gatewayHost || "Not set or invalid"}</p>
+                    <p><span className="font-medium">Currency:</span> {cloudPayRuntime.amountCurrency || "Not set"}</p>
+                    <p><span className="font-medium">Deposit path:</span> {cloudPayRuntime.depositPath}</p>
+                    <p><span className="font-medium">Callback host:</span> {cloudPayRuntime.publicAppHost || "Not set or invalid"}</p>
+                    <p><span className="font-medium">Signing secret:</span> {cloudPayRuntime.signingSecretConfigured ? "Loaded (value hidden)" : "Missing"}</p>
+                    <p><span className="font-medium">Live activation:</span> {cloudPayRuntime.liveActivationConfirmed ? "Confirmed" : "Not confirmed"}</p>
+                  </div>
+                  <p className={`font-semibold ${cloudPayRuntime.configured ? "text-green-700" : "text-red-700"}`}>
+                    Configuration {cloudPayRuntime.configured ? "valid" : "incomplete"}
+                  </p>
+                  {cloudPayRuntime.configurationError && (
+                    <p className="text-red-700">{cloudPayRuntime.configurationError}</p>
+                  )}
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

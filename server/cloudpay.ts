@@ -103,6 +103,52 @@ export function isCloudPayConfigured(): boolean {
   }
 }
 
+export type CloudPayRuntimeDiagnostics = {
+  runtime: string;
+  merchantId: string | null;
+  signingSecretConfigured: boolean;
+  amountCurrency: string | null;
+  gatewayHost: string | null;
+  depositPath: string;
+  publicAppHost: string | null;
+  liveActivationConfirmed: boolean;
+  configured: boolean;
+  configurationError?: string;
+};
+
+function getHttpsHost(value: string | undefined): string | null {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+    return url.host;
+  } catch {
+    return null;
+  }
+}
+
+export function getCloudPayRuntimeDiagnostics(): CloudPayRuntimeDiagnostics {
+  let configurationError: string | undefined;
+  try {
+    validateCloudPayConfig();
+  } catch (error) {
+    configurationError = error instanceof Error ? error.message : "CloudPay configuration is invalid";
+  }
+
+  return {
+    runtime: process.env.NODE_ENV?.trim() || "unknown",
+    merchantId: process.env.CLOUDPAY_MERCHANT_ID?.trim() || null,
+    signingSecretConfigured: Boolean(process.env.CLOUDPAY_SIGNING_SECRET?.trim()),
+    amountCurrency: process.env.CLOUDPAY_AMOUNT_CURRENCY?.trim().toUpperCase() || null,
+    gatewayHost: getHttpsHost(process.env.CLOUDPAY_API_BASE_URL),
+    depositPath: process.env.CLOUDPAY_DEPOSIT_PATH?.trim() || DEFAULT_DEPOSIT_PATH,
+    publicAppHost: getHttpsHost(process.env.PUBLIC_APP_URL),
+    liveActivationConfirmed: process.env.CLOUDPAY_LIVE_ACTIVATION_CONFIRMED?.trim().toLowerCase() === "true",
+    configured: configurationError === undefined,
+    ...(configurationError ? { configurationError } : {}),
+  };
+}
+
 export function isCloudPayDepositEnabled(cloudpayEnabled: string | undefined): boolean {
   if (cloudpayEnabled === "true") return true;
   return process.env.NODE_ENV === "development" &&
