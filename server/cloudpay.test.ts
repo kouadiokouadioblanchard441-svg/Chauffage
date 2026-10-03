@@ -119,13 +119,14 @@ try {
   assert.equal(isCloudPayDepositEnabled(undefined), false);
   process.env.CLOUDPAY_DEV_PREVIEW_ENABLED = "true";
 
-  await cloudPayCreateDeposit({
+  const webResult = await cloudPayCreateDeposit({
     orderId: "CPD-test-web",
     amount: 3500,
     bankCode: "PMP",
     callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
     returnUrl: "https://merchant.example/robotpay",
   });
+  assert.equal(webResult.redirectUrl, "https://checkout.example/pay");
   const webDeposit = requests[0];
   assert.equal(webDeposit.url.toString(), "https://gateway.example/api/transfer");
   assert.equal(webDeposit.fields.get("merchant"), "merchant-test");
