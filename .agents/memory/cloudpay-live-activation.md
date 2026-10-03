@@ -62,3 +62,9 @@ Complete CloudPay validation in Replit development before moving the change to p
 **Why:** The user specified that development testing in Replit comes first and production follows only after everything is verified.
 
 **How to apply:** Keep changes in Replit while checking the build, automated tests, authenticated customer flow, and provider callback/reconciliation. Do not claim live end-to-end readiness from mocked tests; a real payment, if required, must be initiated by the merchant, not by the agent.
+
+Galaxy System API 3.0.5 signs ASCII-sorted request fields with MD5 after appending the literal `&key=<secret>`. Transaction-query statuses are 0=error, 1=waiting, 2/6/10=in progress, 3=failed, and 5=success.
+
+**Why:** Omitting the documented `key=` changes every signature, and treating status 0 as pending hides a provider query error.
+
+**How to apply:** Use the exact signing string for outbound requests and callback verification. Map only the documented waiting/in-progress values to pending; report error or unknown values as verification errors.

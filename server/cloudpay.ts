@@ -121,7 +121,7 @@ export function signCloudPayFields(fields: CloudPayFields, signingSecret: string
     .sort(([left], [right]) => compareAscii(left, right))
     .map(([key, value]) => `${key}=${value}`)
     .join("&");
-  return createHash("md5").update(`${canonical}&${signingSecret}`, "utf8").digest("hex");
+  return createHash("md5").update(`${canonical}&key=${signingSecret}`, "utf8").digest("hex");
 }
 
 export function verifyCloudPaySignature(fields: CloudPayFields, signature: string, signingSecret: string): boolean {
@@ -136,7 +136,8 @@ export function mapCloudPayStatus(rawStatus: unknown): CloudPayStatus {
   const status = String(rawStatus ?? "").trim();
   if (status === "5") return "approved";
   if (status === "3") return "rejected";
-  return "pending";
+  if (status === "1" || status === "2" || status === "6" || status === "10") return "pending";
+  throw new CloudPayError("CloudPay returned an error or unknown transaction status", false, { status });
 }
 
 export function formatCloudPayAmount(amount: number): string {
