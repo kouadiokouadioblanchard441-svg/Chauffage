@@ -96,7 +96,14 @@ export interface IStorage {
   getWithdrawalByCloudPayOrderId(orderId: string): Promise<Withdrawal | undefined>;
   updateWithdrawal(id: number, data: Partial<Withdrawal>): Promise<Withdrawal>;
   claimManualWithdrawalApproval(id: number, processedBy: number): Promise<Withdrawal | undefined>;
+  claimManualWithdrawalRejection(id: number, processedBy: number): Promise<Withdrawal | undefined>;
+  claimWithdrawalForCloudPayPayout(id: number, orderId: string): Promise<Withdrawal | undefined>;
   claimWithdrawalFinalization(id: number, status: "approved" | "rejected"): Promise<Withdrawal | undefined>;
+  finalizeCloudPayWithdrawal(
+    id: number,
+    orderId: string,
+    status: "approved" | "rejected",
+  ): Promise<{ withdrawal?: Withdrawal; finalized: boolean }>;
   releaseWithdrawalProcessing(id: number, cloudpayOrderId: string): Promise<Withdrawal | undefined>;
   getUserWithdrawalCountToday(userId: number): Promise<number>;
   
@@ -1121,6 +1128,89 @@ export class DatabaseStorage implements IStorage {
     return withdrawal;
   }
 
+  async claimManualWithdrawalRejection(
+    id: number,
+    processedBy: number,
+  ): Promise<Withdrawal | undefined> {
+    const withdrawal = await db.transaction(async (tx) => {
+      const [claimed] = await tx.update(withdrawals)
+        .set({ status: "rejected", processedAt: new Date(), processedBy })
+        .where(and(
+          eq(withdrawals.id, id),
+          eq(withdrawals.status, "pending"),
+          isNull(withdrawals.cloudpayOrderId),
+          isNull(withdrawals.inpayOutTradeNo),
+          isNull(withdrawals.inpayOrderNumber),
+          isNull(withdrawals.omnipayId),
+          isNull(withdrawals.omnipayReference),
+        ))
+        .returning();
+      if (!claimed) return undefined;
+
+      const [refundedUser] = await tx.update(users)
+        .set({ balance: sql`${users.balance} + ${claimed.amount}` })
+        .where(eq(users.id, claimed.userId))
+        .returning({ id: users.id });
+      if (!refundedUser) throw new Error("Withdrawal owner was not found for refund");
+
+      await tx.insert(transactions).values({
+        userId: claimed.userId,
+        type: "withdrawal_refund",
+        amount: claimed.amount.toString(),
+        description: `Manual withdrawal refund #${claimed.id}`,
+      });
+      return claimed;
+    });
+
+    if (withdrawal) {
+      notifyTelegramPaymentEvent({
+        kind: "withdrawal",
+        phase: "status",
+        id: withdrawal.id,
+        userId: withdrawal.userId,
+        amount: withdrawal.amount,
+        netAmount: withdrawal.netAmount,
+        status: withdrawal.status,
+        country: withdrawal.country,
+        paymentMethod: withdrawal.paymentMethod,
+      });
+    }
+    return withdrawal;
+  }
+
+  async claimWithdrawalForCloudPayPayout(
+    id: number,
+    orderId: string,
+  ): Promise<Withdrawal | undefined> {
+    const [withdrawal] = await db.update(withdrawals)
+      .set({ status: "processing", cloudpayOrderId: orderId })
+      .where(and(
+        eq(withdrawals.id, id),
+        eq(withdrawals.status, "pending"),
+        isNull(withdrawals.cloudpayOrderId),
+        isNull(withdrawals.inpayOutTradeNo),
+        isNull(withdrawals.inpayOrderNumber),
+        isNull(withdrawals.omnipayId),
+        isNull(withdrawals.omnipayReference),
+      ))
+      .returning();
+    if (withdrawal) {
+      notifyTelegramPaymentEvent({
+        kind: "withdrawal",
+        phase: "status",
+        id: withdrawal.id,
+        userId: withdrawal.userId,
+        amount: withdrawal.amount,
+        netAmount: withdrawal.netAmount,
+        status: withdrawal.status,
+        country: withdrawal.country,
+        paymentMethod: withdrawal.paymentMethod,
+        reference: withdrawal.cloudpayOrderId,
+      });
+    }
+    return withdrawal;
+  }
+
   private async getWithdrawalById(id: number): Promise<Withdrawal | undefined> {
     const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.id, id));
     return withdrawal;
@@ -1154,12 +1244,72 @@ export class DatabaseStorage implements IStorage {
     return withdrawal;
   }
 
+  async finalizeCloudPayWithdrawal(
+    id: number,
+    orderId: string,
+    status: "approved" | "rejected",
+  ): Promise<{ withdrawal?: Withdrawal; finalized: boolean }> {
+    const result = await db.transaction(async (tx) => {
+      const [withdrawal] = await tx.update(withdrawals)
+        .set({ status, processedAt: new Date() })
+        .where(and(
+          eq(withdrawals.id, id),
+          eq(withdrawals.cloudpayOrderId, orderId),
+          sql`${withdrawals.status} NOT IN ('approved', 'rejected')`,
+        ))
+        .returning();
+
+      if (!withdrawal) {
+        const [current] = await tx.select().from(withdrawals)
+          .where(and(
+            eq(withdrawals.id, id),
+            eq(withdrawals.cloudpayOrderId, orderId),
+          ))
+          .limit(1);
+        return { withdrawal: current, finalized: false };
+      }
+
+      if (status === "rejected") {
+        const [refundedUser] = await tx.update(users)
+          .set({ balance: sql`${users.balance} + ${withdrawal.amount}` })
+          .where(eq(users.id, withdrawal.userId))
+          .returning({ id: users.id });
+        if (!refundedUser) throw new Error("CloudPay withdrawal owner was not found for refund");
+
+        await tx.insert(transactions).values({
+          userId: withdrawal.userId,
+          type: "withdrawal_refund",
+          amount: withdrawal.amount.toString(),
+          description: `CloudPay withdrawal refund #${withdrawal.id}`,
+        });
+      }
+
+      return { withdrawal, finalized: true };
+    });
+
+    if (result.finalized && result.withdrawal) {
+      notifyTelegramPaymentEvent({
+        kind: "withdrawal",
+        phase: "status",
+        id: result.withdrawal.id,
+        userId: result.withdrawal.userId,
+        amount: result.withdrawal.amount,
+        netAmount: result.withdrawal.netAmount,
+        status: result.withdrawal.status,
+        country: result.withdrawal.country,
+        paymentMethod: result.withdrawal.paymentMethod,
+        reference: result.withdrawal.cloudpayOrderId,
+      });
+    }
+    return result;
+  }
+
   async releaseWithdrawalProcessing(
     id: number,
     cloudpayOrderId: string,
   ): Promise<Withdrawal | undefined> {
     const [withdrawal] = await db.update(withdrawals)
-      .set({ status: "pending" })
+      .set({ status: "pending", cloudpayOrderId: null })
       .where(and(
         eq(withdrawals.id, id),
         eq(withdrawals.cloudpayOrderId, cloudpayOrderId),
@@ -1177,7 +1327,7 @@ export class DatabaseStorage implements IStorage {
         status: withdrawal.status,
         country: withdrawal.country,
         paymentMethod: withdrawal.paymentMethod,
-        reference: withdrawal.cloudpayOrderId || withdrawal.inpayOutTradeNo,
+        reference: cloudpayOrderId,
       });
     }
     return withdrawal;
