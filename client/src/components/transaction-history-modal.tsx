@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/countries";
 import { ArrowDownToLine, ArrowUpFromLine, TrendingUp, Clock, Check, X } from "lucide-react";
-import type { Deposit, Withdrawal, Transaction } from "@shared/schema";
+import type { Deposit, PublicWithdrawalHistoryItem, Transaction } from "@shared/schema";
 
 interface TransactionHistoryModalProps {
   open: boolean;
@@ -24,7 +24,7 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
     enabled: open && activeTab === "deposits",
   });
 
-  const { data: withdrawals, isLoading: withdrawalsLoading } = useQuery<Withdrawal[]>({
+  const { data: withdrawals, isLoading: withdrawalsLoading } = useQuery<PublicWithdrawalHistoryItem[]>({
     queryKey: ["/api/withdrawals/history"],
     enabled: open && activeTab === "withdrawals",
   });
@@ -111,8 +111,8 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
               {withdrawalsLoading ? (
                 Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)
               ) : withdrawals && withdrawals.length > 0 ? (
-                withdrawals.map((withdrawal) => (
-                  <Card key={withdrawal.id}>
+                withdrawals.map((withdrawal, index) => (
+                  <Card key={`${withdrawal.createdAt}-${index}`}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -126,7 +126,7 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
                             <p className="text-xs text-muted-foreground">
                                Net: {formatCurrency(withdrawal.netAmount, user.country)}
                             </p>
-                            <p className="text-xs text-muted-foreground">{formatDate(withdrawal.createdAt as unknown as string)}</p>
+                            <p className="text-xs text-muted-foreground">{formatDate(withdrawal.createdAt)}</p>
                           </div>
                         </div>
                         {getStatusBadge(withdrawal.status)}

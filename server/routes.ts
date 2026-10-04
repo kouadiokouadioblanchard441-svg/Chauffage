@@ -12,6 +12,8 @@ import {
   walletSchema,
   phoneNumberSchema,
   type CloudPayWithdrawalResponse,
+  type PublicWithdrawalHistoryItem,
+  type Withdrawal,
 } from "@shared/schema";
 import { getWithdrawalMethods, isAllowedWithdrawalMethod } from "@shared/withdrawal-methods";
 import {
@@ -2480,6 +2482,13 @@ export async function registerRoutes(
     }
   });
 
+  const serializePublicWithdrawal = (withdrawal: Withdrawal): PublicWithdrawalHistoryItem => ({
+    amount: withdrawal.amount,
+    netAmount: withdrawal.netAmount,
+    status: withdrawal.status,
+    createdAt: withdrawal.createdAt.toISOString(),
+  });
+
   app.post("/api/withdrawals", requireAuth, async (req, res) => {
     try {
       const { amount } = req.body;
@@ -2622,7 +2631,7 @@ export async function registerRoutes(
         status: "pending",
       });
 
-      res.json(withdrawal);
+      res.json(serializePublicWithdrawal(withdrawal));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -2631,13 +2640,10 @@ export async function registerRoutes(
   app.get("/api/withdrawals/history", requireAuth, async (req, res) => {
     try {
       const withdrawals = await storage.getUserWithdrawals(req.session.userId!);
-      res.json(withdrawals.map((withdrawal) => {
-        const { cloudpayResponse, ...publicWithdrawal } = withdrawal;
-        void cloudpayResponse;
-        return publicWithdrawal;
-      }));
+      res.json(withdrawals.map(serializePublicWithdrawal));
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      console.error("[withdrawals] history failed:", error);
+      res.status(500).json({ message: "Unable to load withdrawal history." });
     }
   });
 

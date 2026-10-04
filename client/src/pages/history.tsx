@@ -5,6 +5,7 @@ import { getCountryByCode } from "@/lib/countries";
 import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import type { PublicWithdrawalHistoryItem } from "@shared/schema";
 
 import nodataImg from "@assets/nodata-da225bbb_(1)_1783249133513.png";
 
@@ -19,16 +20,6 @@ interface Deposit {
   soleaspayOrderId?: string;
   omnipayId?: string;
   omnipayReference?: string;
-  sendavapayReference?: string;
-}
-
-interface Withdrawal {
-  id: number;
-  userId: number;
-  amount: string;
-  netAmount: string;
-  status: string;
-  createdAt: string;
   sendavapayReference?: string;
 }
 
@@ -68,12 +59,6 @@ const getDepositRef = (deposit: Deposit) => {
     deposit.soleaspayOrderId;
   if (reference) return reference.startsWith("sdk") ? reference : `sdk${reference}`;
   return makeRef("D", deposit.id, deposit.createdAt);
-};
-
-const getWithdrawalRef = (withdrawal: Withdrawal) => {
-  const reference = withdrawal.sendavapayReference;
-  if (reference) return reference.startsWith("sdk") ? reference : `sdk${reference}`;
-  return makeRef("W", withdrawal.id, withdrawal.createdAt);
 };
 
 const maskRef = (reference: string) =>
@@ -151,7 +136,7 @@ export default function HistoryPage() {
     queryKey: ["/api/deposits/history"],
   });
 
-  const { data: withdrawals = [], isLoading: withdrawalsLoading } = useQuery<Withdrawal[]>({
+  const { data: withdrawals = [], isLoading: withdrawalsLoading } = useQuery<PublicWithdrawalHistoryItem[]>({
     queryKey: ["/api/withdrawals/history"],
   });
 
@@ -560,12 +545,12 @@ export default function HistoryPage() {
             )
           ) : withdrawals.length > 0 ? (
             <div className="history-list">
-              {withdrawals.map((withdrawal) => {
+              {withdrawals.map((withdrawal, index) => {
                 const { label, color } = getStatusInfo(withdrawal.status);
-                const gross = Number.parseFloat(withdrawal.amount);
-                const net = Number.parseFloat(withdrawal.netAmount || withdrawal.amount);
+                const gross = Number(withdrawal.amount);
+                const net = Number(withdrawal.netAmount);
                 return (
-                  <article className="history-card" key={withdrawal.id} data-testid={`withdrawal-item-${withdrawal.id}`}>
+                  <article className="history-card" key={`${withdrawal.createdAt}-${index}`} data-testid={`withdrawal-item-${index}`}>
                     <div className="history-card-top">
                       <div>
                         <p className="history-amount">{currency} {gross.toLocaleString("en-PH")}</p>

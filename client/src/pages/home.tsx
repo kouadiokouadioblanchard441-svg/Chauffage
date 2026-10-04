@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { getCountryByCode } from "@/lib/countries";
 import { ChevronRight, Send } from "lucide-react";
+import type { PublicWithdrawalHistoryItem } from "@shared/schema";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import "./home.css";
 
@@ -28,11 +29,6 @@ import sybotxLogo from "@/assets/Logo_SYBOTX_recadre_1786844134617.png";
 import vestasLogo from "@/assets/vestas-logo_1783210030332.png";
 import elfLogo from "@/assets/images/elf-logo-card.png";
 import jollibeeLogo from "@/assets/jollibee_logo.png";
-
-interface Withdrawal {
-  amount: string;
-  status: string;
-}
 
 const quickActions = [
   { label: "Deposit", href: "/deposit", icon: depositIcon },
@@ -77,7 +73,10 @@ export default function HomePage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { data: settings } = useQuery<Record<string, string>>({ queryKey: ["/api/settings"] });
-  const { data: withdrawals } = useQuery<Withdrawal[]>({ queryKey: ["/api/withdrawals/history"], enabled: !!user });
+  const { data: withdrawals } = useQuery<PublicWithdrawalHistoryItem[]>({
+    queryKey: ["/api/withdrawals/history"],
+    enabled: !!user,
+  });
   const [welcomePopupOpen, setWelcomePopupOpen] = useState(false);
   const [bannerIndex, setBannerIndex] = useState(0);
 
@@ -130,7 +129,7 @@ export default function HomePage() {
     "Before confirming a request, check your wallet details and the displayed net amount.",
   ];
   const withdrawnTotal = withdrawals?.filter((item) => item.status === "approved")
-    .reduce((sum, item) => sum + (Number.parseFloat(item.amount) || 0), 0);
+    .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
   return (
     <>

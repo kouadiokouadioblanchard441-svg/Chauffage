@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { X, Search, Loader2, Send, CheckCircle2 } from "lucide-react";
+import { resolveCloudPayBankCode } from "@shared/cloudpay-banks";
 import type { Withdrawal } from "@shared/schema";
 
 interface WithdrawalWithUser extends Withdrawal {
@@ -37,6 +38,25 @@ function hasProviderReference(withdrawal: Withdrawal): boolean {
     withdrawal.omnipayId ||
     withdrawal.omnipayReference
   );
+}
+
+function getCloudPayUnavailableReason(
+  withdrawal: Withdrawal,
+  settings?: Record<string, string>,
+): string | undefined {
+  if (hasProviderReference(withdrawal)) {
+    return "A provider request already exists. Check its status before another payout or manual decision.";
+  }
+  if (withdrawal.country.trim().toUpperCase() !== "PH") {
+    return "CloudPay is available only for Philippines withdrawals.";
+  }
+  if (!resolveCloudPayBankCode(withdrawal.paymentMethod)) {
+    return "This payout method is not supported by CloudPay.";
+  }
+  if (!settings) return "Checking CloudPay settings.";
+  if (settings.cloudpayEnabled !== "true") return "CloudPay payouts are disabled in settings.";
+  if (settings.cloudpayConfigured !== "true") return "CloudPay server configuration is incomplete.";
+  return undefined;
 }
 
 export default function AdminWithdrawals() {
@@ -231,6 +251,7 @@ export default function AdminWithdrawals() {
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
+                    <p className="text-xs text-muted-foreground">Withdrawal #{withdrawal.id}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-foreground">{withdrawal.user.fullName}</p>
                       {withdrawal.user.isPromoter && <Badge className="text-xs">Promoter</Badge>}
@@ -362,49 +383,62 @@ export default function AdminWithdrawals() {
                   </div>
                 )}
 
-                {withdrawal.status === "pending" && (
-                  <div className="flex flex-wrap gap-2">
-                    {withdrawal.country.toUpperCase() === "PH" &&
-                      adminSettings?.cloudpayEnabled === "true" &&
-                      adminSettings?.cloudpayConfigured === "true" && (
-                      !hasProviderReference(withdrawal) && (
+                {withdrawal.status === "pending" && (() => {
+                  const providerReferenceExists = hasProviderReference(withdrawal);
+                  const cloudPayUnavailableReason = getCloudPayUnavailableReason(withdrawal, adminSettings);
+                  const isProcessing = processingId === withdrawal.id;
+                  return (
+                    <div className="space-y-2 border-t pt-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Admin actions
+                      </p>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1"
-                          onClick={() => setCloudPayApprovalId(withdrawal.id)}
-                          disabled={processingId === withdrawal.id}
-                          data-testid={`button-send-cloudpay-${withdrawal.id}`}
-                        >
-                          {processingId === withdrawal.id
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <><Send className="w-4 h-4 mr-1" /> Send to CloudPay</>}
-                        </Button>
-                      ))}
-                    {!hasProviderReference(withdrawal) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1"
+                          className="w-full"
                           onClick={() => setManualApprovalId(withdrawal.id)}
-                          disabled={processingId === withdrawal.id}
+                          disabled={isProcessing || providerReferenceExists}
                           data-testid={`button-manual-paid-${withdrawal.id}`}
                         >
                           <CheckCircle2 className="w-4 h-4 mr-1" />
                           Mark paid manually
                         </Button>
-                      )}
-                    {!hasProviderReference(withdrawal) && <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => processMutation.mutate({ id: withdrawal.id, action: "reject" })}
-                      disabled={processingId === withdrawal.id}
-                      data-testid={`button-reject-${withdrawal.id}`}
-                    >
-                       <X className="w-4 h-4 mr-1" /> Reject
-                    </Button>}
-                  </div>
-                )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setCloudPayApprovalId(withdrawal.id)}
+                          disabled={isProcessing || Boolean(cloudPayUnavailableReason)}
+                          data-testid={`button-send-cloudpay-${withdrawal.id}`}
+                        >
+                          {isProcessing
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <><Send className="w-4 h-4 mr-1" /> Send to CloudPay</>}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="w-full"
+                          onClick={() => processMutation.mutate({ id: withdrawal.id, action: "reject" })}
+                          disabled={isProcessing || providerReferenceExists}
+                          data-testid={`button-reject-${withdrawal.id}`}
+                        >
+                          <X className="w-4 h-4 mr-1" /> Reject
+                        </Button>
+                      </div>
+                      {providerReferenceExists ? (
+                        <p className="text-xs text-amber-700">
+                          A provider request already exists. Check its status before marking it paid manually or rejecting it.
+                        </p>
+                      ) : cloudPayUnavailableReason ? (
+                        <p className="text-xs text-muted-foreground">
+                          CloudPay unavailable: {cloudPayUnavailableReason}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })()}
                 {withdrawal.cloudpayOrderId &&
                   ((withdrawal.status === "processing" || withdrawal.status === "pending") ||
                     !withdrawal.cloudpayResponse) && (

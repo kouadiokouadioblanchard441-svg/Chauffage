@@ -435,6 +435,9 @@ export type Product = typeof products.$inferSelect;
 export type UserProduct = typeof userProducts.$inferSelect;
 export type Deposit = typeof deposits.$inferSelect;
 export type Withdrawal = typeof withdrawals.$inferSelect;
+export type PublicWithdrawalHistoryItem = Pick<Withdrawal, "amount" | "netAmount" | "status"> & {
+  createdAt: string;
+};
 export type WithdrawalFeePayment = typeof withdrawalFeePayments.$inferSelect;
 export type WithdrawalWallet = typeof withdrawalWallets.$inferSelect;
 export type PaymentChannel = typeof paymentChannels.$inferSelect;

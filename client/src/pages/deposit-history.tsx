@@ -5,21 +5,14 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { getCountryByCode } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface Withdrawal {
-  id: number;
-  userId: number;
-  amount: string;
-  status: string;
-  createdAt: string;
-}
+import type { PublicWithdrawalHistoryItem } from "@shared/schema";
 
 export default function DepositHistoryPage() {
   const { user } = useAuth();
   const countryInfo = user ? getCountryByCode(user.country) : null;
   const currency = "PHP";
 
-  const { data: withdrawals = [], isLoading } = useQuery<Withdrawal[]>({
+  const { data: withdrawals = [], isLoading } = useQuery<PublicWithdrawalHistoryItem[]>({
     queryKey: ["/api/withdrawals/history"],
   });
 
@@ -73,18 +66,18 @@ export default function DepositHistoryPage() {
             <p className="text-gray-500">No withdrawals yet</p>
           </div>
         ) : (
-          withdrawals.map((withdrawal) => {
+          withdrawals.map((withdrawal, index) => {
             const date = new Date(withdrawal.createdAt);
             return (
               <div
-                key={withdrawal.id}
+                key={`${withdrawal.createdAt}-${index}`}
                 className="bg-white rounded-lg p-4 border"
-                data-testid={`withdrawal-item-${withdrawal.id}`}
+                data-testid={`withdrawal-item-${index}`}
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-gray-900">
-                      {parseFloat(withdrawal.amount).toLocaleString()} {currency}
+                      {Number(withdrawal.amount).toLocaleString()} {currency}
                     </p>
                     <p className="text-sm text-gray-500">
                        {date.toLocaleDateString('en-PH')} at {date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}

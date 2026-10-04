@@ -5,14 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { Link } from "wouter";
 import { getCountryByCode } from "@/lib/countries";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface Withdrawal {
-  id: number;
-  amount: string;
-  netAmount?: string;
-  status: string;
-  createdAt: string;
-}
+import type { PublicWithdrawalHistoryItem } from "@shared/schema";
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
   approved: { label: "Success",     bg: "bg-gray-900",         text: "text-white" },
@@ -32,7 +25,7 @@ export default function WithdrawalHistoryPage() {
   const countryInfo = user ? getCountryByCode(user.country) : null;
   const currency = "PHP";
 
-  const { data: withdrawals = [], isLoading } = useQuery<Withdrawal[]>({
+  const { data: withdrawals = [], isLoading } = useQuery<PublicWithdrawalHistoryItem[]>({
     queryKey: ["/api/withdrawals/history"],
   });
 
@@ -61,10 +54,10 @@ export default function WithdrawalHistoryPage() {
             <p className="text-gray-400 text-sm">No withdrawals yet</p>
           </div>
         ) : (
-          withdrawals.map((w) => {
+          withdrawals.map((w, index) => {
             const cfg = STATUS_CONFIG[w.status] || { label: w.status, bg: "bg-gray-500", text: "text-white" };
             return (
-              <div key={w.id} className="bg-white rounded-2xl overflow-hidden shadow-sm">
+              <div key={`${w.createdAt}-${index}`} className="bg-white rounded-2xl overflow-hidden shadow-sm">
                 {/* Red top bar */}
                 <div className="h-3 rounded-t-2xl" style={{ backgroundColor: "#3174d1" }} />
 
@@ -72,7 +65,7 @@ export default function WithdrawalHistoryPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 text-sm">Amount</span>
                     <span className="text-[#3174d1] font-bold text-base">
-                       {parseFloat(w.amount).toLocaleString("en-PH")} {currency}
+                       {Number(w.amount).toLocaleString("en-PH")} {currency}
                     </span>
                   </div>
 
