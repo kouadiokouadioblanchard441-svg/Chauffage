@@ -93,20 +93,20 @@ For Galaxy callbacks, acknowledge with `SUCCESS` only after the verified final s
 
 **How to apply:** Verify the callback signature, merchant, order, country, and amount; query Galaxy; then commit deposit status, balance, and ledger changes atomically before acknowledging success. Keep a separate recovery path for callbacks that exhaust Galaxy's retry limit.
 
-For pending Philippines withdrawals, keep two distinct admin choices: manual approval only after the transfer is already completed, or a CloudPay/Galaxy payout request. Send only the withdrawal's net amount after fees; keep it processing until CloudPay confirms the result.
+For Philippines withdrawals, send only the net amount after fees, and keep manual approval separate from provider payout initiation. Manual approval requires confirmation that the external transfer has already been completed.
 
 **Why:** The user explicitly requires both manual and CloudPay validation, with the net amount being what the recipient receives.
 
 **How to apply:** Keep manual confirmation separate from payout initiation, show the recipient and net amount before sending, and never mark a provider payout approved based only on its initiation response.
 
-When CloudPay confirms a payout failure with a verified order and matching amount, keep the withdrawal pending and its amount reserved instead of refunding automatically. Then allow the admin to pay manually, retry CloudPay with a new order reference, or reject and refund. Keep those choices blocked while the provider result is unknown or mismatched.
+When CloudPay confirms a payout failure with a verified order and matching amount, keep the withdrawal pending and its amount reserved instead of refunding automatically. The user later chose to allow all three admin actions—manual payment, another CloudPay payout, or rejection/refund—even while a CloudPay result is unknown or mismatched. This supersedes the earlier rule that blocked all actions until confirmation. Continue blocking these actions when a separate InPay or OmniPay reference is active.
 
-**Why:** The user chose to wait for CloudPay confirmation, then retain all three admin choices after a confirmed failure.
+**Why:** On 2026-10-04, the user explicitly accepted the displayed duplicate-operation risk and chose “Activer toutes les actions” during uncertainty.
 
-**How to apply:** Only treat a signed/query-verified rejection with the expected net amount as a confirmed failure; preserve previous attempt details in the admin audit log when retrying.
+**How to apply:** Keep the manual-transfer confirmation. In every relevant action confirmation, warn that an earlier CloudPay payout may still complete, potentially causing a duplicate payment or a refund after payment. Give each retry a unique order reference, preserve prior references and sanitized results, and record late callbacks without changing an admin's manual settlement or refund.
 
-Persist only the sanitized CloudPay payout status, reported amount, provider message, source, and receipt time for admin review. Keep the response admin-only; never store or expose the raw signed payload, signature, merchant value, signing secret, or payout account details.
+Persist only sanitized CloudPay payout status, reported amount, provider message, source, receipt time, attempt references, and admin-override metadata for admin review. Keep this information admin-only; never store or expose the raw signed payload, signature, merchant value, signing secret, or payout account details.
 
-**Why:** Provider messages and raw replies can contain account data or signing material, while admins still need an auditable result on each withdrawal.
+**Why:** Provider messages and raw replies can contain account data or signing material, while admins still need an auditable result for the current and superseded attempts.
 
-**How to apply:** Whitelist the fields saved to the withdrawal record, redact sensitive values from provider messages, and remove the stored response from customer-facing withdrawal history.
+**How to apply:** Whitelist the fields saved to the withdrawal record, redact sensitive values from provider messages, and remove the stored response and attempt history from customer-facing withdrawal history.

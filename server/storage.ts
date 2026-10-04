@@ -6,21 +6,13 @@ import {
   type User, type Product, type UserProduct, type Deposit, type Withdrawal, type WithdrawalWallet,
   type PaymentChannel, type PaymentNumber, type StakingProduct, type UserStaking, type ReferralCommission, type Task, type UserTask, type Transaction, type PlatformSetting,
   type GiftCode, type GiftCodeClaim, type Country,
-  type WithdrawalFeePayment, type CloudPayWithdrawalResponse
+  type WithdrawalFeePayment, type CloudPayWithdrawalAttempt, type CloudPayWithdrawalResponse
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, lte, or, isNull, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { getDemoReferralPreview } from "./demo-referrals";
 import { notifyTelegramPaymentEvent } from "./telegram-events";
-
-const confirmedCloudPayFailureCondition = sql`
-  ${withdrawals.cloudpayOrderId} IS NOT NULL
-  AND ${withdrawals.cloudpayResponse}->>'source' = 'query'
-  AND ${withdrawals.cloudpayResponse}->>'status' = 'rejected'
-  AND ${withdrawals.cloudpayResponse}->>'amountMatches' = 'true'
-  AND COALESCE(${withdrawals.cloudpayResponse}->>'statusMatches', 'true') = 'true'
-`;
 
 type TeamStats = {
   level1Count: number;
@@ -108,9 +100,22 @@ export interface IStorage {
     processedBy: number,
     cloudpayResponse?: CloudPayWithdrawalResponse,
   ): Promise<Withdrawal | undefined>;
-  claimManualWithdrawalRejection(id: number, processedBy: number): Promise<Withdrawal | undefined>;
-  claimWithdrawalForCloudPayPayout(id: number, orderId: string): Promise<Withdrawal | undefined>;
+  claimManualWithdrawalRejection(
+    id: number,
+    processedBy: number,
+    cloudpayResponse?: CloudPayWithdrawalResponse,
+  ): Promise<Withdrawal | undefined>;
+  claimWithdrawalForCloudPayPayout(
+    id: number,
+    orderId: string,
+    expectedPreviousOrderId: string | null,
+  ): Promise<Withdrawal | undefined>;
   recordCloudPayWithdrawalResponse(
+    id: number,
+    orderId: string,
+    response: CloudPayWithdrawalResponse,
+  ): Promise<Withdrawal | undefined>;
+  recordHistoricalCloudPayWithdrawalResponse(
     id: number,
     orderId: string,
     response: CloudPayWithdrawalResponse,
@@ -1090,8 +1095,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWithdrawalByCloudPayOrderId(orderId: string): Promise<Withdrawal | undefined> {
-    const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.cloudpayOrderId, orderId));
-    return withdrawal;
+    const [withdrawal] = await db.select().from(withdrawals).where(or(
+      eq(withdrawals.cloudpayOrderId, orderId),
+      sql`${withdrawals.cloudpayResponse}->'attempts' @> ${JSON.stringify([{ orderId }])}::jsonb`,
+    ));
+    if (withdrawal) return withdrawal;
+
+    const [retryAudit] = await db.select({ details: adminAuditLog.details })
+      .from(adminAuditLog)
+      .where(and(
+        eq(adminAuditLog.action, "retry_cloudpay_withdrawal"),
+        sql`${adminAuditLog.details} LIKE ${`%previous CloudPay order ${orderId}%`}`,
+      ))
+      .orderBy(desc(adminAuditLog.createdAt))
+      .limit(1);
+    const withdrawalId = retryAudit?.details.match(/Withdrawal ID: (\d+)/)?.[1];
+    return withdrawalId ? this.getWithdrawalById(Number(withdrawalId)) : undefined;
   }
 
   async updateWithdrawal(id: number, data: Partial<Withdrawal>): Promise<Withdrawal> {
@@ -1128,8 +1147,13 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(
         eq(withdrawals.id, id),
-        eq(withdrawals.status, "pending"),
-        or(isNull(withdrawals.cloudpayOrderId), confirmedCloudPayFailureCondition),
+        or(
+          eq(withdrawals.status, "pending"),
+          and(
+            eq(withdrawals.status, "processing"),
+            sql`${withdrawals.cloudpayOrderId} IS NOT NULL`,
+          ),
+        ),
         sql`${withdrawals.inpayOutTradeNo} IS NULL`,
         sql`${withdrawals.inpayOrderNumber} IS NULL`,
         sql`${withdrawals.omnipayId} IS NULL`,
@@ -1155,14 +1179,25 @@ export class DatabaseStorage implements IStorage {
   async claimManualWithdrawalRejection(
     id: number,
     processedBy: number,
+    cloudpayResponse?: CloudPayWithdrawalResponse,
   ): Promise<Withdrawal | undefined> {
     const withdrawal = await db.transaction(async (tx) => {
       const [claimed] = await tx.update(withdrawals)
-        .set({ status: "rejected", processedAt: new Date(), processedBy })
+        .set({
+          status: "rejected",
+          processedAt: new Date(),
+          processedBy,
+          ...(cloudpayResponse ? { cloudpayResponse } : {}),
+        })
         .where(and(
           eq(withdrawals.id, id),
-          eq(withdrawals.status, "pending"),
-          or(isNull(withdrawals.cloudpayOrderId), confirmedCloudPayFailureCondition),
+          or(
+            eq(withdrawals.status, "pending"),
+            and(
+              eq(withdrawals.status, "processing"),
+              sql`${withdrawals.cloudpayOrderId} IS NOT NULL`,
+            ),
+          ),
           isNull(withdrawals.inpayOutTradeNo),
           isNull(withdrawals.inpayOrderNumber),
           isNull(withdrawals.omnipayId),
@@ -1205,25 +1240,81 @@ export class DatabaseStorage implements IStorage {
   async claimWithdrawalForCloudPayPayout(
     id: number,
     orderId: string,
+    expectedPreviousOrderId: string | null,
   ): Promise<Withdrawal | undefined> {
-    const [withdrawal] = await db.update(withdrawals)
-      .set({
-        status: "processing",
-        cloudpayOrderId: orderId,
-        cloudpayResponse: null,
-        processedAt: null,
-        processedBy: null,
-      })
-      .where(and(
-        eq(withdrawals.id, id),
-        eq(withdrawals.status, "pending"),
-        or(isNull(withdrawals.cloudpayOrderId), confirmedCloudPayFailureCondition),
-        isNull(withdrawals.inpayOutTradeNo),
-        isNull(withdrawals.inpayOrderNumber),
-        isNull(withdrawals.omnipayId),
-        isNull(withdrawals.omnipayReference),
-      ))
-      .returning();
+    const withdrawal = await db.transaction(async (tx) => {
+      const [current] = await tx.select().from(withdrawals)
+        .where(eq(withdrawals.id, id))
+        .for("update");
+      if (
+        !current ||
+        !(
+          current.status === "pending" ||
+          (current.status === "processing" && current.cloudpayOrderId)
+        ) ||
+        (current.cloudpayOrderId || null) !== expectedPreviousOrderId ||
+        current.inpayOutTradeNo ||
+        current.inpayOrderNumber ||
+        current.omnipayId ||
+        current.omnipayReference
+      ) {
+        return undefined;
+      }
+
+      const now = new Date().toISOString();
+      const attempts: CloudPayWithdrawalAttempt[] = [
+        ...(current.cloudpayResponse?.attempts || []),
+      ];
+      if (current.cloudpayOrderId) {
+        const previousResponse = current.cloudpayResponse;
+        attempts.push({
+          orderId: current.cloudpayOrderId,
+          status: previousResponse?.status || "unknown",
+          ...(previousResponse?.providerStatus ? { providerStatus: previousResponse.providerStatus } : {}),
+          ...(previousResponse?.amount ? { amount: previousResponse.amount } : {}),
+          ...(previousResponse?.amountMatches !== undefined ? { amountMatches: previousResponse.amountMatches } : {}),
+          ...(previousResponse?.statusMatches !== undefined ? { statusMatches: previousResponse.statusMatches } : {}),
+          ...(previousResponse?.receivedAt ? { receivedAt: previousResponse.receivedAt } : {}),
+          endedAt: now,
+          endReason: "superseded",
+        });
+      }
+
+      const nextResponse: CloudPayWithdrawalResponse = {
+        source: "payout",
+        status: "pending",
+        providerStatus: "request_started",
+        receivedAt: now,
+        ...(attempts.length ? { attempts } : {}),
+      };
+      const [claimed] = await tx.update(withdrawals)
+        .set({
+          status: "processing",
+          cloudpayOrderId: orderId,
+          cloudpayResponse: nextResponse,
+          processedAt: null,
+          processedBy: null,
+        })
+        .where(and(
+          eq(withdrawals.id, id),
+          or(
+            eq(withdrawals.status, "pending"),
+            and(
+              eq(withdrawals.status, "processing"),
+              sql`${withdrawals.cloudpayOrderId} IS NOT NULL`,
+            ),
+          ),
+          expectedPreviousOrderId
+            ? eq(withdrawals.cloudpayOrderId, expectedPreviousOrderId)
+            : isNull(withdrawals.cloudpayOrderId),
+          isNull(withdrawals.inpayOutTradeNo),
+          isNull(withdrawals.inpayOrderNumber),
+          isNull(withdrawals.omnipayId),
+          isNull(withdrawals.omnipayReference),
+        ))
+        .returning();
+      return claimed;
+    });
     if (withdrawal) {
       notifyTelegramPaymentEvent({
         kind: "withdrawal",
@@ -1279,18 +1370,77 @@ export class DatabaseStorage implements IStorage {
     orderId: string,
     response: CloudPayWithdrawalResponse,
   ): Promise<Withdrawal | undefined> {
+    const [current] = await db.select().from(withdrawals).where(and(
+      eq(withdrawals.id, id),
+      eq(withdrawals.cloudpayOrderId, orderId),
+    ));
+    if (!current) return undefined;
+    const isTerminal = current.status === "approved" || current.status === "rejected";
+    const normalizedResponse: CloudPayWithdrawalResponse = isTerminal
+      ? {
+          ...response,
+          statusMatches:
+            response.status !== "pending" && response.status === current.status,
+        }
+      : response;
+    const enrichedResponse: CloudPayWithdrawalResponse = {
+      ...normalizedResponse,
+      ...(current.cloudpayResponse?.attempts
+        ? { attempts: current.cloudpayResponse.attempts }
+        : {}),
+      ...(current.cloudpayResponse?.adminOverride
+        ? { adminOverride: current.cloudpayResponse.adminOverride }
+        : {}),
+    };
     const [withdrawal] = await db.update(withdrawals)
-      .set({ cloudpayResponse: response })
+      .set({ cloudpayResponse: enrichedResponse })
       .where(and(
         eq(withdrawals.id, id),
         eq(withdrawals.cloudpayOrderId, orderId),
         or(
           sql`${withdrawals.status} NOT IN ('approved', 'rejected')`,
           isNull(withdrawals.cloudpayResponse),
+          sql`${withdrawals.cloudpayResponse}->>'statusMatches' = 'false'`,
+          sql`${withdrawals.processedBy} IS NOT NULL`,
         ),
       ))
       .returning();
     return withdrawal;
+  }
+
+  async recordHistoricalCloudPayWithdrawalResponse(
+    id: number,
+    orderId: string,
+    response: CloudPayWithdrawalResponse,
+  ): Promise<Withdrawal | undefined> {
+    return db.transaction(async (tx) => {
+      const [current] = await tx.select().from(withdrawals)
+        .where(eq(withdrawals.id, id))
+        .for("update");
+      if (!current?.cloudpayResponse?.attempts?.some((attempt) => attempt.orderId === orderId)) {
+        return undefined;
+      }
+      const attempts = current.cloudpayResponse.attempts.map((attempt) =>
+        attempt.orderId === orderId
+          ? {
+              ...attempt,
+              status: response.status,
+              providerStatus: response.providerStatus,
+              ...(response.amount ? { amount: response.amount } : {}),
+              ...(response.amountMatches !== undefined ? { amountMatches: response.amountMatches } : {}),
+              ...(response.statusMatches !== undefined ? { statusMatches: response.statusMatches } : {}),
+              receivedAt: response.receivedAt,
+            }
+          : attempt,
+      );
+      const [updated] = await tx.update(withdrawals)
+        .set({
+          cloudpayResponse: { ...current.cloudpayResponse, attempts },
+        })
+        .where(eq(withdrawals.id, id))
+        .returning();
+      return updated;
+    });
   }
 
   async finalizeCloudPayWithdrawal(
@@ -1300,14 +1450,29 @@ export class DatabaseStorage implements IStorage {
     response: CloudPayWithdrawalResponse,
   ): Promise<{ withdrawal?: Withdrawal; finalized: boolean }> {
     const result = await db.transaction(async (tx) => {
+      const [current] = await tx.select().from(withdrawals)
+        .where(eq(withdrawals.id, id))
+        .for("update");
+      if (!current || current.cloudpayOrderId !== orderId) {
+        return { withdrawal: current, finalized: false };
+      }
+      const enrichedResponse: CloudPayWithdrawalResponse = {
+        ...response,
+        ...(current.cloudpayResponse?.attempts
+          ? { attempts: current.cloudpayResponse.attempts }
+          : {}),
+        ...(current.cloudpayResponse?.adminOverride
+          ? { adminOverride: current.cloudpayResponse.adminOverride }
+          : {}),
+      };
       const [withdrawal] = await tx.update(withdrawals)
         .set(status === "approved"
-          ? { status: "approved", processedAt: new Date(), cloudpayResponse: response }
+          ? { status: "approved", processedAt: new Date(), cloudpayResponse: enrichedResponse }
           : {
               status: "pending",
               processedAt: null,
               processedBy: null,
-              cloudpayResponse: response,
+              cloudpayResponse: enrichedResponse,
             })
         .where(and(
           eq(withdrawals.id, id),
@@ -1317,12 +1482,6 @@ export class DatabaseStorage implements IStorage {
         .returning();
 
       if (!withdrawal) {
-        const [current] = await tx.select().from(withdrawals)
-          .where(and(
-            eq(withdrawals.id, id),
-            eq(withdrawals.cloudpayOrderId, orderId),
-          ))
-          .limit(1);
         return { withdrawal: current, finalized: false };
       }
 
@@ -1350,14 +1509,44 @@ export class DatabaseStorage implements IStorage {
     id: number,
     cloudpayOrderId: string,
   ): Promise<Withdrawal | undefined> {
-    const [withdrawal] = await db.update(withdrawals)
-      .set({ status: "pending", cloudpayOrderId: null, cloudpayResponse: null })
-      .where(and(
-        eq(withdrawals.id, id),
-        eq(withdrawals.cloudpayOrderId, cloudpayOrderId),
-        eq(withdrawals.status, "processing"),
-      ))
-      .returning();
+    const withdrawal = await db.transaction(async (tx) => {
+      const [current] = await tx.select().from(withdrawals)
+        .where(and(eq(withdrawals.id, id), eq(withdrawals.cloudpayOrderId, cloudpayOrderId)))
+        .for("update");
+      if (!current || current.status !== "processing") return undefined;
+      const now = new Date().toISOString();
+      const attempts: CloudPayWithdrawalAttempt[] = [
+        ...(current.cloudpayResponse?.attempts || []),
+        {
+          orderId: cloudpayOrderId,
+          status: "rejected",
+          providerStatus: "not_accepted",
+          ...(current.cloudpayResponse?.amount ? { amount: current.cloudpayResponse.amount } : {}),
+          ...(current.cloudpayResponse?.amountMatches !== undefined
+            ? { amountMatches: current.cloudpayResponse.amountMatches }
+            : {}),
+          receivedAt: current.cloudpayResponse?.receivedAt || now,
+          endedAt: now,
+          endReason: "not_accepted",
+        },
+      ];
+      const response: CloudPayWithdrawalResponse = {
+        source: "payout",
+        status: "rejected",
+        providerStatus: "not_accepted",
+        receivedAt: now,
+        attempts,
+      };
+      const [released] = await tx.update(withdrawals)
+        .set({ status: "pending", cloudpayOrderId: null, cloudpayResponse: response })
+        .where(and(
+          eq(withdrawals.id, id),
+          eq(withdrawals.cloudpayOrderId, cloudpayOrderId),
+          eq(withdrawals.status, "processing"),
+        ))
+        .returning();
+      return released;
+    });
     if (withdrawal) {
       notifyTelegramPaymentEvent({
         kind: "withdrawal",

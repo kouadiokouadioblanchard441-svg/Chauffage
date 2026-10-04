@@ -120,6 +120,18 @@ export const deposits = pgTable("deposits", {
 });
 
 // Withdrawals
+export type CloudPayWithdrawalAttempt = {
+  orderId: string;
+  status: "unknown" | "pending" | "approved" | "rejected";
+  providerStatus?: string;
+  amount?: string;
+  amountMatches?: boolean;
+  statusMatches?: boolean;
+  receivedAt?: string;
+  endedAt: string;
+  endReason: "superseded" | "not_accepted";
+};
+
 export type CloudPayWithdrawalResponse = {
   source: "payout" | "query";
   status: "pending" | "approved" | "rejected";
@@ -129,6 +141,11 @@ export type CloudPayWithdrawalResponse = {
   amountMatches?: boolean;
   statusMatches?: boolean;
   receivedAt: string;
+  attempts?: CloudPayWithdrawalAttempt[];
+  adminOverride?: {
+    action: "manual_approval" | "rejection";
+    at: string;
+  };
 };
 
 export const withdrawals = pgTable("withdrawals", {
