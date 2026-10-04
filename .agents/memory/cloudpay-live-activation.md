@@ -74,3 +74,9 @@ Galaxy System API 3.0.5 signs ASCII-sorted request fields with MD5 after appendi
 **Why:** Omitting the documented `key=` changes every signature, and treating status 0 as pending hides a provider query error.
 
 **How to apply:** Use the exact signing string for outbound requests and callback verification. Map only the documented waiting/in-progress values to pending; report error or unknown values as verification errors.
+
+The merchant connection sheet identifies `https://cloud.la2568.site/` as the API base, `/api/transfer` for deposits, `/api/daifu` for payouts, and `https://cloud.hubcc.net/` for the merchant portal. It labels `52.77.112.163` as the provider callback IP, but also asks for IP whitelisting; confirm the IP direction and purpose before treating it as the merchant server's API egress IP.
+
+**Why:** The API host and paths are provider-supplied, while the callback-IP wording does not establish whether that address is for inbound webhooks or outbound API access.
+
+**How to apply:** Keep payout calls separate from deposits. Whitelist the Plesk server's public egress IP for API requests only after Galaxy confirms the target IP and any five-minute expiry; handle the provider callback source IP separately.
