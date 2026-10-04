@@ -60,7 +60,7 @@ timeoutMs = 120000
 
 [userenv.shared]
 ADMIN_COUNTRY = "CI"
-CLOUDPAY_MERCHANT_ID = "Chargepoint_b"
+CLOUDPAY_MERCHANT_ID = "Chargepoint"
 CLOUDPAY_API_BASE_URL = "https://cloud.la2568.site/"
 CLOUDPAY_AMOUNT_CURRENCY = "PHP"
 

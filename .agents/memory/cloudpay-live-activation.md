@@ -80,3 +80,9 @@ The merchant connection sheet identifies `https://cloud.la2568.site/` as the API
 **Why:** The API host and paths are provider-supplied, and Galaxy clarified that its listed callback IP is distinct from the merchant server's outgoing API address.
 
 **How to apply:** Keep payout calls separate from deposits. Whitelist the Plesk server's public egress IP for API requests and handle Galaxy's callback source IP separately. Confirm the reported five-minute whitelist window with Galaxy. Replit and Plesk use different outbound networks, so a Replit API response does not verify Plesk's allowlist status.
+
+For this Galaxy merchant, the working API `merchant` value is `Chargepoint`; the user confirmed deposits succeed with it, despite earlier support guidance suggesting `Chargepoint_b`.
+
+**Why:** The provider's chat reply conflicted with the actual successful production result, so verified runtime behavior is the stronger source of truth.
+
+**How to apply:** Keep `CLOUDPAY_MERCHANT_ID=Chargepoint` in the Replit and Plesk runtimes. Do not switch back to `Chargepoint_b` based only on the earlier chat.
