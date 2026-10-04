@@ -72,6 +72,10 @@ export interface IStorage {
   getPendingAshtechDeposits(): Promise<Deposit[]>;
   claimDepositApproval(id: number): Promise<Deposit | undefined>;
   claimDepositFinalization(id: number, status: "approved" | "rejected"): Promise<Deposit | undefined>;
+  finalizeCloudPayDeposit(
+    id: number,
+    status: "approved" | "rejected",
+  ): Promise<{ deposit?: Deposit; finalized: boolean }>;
   claimAdminDepositApproval(id: number, processedBy: number): Promise<Deposit | undefined>;
   getDeposits(status?: string): Promise<(Deposit & { user: User })[]>;
   getUserDeposits(userId: number): Promise<Deposit[]>;
@@ -680,6 +684,143 @@ export class DatabaseStorage implements IStorage {
       });
     }
     return deposit;
+  }
+
+  async finalizeCloudPayDeposit(
+    id: number,
+    status: "approved" | "rejected",
+  ): Promise<{ deposit?: Deposit; finalized: boolean }> {
+    const result = await db.transaction(async (tx) => {
+      const [deposit] = await tx.update(deposits)
+        .set({ status, processedAt: new Date() })
+        .where(and(
+          eq(deposits.id, id),
+          sql`${deposits.status} NOT IN ('approved', 'rejected')`,
+          isNull(deposits.processedAt),
+        ))
+        .returning();
+
+      if (!deposit) {
+        const [current] = await tx.select().from(deposits)
+          .where(eq(deposits.id, id))
+          .limit(1);
+        return { deposit: current, finalized: false };
+      }
+
+      if (status === "approved" && deposit.withdrawalFeePaymentId) {
+        const [feePayment] = await tx.update(withdrawalFeePayments)
+          .set({ status: "paid", depositId: deposit.id, paidAt: new Date() })
+          .where(and(
+            eq(withdrawalFeePayments.id, deposit.withdrawalFeePaymentId),
+            eq(withdrawalFeePayments.userId, deposit.userId),
+            sql`${withdrawalFeePayments.status} = 'pending'`,
+          ))
+          .returning();
+
+        if (!feePayment) {
+          const [currentFeePayment] = await tx.select().from(withdrawalFeePayments)
+            .where(eq(withdrawalFeePayments.id, deposit.withdrawalFeePaymentId))
+            .limit(1);
+          if (
+            currentFeePayment?.status !== "paid" ||
+            currentFeePayment.depositId !== deposit.id ||
+            currentFeePayment.userId !== deposit.userId
+          ) {
+            throw new Error("CloudPay withdrawal-fee payment could not be finalized");
+          }
+        }
+      } else if (status === "approved") {
+        const [creditedUser] = await tx.update(users)
+          .set({
+            balance: sql`${users.balance} + ${deposit.amount}`,
+            hasDeposited: true,
+          })
+          .where(eq(users.id, deposit.userId))
+          .returning({ id: users.id });
+        if (!creditedUser) throw new Error("CloudPay deposit owner was not found");
+
+        await tx.insert(transactions).values({
+          userId: deposit.userId,
+          type: "deposit",
+          amount: deposit.amount.toString(),
+          description: `RobotPay deposit #${deposit.id}`,
+        });
+
+        const [sourceUser] = await tx.select({ referredBy: users.referredBy })
+          .from(users)
+          .where(eq(users.id, deposit.userId))
+          .limit(1);
+
+        if (sourceUser?.referredBy) {
+          const commissionRows = await tx.select({
+            key: platformSettings.key,
+            value: platformSettings.value,
+          })
+            .from(platformSettings)
+            .where(inArray(platformSettings.key, [
+              "depositCommissionLevel1",
+              "depositCommissionLevel2",
+              "depositCommissionLevel3",
+            ]));
+          const commissionSettings = new Map(commissionRows.map((setting) => [setting.key, setting.value]));
+          const rates = [
+            Number.parseFloat(commissionSettings.get("depositCommissionLevel1") || "5") / 100,
+            Number.parseFloat(commissionSettings.get("depositCommissionLevel2") || "2") / 100,
+            Number.parseFloat(commissionSettings.get("depositCommissionLevel3") || "1") / 100,
+          ];
+
+          let referralCode: string | null | undefined = sourceUser.referredBy;
+          for (let index = 0; index < rates.length; index += 1) {
+            const rate = rates[index];
+            if (!referralCode) break;
+            const [referrer] = await tx.select({
+              id: users.id,
+              referredBy: users.referredBy,
+            })
+              .from(users)
+              .where(sql`UPPER(${users.referralCode}) = UPPER(${referralCode})`)
+              .limit(1);
+            if (!referrer) break;
+
+            const commission = Math.round(deposit.amount * rate);
+            if (commission > 0) {
+              const [creditedReferrer] = await tx.update(users)
+                .set({ balance: sql`${users.balance} + ${commission}` })
+                .where(eq(users.id, referrer.id))
+                .returning({ id: users.id });
+              if (!creditedReferrer) throw new Error("CloudPay referral recipient was not found");
+
+              await tx.insert(transactions).values({
+                userId: referrer.id,
+                type: "deposit_commission",
+                amount: commission.toString(),
+                description: `Level ${index + 1} deposit commission`,
+              });
+            }
+            referralCode = referrer.referredBy;
+          }
+        }
+      }
+
+      return { deposit, finalized: true };
+    });
+
+    if (result.finalized && result.deposit) {
+      notifyTelegramPaymentEvent({
+        kind: "deposit",
+        phase: "status",
+        id: result.deposit.id,
+        userId: result.deposit.userId,
+        amount: result.deposit.amount,
+        status: result.deposit.status,
+        country: result.deposit.country,
+        paymentMethod: result.deposit.paymentMethod,
+        reference: result.deposit.reference || result.deposit.cloudpayOrderId,
+        isWithdrawalFeePayment: Boolean(result.deposit.withdrawalFeePaymentId),
+      });
+    }
+
+    return result;
   }
 
   async claimAdminDepositApproval(id: number, processedBy: number): Promise<Deposit | undefined> {

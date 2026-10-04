@@ -86,3 +86,9 @@ For this Galaxy merchant, the working API `merchant` value is `Chargepoint`; the
 **Why:** The provider's chat reply conflicted with the actual successful production result, so verified runtime behavior is the stronger source of truth.
 
 **How to apply:** Keep `CLOUDPAY_MERCHANT_ID=Chargepoint` in the Replit and Plesk runtimes. Do not switch back to `Chargepoint_b` based only on the earlier chat.
+
+For Galaxy callbacks, acknowledge with `SUCCESS` only after the verified final status and all deposit balance/ledger updates commit. If the query is still pending or finalization fails, return a non-success response so Galaxy can retry.
+
+**Why:** Galaxy stops retrying after a successful acknowledgment; acknowledging a pending query or a partially applied credit can leave a paid order stuck or inconsistent.
+
+**How to apply:** Verify the callback signature, merchant, order, country, and amount; query Galaxy; then commit deposit status, balance, and ledger changes atomically before acknowledging success. Keep a separate recovery path for callbacks that exhaust Galaxy's retry limit.

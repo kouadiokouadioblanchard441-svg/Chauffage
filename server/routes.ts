@@ -470,13 +470,9 @@ async function refundRejectedWithdrawal(
 }
 
 async function finalizeCloudPayDeposit(depositId: number, status: CloudPayStatus) {
-  if (status === "approved") {
-    const claimed = await storage.claimDepositFinalization(depositId, "approved");
-    if (claimed) await creditApprovedDeposit(claimed);
-  } else if (status === "rejected") {
-    await storage.claimDepositFinalization(depositId, "rejected");
-  }
-  return storage.getDeposit(depositId);
+  if (status === "pending") return storage.getDeposit(depositId);
+  const result = await storage.finalizeCloudPayDeposit(depositId, status);
+  return result.deposit;
 }
 
 async function finalizeCloudPayWithdrawal(withdrawalId: number, status: CloudPayStatus) {
@@ -3913,7 +3909,11 @@ export async function registerRoutes(
 
         if (orderId.startsWith("CPD-")) {
           const deposit = await storage.getDepositByCloudPayOrderId(orderId);
-          if (!deposit || deposit.status === "approved" || deposit.status === "rejected") {
+          if (!deposit) {
+            console.error("[cloudpay webhook] deposit order not found", { orderId });
+            return res.status(404).send("FAIL");
+          }
+          if (deposit.status === "approved" || deposit.status === "rejected") {
             return res.status(200).send("SUCCESS");
           }
           const callbackAmount = payload.amount;
@@ -3924,6 +3924,9 @@ export async function registerRoutes(
           const verifiedAmount = verification.amount ?? callbackAmount;
           if (!cloudPayAmountMatches(verifiedAmount, deposit.amount)) {
             return res.status(409).send("FAIL");
+          }
+          if (verification.status === "pending") {
+            return res.status(503).send("FAIL");
           }
           await finalizeCloudPayDeposit(deposit.id, verification.status);
           return res.status(200).send("SUCCESS");

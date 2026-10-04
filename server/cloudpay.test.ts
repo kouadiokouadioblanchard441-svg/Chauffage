@@ -5,6 +5,7 @@ import {
   cloudPayAmountMatches,
   cloudPayCreateDeposit,
   cloudPayCreatePayout,
+  cloudPayQuery,
   formatCloudPayAmount,
   getCloudPayRuntimeDiagnostics,
   isCloudPayConfigured,
@@ -85,6 +86,8 @@ const responses = [
     status: 0,
     message: "Invalid payment; signature=01234567890123456789012345678901; phone=09171234567; https://gateway.example/trace",
   },
+  { status: 1, data: { status: 5, order_id: "CPD-test-query", amount: "250.00" } },
+  { status: 1, data: { status: 1, order_id: "CPD-test-query-pending", amount: "250.00" } },
 ];
 
 for (const [key, value] of Object.entries({
@@ -299,6 +302,25 @@ try {
   assert.equal(isCloudPayConfigured(), false);
   process.env.PUBLIC_APP_URL = "https://merchant.example";
   assert.equal(isCloudPayConfigured(), true);
+
+  const successfulQuery = await cloudPayQuery("CPD-test-query");
+  assert.deepEqual(successfulQuery, {
+    orderId: "CPD-test-query",
+    status: "approved",
+    providerStatus: "5",
+    amount: "250.00",
+  });
+  assert.equal(requests[6].url.toString(), "https://gateway.example/api/query");
+  assert.equal(requests[6].fields.get("order_id"), "CPD-test-query");
+  const querySignFields = Object.fromEntries(
+    [...requests[6].fields.entries()].filter(([key]) => key !== "sign"),
+  );
+  assert.equal(requests[6].fields.get("sign"), signCloudPayFields(querySignFields, "test-signing-secret"));
+
+  const pendingQuery = await cloudPayQuery("CPD-test-query-pending");
+  assert.equal(pendingQuery.status, "pending");
+  assert.equal(pendingQuery.providerStatus, "1");
+  assert.equal(requests[7].url.toString(), "https://gateway.example/api/query");
 } finally {
   globalThis.fetch = originalFetch;
   for (const key of configKeys) {
