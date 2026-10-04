@@ -5,8 +5,8 @@ import {
   giftCodes, giftCodeClaims, countries,
   type User, type Product, type UserProduct, type Deposit, type Withdrawal, type WithdrawalWallet,
   type PaymentChannel, type PaymentNumber, type StakingProduct, type UserStaking, type ReferralCommission, type Task, type UserTask, type Transaction, type PlatformSetting,
-  type GiftCode, type GiftCodeClaim, type Country
-  , type WithdrawalFeePayment
+  type GiftCode, type GiftCodeClaim, type Country,
+  type WithdrawalFeePayment, type CloudPayWithdrawalResponse
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, lte, or, isNull, inArray } from "drizzle-orm";
@@ -98,11 +98,17 @@ export interface IStorage {
   claimManualWithdrawalApproval(id: number, processedBy: number): Promise<Withdrawal | undefined>;
   claimManualWithdrawalRejection(id: number, processedBy: number): Promise<Withdrawal | undefined>;
   claimWithdrawalForCloudPayPayout(id: number, orderId: string): Promise<Withdrawal | undefined>;
+  recordCloudPayWithdrawalResponse(
+    id: number,
+    orderId: string,
+    response: CloudPayWithdrawalResponse,
+  ): Promise<Withdrawal | undefined>;
   claimWithdrawalFinalization(id: number, status: "approved" | "rejected"): Promise<Withdrawal | undefined>;
   finalizeCloudPayWithdrawal(
     id: number,
     orderId: string,
     status: "approved" | "rejected",
+    response: CloudPayWithdrawalResponse,
   ): Promise<{ withdrawal?: Withdrawal; finalized: boolean }>;
   releaseWithdrawalProcessing(id: number, cloudpayOrderId: string): Promise<Withdrawal | undefined>;
   getUserWithdrawalCountToday(userId: number): Promise<number>;
@@ -1244,14 +1250,34 @@ export class DatabaseStorage implements IStorage {
     return withdrawal;
   }
 
+  async recordCloudPayWithdrawalResponse(
+    id: number,
+    orderId: string,
+    response: CloudPayWithdrawalResponse,
+  ): Promise<Withdrawal | undefined> {
+    const [withdrawal] = await db.update(withdrawals)
+      .set({ cloudpayResponse: response })
+      .where(and(
+        eq(withdrawals.id, id),
+        eq(withdrawals.cloudpayOrderId, orderId),
+        or(
+          sql`${withdrawals.status} NOT IN ('approved', 'rejected')`,
+          isNull(withdrawals.cloudpayResponse),
+        ),
+      ))
+      .returning();
+    return withdrawal;
+  }
+
   async finalizeCloudPayWithdrawal(
     id: number,
     orderId: string,
     status: "approved" | "rejected",
+    response: CloudPayWithdrawalResponse,
   ): Promise<{ withdrawal?: Withdrawal; finalized: boolean }> {
     const result = await db.transaction(async (tx) => {
       const [withdrawal] = await tx.update(withdrawals)
-        .set({ status, processedAt: new Date() })
+        .set({ status, processedAt: new Date(), cloudpayResponse: response })
         .where(and(
           eq(withdrawals.id, id),
           eq(withdrawals.cloudpayOrderId, orderId),

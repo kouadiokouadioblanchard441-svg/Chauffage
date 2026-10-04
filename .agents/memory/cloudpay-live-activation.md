@@ -98,3 +98,9 @@ For pending Philippines withdrawals, keep two distinct admin choices: manual app
 **Why:** The user explicitly requires both manual and CloudPay validation, with the net amount being what the recipient receives.
 
 **How to apply:** Keep manual confirmation separate from payout initiation, show the recipient and net amount before sending, and never mark a provider payout approved based only on its initiation response.
+
+Persist only the sanitized CloudPay payout status, reported amount, provider message, source, and receipt time for admin review. Keep the response admin-only; never store or expose the raw signed payload, signature, merchant value, signing secret, or payout account details.
+
+**Why:** Provider messages and raw replies can contain account data or signing material, while admins still need an auditable result on each withdrawal.
+
+**How to apply:** Whitelist the fields saved to the withdrawal record, redact sensitive values from provider messages, and remove the stored response from customer-facing withdrawal history.

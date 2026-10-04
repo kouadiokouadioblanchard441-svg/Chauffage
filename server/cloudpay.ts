@@ -388,10 +388,11 @@ export async function cloudPayCreatePayout(input: {
   accountNumber: string;
   accountName: string;
   callbackUrl: string;
-}): Promise<void> {
+}): Promise<{ providerStatus: string; amount?: string; message?: string }> {
   const bankCode = resolveCloudPayBankCode(input.bankCode);
   if (!bankCode) throw new Error("Unsupported CloudPay bank or e-wallet");
-  await postCloudPay("/api/daifu", {
+  const config = getCloudPayConfig();
+  const payload = await postCloudPay("/api/daifu", {
     order_id: input.orderId,
     total_amount: formatCloudPayAmount(input.amount),
     callback_url: input.callbackUrl,
@@ -400,6 +401,19 @@ export async function cloudPayCreatePayout(input: {
     bank_card_name: input.accountName,
     bank_card_remark: "no",
   });
+  const rawAmount = payload.amount ?? payload.total_amount ?? payload.order_amount;
+  const amount = rawAmount === undefined || rawAmount === null
+    ? undefined
+    : String(rawAmount).trim();
+  const message = getProviderMessage(
+    payload,
+    [config.signingSecret, config.merchantId, input.accountNumber],
+  );
+  return {
+    providerStatus: getProviderStatus(payload),
+    ...(amount && /^\d{1,12}(?:\.\d{1,2})?$/.test(amount) ? { amount } : {}),
+    ...(message ? { message } : {}),
+  };
 }
 
 export type CloudPayQueryResult = {
@@ -407,21 +421,27 @@ export type CloudPayQueryResult = {
   status: CloudPayStatus;
   providerStatus: string;
   amount?: string;
+  message?: string;
 };
 
 export async function cloudPayQuery(orderId: string): Promise<CloudPayQueryResult> {
+  const config = getCloudPayConfig();
   const payload = await postCloudPay("/api/query", { order_id: orderId });
   const returnedOrderId = String(payload.order_id ?? orderId);
   if (returnedOrderId !== orderId) {
     throw new CloudPayError("CloudPay returned a different order reference", true);
   }
+  const rawAmount = payload.amount ?? payload.total_amount ?? payload.order_amount;
+  const amount = rawAmount === undefined || rawAmount === null
+    ? undefined
+    : String(rawAmount).trim();
+  const message = getProviderMessage(payload, [config.signingSecret, config.merchantId, orderId]);
   return {
     orderId,
     status: mapCloudPayStatus(payload.status),
-    providerStatus: String(payload.status ?? ""),
-    amount: payload.amount === undefined && payload.total_amount === undefined && payload.order_amount === undefined
-      ? undefined
-      : String(payload.amount ?? payload.total_amount ?? payload.order_amount),
+    providerStatus: getProviderStatus(payload),
+    ...(amount && /^\d{1,12}(?:\.\d{1,2})?$/.test(amount) ? { amount } : {}),
+    ...(message ? { message } : {}),
   };
 }
 

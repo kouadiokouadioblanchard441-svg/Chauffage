@@ -5,7 +5,14 @@ import multer from "multer";
 import { storage } from "./storage";
 import { pool } from "./db";
 import bcrypt from "bcrypt";
-import { registerSchema, loginSchema, depositSchema, walletSchema, phoneNumberSchema } from "@shared/schema";
+import {
+  registerSchema,
+  loginSchema,
+  depositSchema,
+  walletSchema,
+  phoneNumberSchema,
+  type CloudPayWithdrawalResponse,
+} from "@shared/schema";
 import { getWithdrawalMethods, isAllowedWithdrawalMethod } from "@shared/withdrawal-methods";
 import {
   CLOUDPAY_DEPOSIT_METHODS,
@@ -478,14 +485,43 @@ async function finalizeCloudPayDeposit(depositId: number, status: CloudPayStatus
 async function finalizeCloudPayWithdrawal(
   withdrawalId: number,
   orderId: string,
-  status: CloudPayStatus,
+  response: CloudPayWithdrawalResponse,
 ) {
-  if (status === "pending") {
-    const withdrawals = await storage.getWithdrawals();
-    return withdrawals.find((withdrawal) => withdrawal.id === withdrawalId);
+  if (response.status === "pending" || response.amountMatches !== true) {
+    return storage.recordCloudPayWithdrawalResponse(withdrawalId, orderId, response);
   }
-  const result = await storage.finalizeCloudPayWithdrawal(withdrawalId, orderId, status);
+  const result = await storage.finalizeCloudPayWithdrawal(
+    withdrawalId,
+    orderId,
+    response.status,
+    response,
+  );
   return result.withdrawal;
+}
+
+function buildCloudPayWithdrawalResponse(
+  verification: Awaited<ReturnType<typeof cloudPayQuery>>,
+  expectedAmount: number,
+  options: {
+    amountFallback?: string;
+    requireAmount?: boolean;
+    statusMatches?: boolean;
+  } = {},
+): CloudPayWithdrawalResponse {
+  const amount = verification.amount ?? options.amountFallback;
+  const amountMatches = amount === undefined
+    ? options.requireAmount ? false : undefined
+    : cloudPayAmountMatches(amount, expectedAmount);
+  return {
+    source: "query",
+    status: verification.status,
+    providerStatus: verification.providerStatus,
+    ...(amount === undefined ? {} : { amount }),
+    ...(verification.message ? { message: verification.message } : {}),
+    ...(amountMatches === undefined ? {} : { amountMatches }),
+    ...(options.statusMatches === undefined ? {} : { statusMatches: options.statusMatches }),
+    receivedAt: new Date().toISOString(),
+  };
 }
 
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -2595,7 +2631,11 @@ export async function registerRoutes(
   app.get("/api/withdrawals/history", requireAuth, async (req, res) => {
     try {
       const withdrawals = await storage.getUserWithdrawals(req.session.userId!);
-      res.json(withdrawals);
+      res.json(withdrawals.map((withdrawal) => {
+        const { cloudpayResponse, ...publicWithdrawal } = withdrawal;
+        void cloudpayResponse;
+        return publicWithdrawal;
+      }));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -3137,7 +3177,7 @@ export async function registerRoutes(
       }
       payoutClaimed = true;
       providerRequestStarted = true;
-      await cloudPayCreatePayout({
+      const payoutResult = await cloudPayCreatePayout({
         orderId,
         amount: claimedWithdrawal.netAmount,
         bankCode: cloudPayBankCode,
@@ -3146,6 +3186,20 @@ export async function registerRoutes(
         callbackUrl,
       });
       providerAccepted = true;
+      const providerResponse: CloudPayWithdrawalResponse = {
+        source: "payout",
+        status: "pending",
+        providerStatus: payoutResult.providerStatus,
+        ...(payoutResult.amount
+          ? {
+              amount: payoutResult.amount,
+              amountMatches: cloudPayAmountMatches(payoutResult.amount, claimedWithdrawal.netAmount),
+            }
+          : {}),
+        ...(payoutResult.message ? { message: payoutResult.message } : {}),
+        receivedAt: new Date().toISOString(),
+      };
+      await storage.recordCloudPayWithdrawalResponse(withdrawal.id, orderId, providerResponse);
       const updated = (await storage.getWithdrawals()).find((item) => item.id === withdrawal.id);
       await storage.logAdminAction(
         req.session.userId!,
@@ -3153,7 +3207,12 @@ export async function registerRoutes(
         withdrawal.userId,
         `Withdrawal ${withdrawal.id} sent to CloudPay/Galaxy for ${withdrawal.netAmount} PHP`,
       );
-      return res.json({ success: true, status: updated?.status || "processing", orderId });
+      return res.json({
+        success: true,
+        status: updated?.status || "processing",
+        orderId,
+        providerResponse,
+      });
     } catch (error: any) {
       const uncertain = providerAccepted ||
         (providerRequestStarted && error instanceof CloudPayError && error.requestMayHaveReachedProvider);
@@ -3204,22 +3263,41 @@ export async function registerRoutes(
       if (!withdrawal.cloudpayOrderId) {
         return res.status(400).json({ message: "This withdrawal has no CloudPay order reference" });
       }
-      if (withdrawal.status === "approved" || withdrawal.status === "rejected") {
-        return res.json({ status: withdrawal.status });
+      const isTerminal = withdrawal.status === "approved" || withdrawal.status === "rejected";
+      if (isTerminal && withdrawal.cloudpayResponse) {
+        return res.json({
+          status: withdrawal.status,
+          providerStatus: withdrawal.cloudpayResponse.providerStatus,
+          response: withdrawal.cloudpayResponse,
+        });
       }
       const verification = await cloudPayQuery(withdrawal.cloudpayOrderId);
-      if (verification.status !== "pending") {
-        if (!verification.amount || !cloudPayAmountMatches(verification.amount, withdrawal.netAmount)) {
-          return res.status(409).json({ message: "CloudPay could not confirm the payout amount" });
-        }
-        const updated = await finalizeCloudPayWithdrawal(
+      const response = buildCloudPayWithdrawalResponse(verification, withdrawal.netAmount, {
+        requireAmount: verification.status !== "pending",
+        ...(isTerminal ? { statusMatches: verification.status === withdrawal.status } : {}),
+      });
+      if (isTerminal) {
+        const updated = await storage.recordCloudPayWithdrawalResponse(
           withdrawal.id,
           withdrawal.cloudpayOrderId,
-          verification.status,
+          response,
         );
-        return res.json({ status: updated?.status || withdrawal.status, providerStatus: verification.providerStatus });
+        return res.json({
+          status: withdrawal.status,
+          providerStatus: verification.providerStatus,
+          response: updated?.cloudpayResponse || response,
+        });
       }
-      return res.json({ status: withdrawal.status, providerStatus: verification.providerStatus });
+      const updated = await finalizeCloudPayWithdrawal(
+        withdrawal.id,
+        withdrawal.cloudpayOrderId,
+        response,
+      );
+      return res.json({
+        status: updated?.status || withdrawal.status,
+        providerStatus: verification.providerStatus,
+        response: updated?.cloudpayResponse || response,
+      });
     } catch (error: any) {
       console.error("[cloudpay] payout status error:", error);
       return res.status(502).json({ message: "Unable to verify the CloudPay payout right now" });
@@ -3955,14 +4033,19 @@ export async function registerRoutes(
             return res.status(409).send("FAIL");
           }
           const verification = await cloudPayQuery(orderId);
-          const verifiedAmount = verification.amount ?? callbackAmount;
-          if (!cloudPayAmountMatches(verifiedAmount, withdrawal.netAmount)) {
+          const response = buildCloudPayWithdrawalResponse(verification, withdrawal.netAmount, {
+            amountFallback: String(callbackAmount),
+            requireAmount: true,
+          });
+          if (response.amountMatches !== true) {
+            await storage.recordCloudPayWithdrawalResponse(withdrawal.id, orderId, response);
             return res.status(409).send("FAIL");
           }
           if (verification.status === "pending") {
+            await finalizeCloudPayWithdrawal(withdrawal.id, orderId, response);
             return res.status(503).send("FAIL");
           }
-          await finalizeCloudPayWithdrawal(withdrawal.id, orderId, verification.status);
+          await finalizeCloudPayWithdrawal(withdrawal.id, orderId, response);
           return res.status(200).send("SUCCESS");
         }
 

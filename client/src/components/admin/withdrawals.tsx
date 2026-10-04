@@ -154,7 +154,17 @@ export default function AdminWithdrawals() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
-      toast({ title: `CloudPay status: ${data.status}` });
+      const needsReview =
+        data.response?.amountMatches === false ||
+        data.response?.statusMatches === false;
+      toast({
+        title: needsReview ? "CloudPay response needs review" : `CloudPay status: ${data.status}`,
+        description: data.response?.message ||
+          (data.response?.providerStatus
+            ? `Provider response code: ${data.response.providerStatus}`
+            : undefined),
+        variant: needsReview ? "destructive" : undefined,
+      });
     },
     onError: (error: any) => {
       toast({ title: "Unable to check CloudPay status", description: error.message, variant: "destructive" });
@@ -297,6 +307,61 @@ export default function AdminWithdrawals() {
                   )}
                 </div>
 
+                {withdrawal.cloudpayOrderId && (
+                  <div className="mt-3 rounded-md border bg-muted/30 p-3 text-sm">
+                    <p className="mb-1 font-semibold">CloudPay response</p>
+                    {withdrawal.cloudpayResponse ? (
+                      <>
+                        <p>
+                          <strong>Result:</strong>{" "}
+                          {withdrawal.cloudpayResponse.status === "approved" &&
+                          withdrawal.cloudpayResponse.amountMatches === true
+                            ? "Validated by CloudPay"
+                            : withdrawal.cloudpayResponse.status === "rejected"
+                              ? "Rejected by CloudPay"
+                              : "Awaiting final CloudPay validation"}
+                        </p>
+                        <p>
+                          <strong>Provider code:</strong>{" "}
+                          {withdrawal.cloudpayResponse.providerStatus}
+                          {" · "}
+                          <strong>Provider status:</strong>{" "}
+                          {withdrawal.cloudpayResponse.status}
+                        </p>
+                        <p>
+                          <strong>Amount returned:</strong>{" "}
+                          {withdrawal.cloudpayResponse.amount
+                            ? `${withdrawal.cloudpayResponse.amount} PHP`
+                            : "Not included"}
+                        </p>
+                        {withdrawal.cloudpayResponse.amountMatches === false && (
+                          <p className="font-medium text-destructive">
+                            The provider amount does not match the expected net payout.
+                          </p>
+                        )}
+                        {withdrawal.cloudpayResponse.statusMatches === false && (
+                          <p className="font-medium text-destructive">
+                            The provider status differs from the recorded withdrawal status.
+                          </p>
+                        )}
+                        <p>
+                          <strong>Message:</strong>{" "}
+                          {withdrawal.cloudpayResponse.message || "No message returned."}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {withdrawal.cloudpayResponse.source === "payout"
+                            ? "Payout request response"
+                            : "Status query response"}
+                          {" · "}
+                          {new Date(withdrawal.cloudpayResponse.receivedAt).toLocaleString()}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">No CloudPay response has been saved yet.</p>
+                    )}
+                  </div>
+                )}
+
                 {withdrawal.status === "pending" && (
                   <div className="flex flex-wrap gap-2">
                     {withdrawal.country.toUpperCase() === "PH" &&
@@ -340,7 +405,9 @@ export default function AdminWithdrawals() {
                     </Button>}
                   </div>
                 )}
-                {(withdrawal.status === "processing" || withdrawal.status === "pending") && withdrawal.cloudpayOrderId && (
+                {withdrawal.cloudpayOrderId &&
+                  ((withdrawal.status === "processing" || withdrawal.status === "pending") ||
+                    !withdrawal.cloudpayResponse) && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -351,7 +418,9 @@ export default function AdminWithdrawals() {
                   >
                     {processingId === withdrawal.id
                       ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : "Check CloudPay status"}
+                      : withdrawal.cloudpayResponse
+                        ? "Refresh CloudPay response"
+                        : "Check CloudPay response"}
                   </Button>
                 )}
               </CardContent>

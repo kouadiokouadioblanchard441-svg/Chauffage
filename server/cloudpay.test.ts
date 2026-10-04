@@ -81,12 +81,20 @@ const responses = [
   { status: 1, qrcode_url: "https://checkout.example/gotyme-qr.png" },
   { status: 1, gcashqr: "https://checkout.example/gcash-qr.png" },
   { status: 1 },
-  { status: 1 },
+  { status: 1, message: "Request accepted; account=09171234567" },
   {
     status: 0,
     message: "Invalid payment; signature=01234567890123456789012345678901; phone=09171234567; https://gateway.example/trace",
   },
-  { status: 1, data: { status: 5, order_id: "CPD-test-query", amount: "250.00" } },
+  {
+    status: 1,
+    data: {
+      status: 5,
+      order_id: "CPD-test-query",
+      amount: "250.00",
+      message: "Payout approved; phone=09171234567; https://gateway.example/trace",
+    },
+  },
   { status: 1, data: { status: 1, order_id: "CPD-test-query-pending", amount: "250.00" } },
 ];
 
@@ -240,13 +248,17 @@ try {
   assert.equal(requests[3].fields.get("customer_bank_card_account"), null);
 
   process.env.CLOUDPAY_DEPOSIT_PATH = "/api/transfer";
-  await cloudPayCreatePayout({
+  const payoutResult = await cloudPayCreatePayout({
     orderId: "CPW-test",
     amount: 100.25,
     bankCode: "gcash",
     accountNumber: "09171234567",
     accountName: "Test Account",
     callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
+  });
+  assert.deepEqual(payoutResult, {
+    providerStatus: "1",
+    message: "Request accepted; account=[redacted]",
   });
   const payout = requests[4];
   assert.equal(payout.url.toString(), "https://gateway.example/api/daifu");
@@ -309,6 +321,7 @@ try {
     status: "approved",
     providerStatus: "5",
     amount: "250.00",
+    message: "Payout approved; phone=[redacted]; [redacted URL]",
   });
   assert.equal(requests[6].url.toString(), "https://gateway.example/api/query");
   assert.equal(requests[6].fields.get("order_id"), "CPD-test-query");
