@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
@@ -21,6 +22,7 @@ import {
   resolveCloudPayBankCode,
   resolveCloudPayDepositMethod,
 } from "@shared/cloudpay-banks";
+import { isConfirmedCloudPayPayoutFailure } from "@shared/cloudpay-withdrawals";
 import { z } from "zod";
 import ConnectPgSimple from "connect-pg-simple";
 import { 
@@ -3069,7 +3071,7 @@ export async function registerRoutes(
       }
       if (req.body?.manualTransferConfirmed !== true) {
         return res.status(400).json({
-          message: "Confirm that the external manual transfer has already been sent.",
+          message: "Confirme que le virement manuel a déjà été effectué.",
         });
       }
       const withdrawalData = (await storage.getWithdrawals())
@@ -3077,25 +3079,29 @@ export async function registerRoutes(
       if (!withdrawalData) {
         return res.status(404).json({ message: "Withdrawal not found" });
       }
+      const cloudPayFailureConfirmed = isConfirmedCloudPayPayoutFailure(withdrawalData);
       if (
         withdrawalData.status !== "pending" ||
-        withdrawalData.cloudpayOrderId ||
+        (withdrawalData.cloudpayOrderId && !cloudPayFailureConfirmed) ||
         withdrawalData.inpayOutTradeNo ||
         withdrawalData.inpayOrderNumber ||
         withdrawalData.omnipayId ||
         withdrawalData.omnipayReference
       ) {
         return res.status(409).json({
-          message: "Only pending withdrawals that have not been sent to a provider can be marked paid manually.",
+          message: "Seuls les retraits en attente sans demande prestataire active, ou avec un échec CloudPay confirmé, peuvent être validés manuellement.",
         });
       }
       const withdrawal = await storage.claimManualWithdrawalApproval(
         withdrawalId,
         req.session.userId!,
+        cloudPayFailureConfirmed && withdrawalData.cloudpayResponse
+          ? { ...withdrawalData.cloudpayResponse, statusMatches: false }
+          : undefined,
       );
       if (!withdrawal) {
         return res.status(409).json({
-          message: "This withdrawal was processed or sent to a provider before manual approval completed.",
+          message: "Le retrait a été traité ou envoyé à un prestataire avant la validation manuelle.",
         });
       }
 
@@ -3103,7 +3109,7 @@ export async function registerRoutes(
         req.session.userId!,
         "approve_withdrawal",
         withdrawalData.userId,
-        `Withdrawal ${withdrawal.id} marked paid manually after admin confirmation: ${withdrawalData.netAmount} PHP`,
+        `Withdrawal ${withdrawal.id} marked paid manually after admin confirmation: ${withdrawalData.netAmount} PHP${cloudPayFailureConfirmed ? `; CloudPay failure ${withdrawalData.cloudpayOrderId} was confirmed first` : ""}`,
       );
       res.json(withdrawal);
     } catch (error: any) {
@@ -3126,7 +3132,7 @@ export async function registerRoutes(
           .find((item) => item.id === withdrawalId);
         if (!current) return res.status(404).json({ message: "Withdrawal not found" });
         return res.status(409).json({
-          message: "Only pending withdrawals that have not been sent to a provider can be rejected here.",
+          message: "Seuls les retraits en attente sans demande prestataire active, ou avec un échec CloudPay confirmé, peuvent être rejetés ici.",
         });
       }
 
@@ -3151,34 +3157,44 @@ export async function registerRoutes(
       const withdrawal = (await storage.getWithdrawals()).find((item) => item.id === withdrawalId);
       if (!withdrawal) return res.status(404).json({ message: "Withdrawal not found" });
       if (withdrawal.status !== "pending") {
-        return res.status(409).json({ message: "This withdrawal has already been processed or sent" });
+        return res.status(409).json({ message: "Ce retrait a déjà été traité ou envoyé à un prestataire." });
       }
       withdrawalUserId = withdrawal.userId;
       const country = withdrawal.country.trim().toUpperCase();
       const settings = await storage.getSettings();
       if (!isPhilippinesCountryCode(country) || settings.cloudpayEnabled !== "true" || !isCloudPayConfigured()) {
-        return res.status(400).json({ message: "CloudPay is not enabled and configured for Philippines withdrawals" });
+        return res.status(400).json({ message: "CloudPay n’est pas activé et configuré pour les retraits aux Philippines." });
       }
       validateCloudPayConfig();
       const cloudPayBankCode = resolveCloudPayBankCode(withdrawal.paymentMethod);
       if (!cloudPayBankCode) {
-        return res.status(400).json({ message: "This withdrawal method is not supported by CloudPay" });
+        return res.status(400).json({ message: "Cette méthode de retrait n’est pas prise en charge par CloudPay." });
       }
 
       const publicBaseUrl = new URL(getPublicBaseUrl(req));
       if (publicBaseUrl.protocol !== "https:") {
-        throw new Error("The public app URL must use HTTPS for CloudPay callbacks.");
+        throw new Error("L’URL publique de l’application doit utiliser HTTPS pour les notifications CloudPay.");
       }
       const callbackUrl = new URL("/api/webhooks/cloudpay", publicBaseUrl).toString();
 
-      orderId = `CPW-${withdrawal.id}-${Date.now()}`;
+      orderId = `CPW-${withdrawal.id}-${Date.now()}-${randomUUID().replaceAll("-", "").slice(0, 16)}`;
+      const retryingAfterCloudPayFailure = isConfirmedCloudPayPayoutFailure(withdrawal);
+      if (retryingAfterCloudPayFailure && withdrawal.cloudpayOrderId) {
+        const failedAttempt = withdrawal.cloudpayResponse!;
+        await storage.logAdminAction(
+          req.session.userId!,
+          "retry_cloudpay_withdrawal",
+          withdrawal.userId,
+          `New CloudPay payout attempt prepared after confirmed failure of ${withdrawal.cloudpayOrderId}; provider status ${failedAttempt.providerStatus}; reported amount ${failedAttempt.amount || "not returned"} PHP.`,
+        );
+      }
       const claimedWithdrawal = await storage.claimWithdrawalForCloudPayPayout(
         withdrawal.id,
         orderId,
       );
       if (!claimedWithdrawal) {
         return res.status(409).json({
-          message: "This withdrawal was processed or sent to another provider before CloudPay could claim it.",
+          message: "Le retrait a été traité ou attribué à un autre prestataire avant la demande CloudPay.",
         });
       }
       payoutClaimed = true;
@@ -3217,6 +3233,7 @@ export async function registerRoutes(
         success: true,
         status: updated?.status || "processing",
         orderId,
+        retriedAfterFailure: retryingAfterCloudPayFailure,
         providerResponse,
       });
     } catch (error: any) {
@@ -3251,10 +3268,12 @@ export async function registerRoutes(
         return res.status(202).json({
           orderId,
           uncertain: true,
-          message: "The request status is uncertain. Do not send it again; check the provider status.",
+          message: "Le résultat de la demande est incertain. Ne la renvoie pas; vérifie d’abord le statut CloudPay.",
         });
       }
-      return res.status(502).json({ message: error.message || "CloudPay payout failed" });
+      return res.status(502).json({
+        message: "Impossible d’envoyer le paiement à CloudPay. Vérifie le retrait avant toute nouvelle tentative.",
+      });
     }
   });
 
@@ -3267,7 +3286,7 @@ export async function registerRoutes(
       const withdrawal = (await storage.getWithdrawals()).find((item) => item.id === withdrawalId);
       if (!withdrawal) return res.status(404).json({ message: "Withdrawal not found" });
       if (!withdrawal.cloudpayOrderId) {
-        return res.status(400).json({ message: "This withdrawal has no CloudPay order reference" });
+        return res.status(400).json({ message: "Ce retrait n’a aucune référence de commande CloudPay." });
       }
       const isTerminal = withdrawal.status === "approved" || withdrawal.status === "rejected";
       if (isTerminal && withdrawal.cloudpayResponse) {
@@ -3306,7 +3325,7 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       console.error("[cloudpay] payout status error:", error);
-      return res.status(502).json({ message: "Unable to verify the CloudPay payout right now" });
+      return res.status(502).json({ message: "Impossible de vérifier le statut du paiement CloudPay pour le moment." });
     }
   });
 

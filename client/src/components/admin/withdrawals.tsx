@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { X, Search, Loader2, Send, CheckCircle2 } from "lucide-react";
 import { resolveCloudPayBankCode } from "@shared/cloudpay-banks";
+import { isConfirmedCloudPayPayoutFailure } from "@shared/cloudpay-withdrawals";
 import type { Withdrawal } from "@shared/schema";
 
 interface WithdrawalWithUser extends Withdrawal {
@@ -30,9 +31,9 @@ interface WithdrawalWithUser extends Withdrawal {
   };
 }
 
-function hasProviderReference(withdrawal: Withdrawal): boolean {
+function hasBlockingProviderReference(withdrawal: Withdrawal): boolean {
   return Boolean(
-    withdrawal.cloudpayOrderId ||
+    (withdrawal.cloudpayOrderId && !isConfirmedCloudPayPayoutFailure(withdrawal)) ||
     withdrawal.inpayOutTradeNo ||
     withdrawal.inpayOrderNumber ||
     withdrawal.omnipayId ||
@@ -44,18 +45,18 @@ function getCloudPayUnavailableReason(
   withdrawal: Withdrawal,
   settings?: Record<string, string>,
 ): string | undefined {
-  if (hasProviderReference(withdrawal)) {
-    return "A provider request already exists. Check its status before another payout or manual decision.";
+  if (hasBlockingProviderReference(withdrawal)) {
+    return "Une demande prestataire est en cours. Vérifie son statut avant toute autre action.";
   }
   if (withdrawal.country.trim().toUpperCase() !== "PH") {
-    return "CloudPay is available only for Philippines withdrawals.";
+    return "CloudPay est disponible uniquement pour les retraits des Philippines.";
   }
   if (!resolveCloudPayBankCode(withdrawal.paymentMethod)) {
-    return "This payout method is not supported by CloudPay.";
+    return "Cette méthode de retrait n’est pas prise en charge par CloudPay.";
   }
-  if (!settings) return "Checking CloudPay settings.";
-  if (settings.cloudpayEnabled !== "true") return "CloudPay payouts are disabled in settings.";
-  if (settings.cloudpayConfigured !== "true") return "CloudPay server configuration is incomplete.";
+  if (!settings) return "Vérification de la configuration CloudPay en cours.";
+  if (settings.cloudpayEnabled !== "true") return "Les paiements CloudPay sont désactivés dans les réglages.";
+  if (settings.cloudpayConfigured !== "true") return "La configuration serveur CloudPay est incomplète.";
   return undefined;
 }
 
@@ -65,6 +66,7 @@ export default function AdminWithdrawals() {
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "processing" | "approved" | "rejected">("pending");
   const [manualApprovalId, setManualApprovalId] = useState<number | null>(null);
   const [cloudPayApprovalId, setCloudPayApprovalId] = useState<number | null>(null);
+  const [rejectionId, setRejectionId] = useState<number | null>(null);
 
   const { data: allWithdrawals, isLoading } = useQuery<WithdrawalWithUser[]>({
     queryKey: ["/api/admin/withdrawals"],
@@ -94,16 +96,17 @@ export default function AdminWithdrawals() {
         credentials: "include",
       });
       const data = await res.json();
-        if (!res.ok) throw new Error(data.message || `Withdrawal processing failed (code ${res.status})`);
+        if (!res.ok) throw new Error(data.message || `Échec du traitement du retrait (code ${res.status})`);
       return data;
     },
     onSuccess: () => {
+      setRejectionId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-       toast({ title: "Withdrawal processed!" });
+      toast({ title: "Retrait rejeté et remboursé" });
     },
     onError: (error: any) => {
-       toast({ title: "Unable to process withdrawal", description: error.message, variant: "destructive" });
+       toast({ title: "Impossible de traiter le retrait", description: error.message, variant: "destructive" });
     },
     onSettled: () => setProcessingId(null),
   });
@@ -118,17 +121,17 @@ export default function AdminWithdrawals() {
         credentials: "include",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || `Manual withdrawal approval failed (code ${res.status})`);
+      if (!res.ok) throw new Error(data.message || `Échec de la validation manuelle du retrait (code ${res.status})`);
       return data;
     },
     onSuccess: () => {
       setManualApprovalId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Withdrawal marked paid manually" });
+      toast({ title: "Retrait validé manuellement" });
     },
     onError: (error: any) => toast({
-      title: "Unable to mark withdrawal paid",
+      title: "Impossible de valider le retrait",
       description: error.message,
       variant: "destructive",
     }),
@@ -143,20 +146,26 @@ export default function AdminWithdrawals() {
         credentials: "include",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || `Sending withdrawal to CloudPay failed (code ${res.status})`);
-      return data as { uncertain?: boolean };
+      if (!res.ok) throw new Error(data.message || `Échec de l’envoi du retrait à CloudPay (code ${res.status})`);
+      return data as { uncertain?: boolean; retriedAfterFailure?: boolean };
     },
     onSuccess: (data) => {
       setCloudPayApprovalId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
-        title: data.uncertain ? "CloudPay request needs status check" : "Withdrawal sent to CloudPay",
-        description: data.uncertain ? "Do not send it again. Check the provider status before taking another action." : undefined,
+        title: data.uncertain
+          ? "La demande CloudPay doit être vérifiée"
+          : data.retriedAfterFailure
+            ? "Nouvelle tentative CloudPay envoyée"
+            : "Retrait envoyé à CloudPay",
+        description: data.uncertain
+          ? "Ne renvoie pas la demande. Vérifie son statut avant toute autre action."
+          : undefined,
       });
     },
     onError: (error: any) => {
-      toast({ title: "Unable to send withdrawal to CloudPay", description: error.message, variant: "destructive" });
+      toast({ title: "Impossible d’envoyer le retrait à CloudPay", description: error.message, variant: "destructive" });
     },
     onSettled: () => setProcessingId(null),
   });
@@ -169,7 +178,7 @@ export default function AdminWithdrawals() {
         credentials: "include",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || `CloudPay status check failed (code ${res.status})`);
+      if (!res.ok) throw new Error(data.message || `Échec de la vérification du statut CloudPay (code ${res.status})`);
       return data;
     },
     onSuccess: (data) => {
@@ -177,17 +186,34 @@ export default function AdminWithdrawals() {
       const needsReview =
         data.response?.amountMatches === false ||
         data.response?.statusMatches === false;
+      const confirmedFailure =
+        data.response?.status === "rejected" &&
+        data.response?.amountMatches === true &&
+        data.response?.statusMatches !== false;
+      const providerStillPending = data.response?.status === "pending";
       toast({
-        title: needsReview ? "CloudPay response needs review" : `CloudPay status: ${data.status}`,
-        description: data.response?.message ||
-          (data.response?.providerStatus
-            ? `Provider response code: ${data.response.providerStatus}`
-            : undefined),
+        title: needsReview
+          ? "La réponse CloudPay nécessite une vérification"
+          : confirmedFailure
+            ? "Échec CloudPay confirmé"
+            : providerStillPending
+              ? "CloudPay n’a pas encore confirmé le paiement"
+              : `Statut CloudPay : ${data.status}`,
+        description: needsReview
+          ? "Le montant ou le statut retourné ne correspond pas. Les décisions restent bloquées."
+          : confirmedFailure
+            ? "Le montant reste réservé. Tu peux valider manuellement, réessayer CloudPay ou rejeter et rembourser."
+            : providerStillPending
+              ? "Vérifie à nouveau plus tard. Les actions manuelles restent bloquées."
+              : data.response?.message ||
+                (data.response?.providerStatus
+                  ? `Code de réponse du prestataire : ${data.response.providerStatus}`
+                  : undefined),
         variant: needsReview ? "destructive" : undefined,
       });
     },
     onError: (error: any) => {
-      toast({ title: "Unable to check CloudPay status", description: error.message, variant: "destructive" });
+      toast({ title: "Impossible de vérifier le statut CloudPay", description: error.message, variant: "destructive" });
     },
     onSettled: () => setProcessingId(null),
   });
@@ -205,6 +231,9 @@ export default function AdminWithdrawals() {
   );
   const cloudPayApprovalTarget = allWithdrawals?.find(
     (withdrawal) => withdrawal.id === cloudPayApprovalId,
+  );
+  const rejectionTarget = allWithdrawals?.find(
+    (withdrawal) => withdrawal.id === rejectionId,
   );
 
   return (
@@ -330,67 +359,68 @@ export default function AdminWithdrawals() {
 
                 {withdrawal.cloudpayOrderId && (
                   <div className="mt-3 rounded-md border bg-muted/30 p-3 text-sm">
-                    <p className="mb-1 font-semibold">CloudPay response</p>
+                    <p className="mb-1 font-semibold">Réponse CloudPay</p>
                     {withdrawal.cloudpayResponse ? (
                       <>
                         <p>
-                          <strong>Result:</strong>{" "}
+                          <strong>Résultat :</strong>{" "}
                           {withdrawal.cloudpayResponse.status === "approved" &&
                           withdrawal.cloudpayResponse.amountMatches === true
-                            ? "Validated by CloudPay"
+                            ? "Validé par CloudPay"
                             : withdrawal.cloudpayResponse.status === "rejected"
-                              ? "Rejected by CloudPay"
-                              : "Awaiting final CloudPay validation"}
+                              ? "Refusé par CloudPay"
+                              : "En attente de la confirmation finale de CloudPay"}
                         </p>
                         <p>
-                          <strong>Provider code:</strong>{" "}
+                          <strong>Code prestataire :</strong>{" "}
                           {withdrawal.cloudpayResponse.providerStatus}
                           {" · "}
-                          <strong>Provider status:</strong>{" "}
+                          <strong>Statut prestataire :</strong>{" "}
                           {withdrawal.cloudpayResponse.status}
                         </p>
                         <p>
-                          <strong>Amount returned:</strong>{" "}
+                          <strong>Montant retourné :</strong>{" "}
                           {withdrawal.cloudpayResponse.amount
                             ? `${withdrawal.cloudpayResponse.amount} PHP`
-                            : "Not included"}
+                            : "Non indiqué"}
                         </p>
                         {withdrawal.cloudpayResponse.amountMatches === false && (
                           <p className="font-medium text-destructive">
-                            The provider amount does not match the expected net payout.
+                            Le montant retourné ne correspond pas au montant net attendu.
                           </p>
                         )}
                         {withdrawal.cloudpayResponse.statusMatches === false && (
                           <p className="font-medium text-destructive">
-                            The provider status differs from the recorded withdrawal status.
+                            Le statut CloudPay diffère du statut enregistré pour ce retrait.
                           </p>
                         )}
                         <p>
-                          <strong>Message:</strong>{" "}
-                          {withdrawal.cloudpayResponse.message || "No message returned."}
+                          <strong>Message :</strong>{" "}
+                          {withdrawal.cloudpayResponse.message || "Aucun message reçu."}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {withdrawal.cloudpayResponse.source === "payout"
-                            ? "Payout request response"
-                            : "Status query response"}
+                            ? "Réponse à la demande de paiement"
+                            : "Réponse à la vérification du statut"}
                           {" · "}
                           {new Date(withdrawal.cloudpayResponse.receivedAt).toLocaleString()}
                         </p>
                       </>
                     ) : (
-                      <p className="text-muted-foreground">No CloudPay response has been saved yet.</p>
+                      <p className="text-muted-foreground">Aucune réponse CloudPay n’a encore été enregistrée.</p>
                     )}
                   </div>
                 )}
 
                 {withdrawal.status === "pending" && (() => {
-                  const providerReferenceExists = hasProviderReference(withdrawal);
+                  const cloudPayFailureConfirmed = isConfirmedCloudPayPayoutFailure(withdrawal);
+                  const providerReferenceExists = hasBlockingProviderReference(withdrawal);
                   const cloudPayUnavailableReason = getCloudPayUnavailableReason(withdrawal, adminSettings);
                   const isProcessing = processingId === withdrawal.id;
                   return (
                     <div className="space-y-2 border-t pt-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Admin actions
+                        Actions disponibles
                       </p>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                         <Button
@@ -402,7 +432,7 @@ export default function AdminWithdrawals() {
                           data-testid={`button-manual-paid-${withdrawal.id}`}
                         >
                           <CheckCircle2 className="w-4 h-4 mr-1" />
-                          Mark paid manually
+                          Valider manuellement
                         </Button>
                         <Button
                           size="sm"
@@ -414,26 +444,30 @@ export default function AdminWithdrawals() {
                         >
                           {isProcessing
                             ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <><Send className="w-4 h-4 mr-1" /> Send to CloudPay</>}
+                            : <><Send className="w-4 h-4 mr-1" /> {cloudPayFailureConfirmed ? "Réessayer avec CloudPay" : "Envoyer à CloudPay"}</>}
                         </Button>
                         <Button
                           size="sm"
                           variant="destructive"
                           className="w-full"
-                          onClick={() => processMutation.mutate({ id: withdrawal.id, action: "reject" })}
+                          onClick={() => setRejectionId(withdrawal.id)}
                           disabled={isProcessing || providerReferenceExists}
                           data-testid={`button-reject-${withdrawal.id}`}
                         >
-                          <X className="w-4 h-4 mr-1" /> Reject
+                          <X className="w-4 h-4 mr-1" /> Rejeter et rembourser
                         </Button>
                       </div>
                       {providerReferenceExists ? (
                         <p className="text-xs text-amber-700">
-                          A provider request already exists. Check its status before marking it paid manually or rejecting it.
+                          Une demande de paiement est en cours. Vérifie son statut auprès du prestataire avant toute autre action.
+                        </p>
+                      ) : cloudPayFailureConfirmed ? (
+                        <p className="text-xs text-amber-700">
+                          CloudPay a confirmé l’échec. Le montant reste réservé; choisis une action ci-dessus.
                         </p>
                       ) : cloudPayUnavailableReason ? (
                         <p className="text-xs text-muted-foreground">
-                          CloudPay unavailable: {cloudPayUnavailableReason}
+                          CloudPay indisponible : {cloudPayUnavailableReason}
                         </p>
                       ) : null}
                     </div>
@@ -453,8 +487,8 @@ export default function AdminWithdrawals() {
                     {processingId === withdrawal.id
                       ? <Loader2 className="w-4 h-4 animate-spin" />
                       : withdrawal.cloudpayResponse
-                        ? "Refresh CloudPay response"
-                        : "Check CloudPay response"}
+                        ? "Actualiser le statut CloudPay"
+                        : "Vérifier le statut CloudPay"}
                   </Button>
                 )}
               </CardContent>
@@ -462,7 +496,7 @@ export default function AdminWithdrawals() {
           ))
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-             No withdrawals found
+             Aucun retrait trouvé
           </div>
         )}
       </div>
@@ -474,21 +508,21 @@ export default function AdminWithdrawals() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm manual payout</AlertDialogTitle>
+            <AlertDialogTitle>Confirmer le paiement manuel</AlertDialogTitle>
             <AlertDialogDescription>
-              This action does not send money. Only confirm after you have completed the transfer outside CloudPay.
+              Cette action n’envoie pas d’argent. Confirme uniquement après avoir effectué le virement en dehors de CloudPay.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {manualApprovalTarget && (
             <div className="rounded-md border p-3 text-sm">
-              <p><strong>Net amount:</strong> {manualApprovalTarget.netAmount.toLocaleString()} PHP</p>
-              <p><strong>Recipient:</strong> {manualApprovalTarget.accountName}</p>
-              <p><strong>Receiving number:</strong> {manualApprovalTarget.accountNumber}</p>
+              <p><strong>Montant net :</strong> {manualApprovalTarget.netAmount.toLocaleString()} PHP</p>
+              <p><strong>Bénéficiaire :</strong> {manualApprovalTarget.accountName}</p>
+              <p><strong>Numéro de réception :</strong> {manualApprovalTarget.accountNumber}</p>
             </div>
           )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={manualApprovalMutation.isPending}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <Button
               type="button"
@@ -497,7 +531,43 @@ export default function AdminWithdrawals() {
                 if (manualApprovalTarget) manualApprovalMutation.mutate(manualApprovalTarget.id);
               }}
             >
-              {manualApprovalMutation.isPending ? "Processing…" : "I sent it — mark paid"}
+              {manualApprovalMutation.isPending ? "Traitement…" : "Virement effectué — valider"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={rejectionId !== null}
+        onOpenChange={(open) => {
+          if (!open && !processMutation.isPending) setRejectionId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rejeter le retrait et rembourser ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action rejette le retrait et recrédite une seule fois le montant débité au client.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {rejectionTarget && (
+            <div className="rounded-md border p-3 text-sm">
+              <p><strong>Montant à rembourser :</strong> {rejectionTarget.amount.toLocaleString()} PHP</p>
+              <p><strong>Bénéficiaire :</strong> {rejectionTarget.accountName}</p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={processMutation.isPending}>
+              Annuler
+            </AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!rejectionTarget || processMutation.isPending}
+              onClick={() => {
+                if (rejectionTarget) processMutation.mutate({ id: rejectionTarget.id, action: "reject" });
+              }}
+            >
+              {processMutation.isPending ? "Traitement…" : "Confirmer le rejet et le remboursement"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -510,25 +580,25 @@ export default function AdminWithdrawals() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Send this payout through CloudPay?</AlertDialogTitle>
+            <AlertDialogTitle>Envoyer ce retrait via CloudPay ?</AlertDialogTitle>
             <AlertDialogDescription>
-              This sends a real payout request to CloudPay/Galaxy. The provider will receive the net amount after fees.
-              If the result is uncertain, do not send it again; check the CloudPay status first.
+              Cette action envoie une demande de paiement réelle à CloudPay/Galaxy. Le prestataire recevra le montant net après déduction des frais.
+              Si le résultat est incertain, ne renvoie pas la demande; vérifie d’abord le statut CloudPay.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {cloudPayApprovalTarget && (
             <div className="rounded-md border p-3 text-sm">
-              <p><strong>Net payout:</strong> {cloudPayApprovalTarget.netAmount.toLocaleString()} PHP</p>
-              <p><strong>Requested amount:</strong> {cloudPayApprovalTarget.amount.toLocaleString()} PHP</p>
-              <p><strong>Fees:</strong> {cloudPayApprovalTarget.fees.toLocaleString()} PHP</p>
-              <p><strong>Recipient:</strong> {cloudPayApprovalTarget.accountName}</p>
-              <p><strong>Receiving number:</strong> {cloudPayApprovalTarget.accountNumber}</p>
-              <p><strong>Method:</strong> {cloudPayApprovalTarget.paymentMethod}</p>
+              <p><strong>Montant net envoyé :</strong> {cloudPayApprovalTarget.netAmount.toLocaleString()} PHP</p>
+              <p><strong>Montant demandé :</strong> {cloudPayApprovalTarget.amount.toLocaleString()} PHP</p>
+              <p><strong>Frais :</strong> {cloudPayApprovalTarget.fees.toLocaleString()} PHP</p>
+              <p><strong>Bénéficiaire :</strong> {cloudPayApprovalTarget.accountName}</p>
+              <p><strong>Numéro de réception :</strong> {cloudPayApprovalTarget.accountNumber}</p>
+              <p><strong>Méthode :</strong> {cloudPayApprovalTarget.paymentMethod}</p>
             </div>
           )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={cloudPayMutation.isPending}>
-              Cancel
+              Annuler
             </AlertDialogCancel>
             <Button
               type="button"
@@ -539,10 +609,10 @@ export default function AdminWithdrawals() {
               data-testid="button-confirm-cloudpay-payout"
             >
               {cloudPayMutation.isPending
-                ? "Sending payout…"
+                ? "Envoi du paiement…"
                 : cloudPayApprovalTarget
-                  ? `Send ${cloudPayApprovalTarget.netAmount.toLocaleString()} PHP`
-                  : "Send payout"}
+                  ? `Envoyer ${cloudPayApprovalTarget.netAmount.toLocaleString()} PHP`
+                  : "Envoyer le paiement"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -18,6 +18,7 @@ import {
   resolveCloudPayBankCode,
   resolveCloudPayDepositMethod,
 } from "@shared/cloudpay-banks";
+import { isConfirmedCloudPayPayoutFailure } from "@shared/cloudpay-withdrawals";
 import {
   getWithdrawalMethods,
   isAllowedWithdrawalMethod,
@@ -61,6 +62,30 @@ assert.equal(resolveCloudPayDepositMethod("PMP")?.paymentType, "3");
 assert.equal(resolveCloudPayDepositMethod("GCash")?.code, "mya");
 assert.equal(resolveCloudPayDepositMethod("mya")?.paymentType, "7");
 assert.equal(resolveCloudPayDepositMethod("bpi"), undefined);
+const confirmedCloudPayFailure = {
+  cloudpayOrderId: "CPW-test-failed",
+  cloudpayResponse: {
+    source: "query" as const,
+    status: "rejected" as const,
+    providerStatus: "3",
+    amount: "250.00",
+    amountMatches: true,
+    receivedAt: "2026-10-04T00:00:00.000Z",
+  },
+};
+assert.equal(isConfirmedCloudPayPayoutFailure(confirmedCloudPayFailure), true);
+assert.equal(isConfirmedCloudPayPayoutFailure({
+  ...confirmedCloudPayFailure,
+  cloudpayResponse: { ...confirmedCloudPayFailure.cloudpayResponse, amountMatches: false },
+}), false);
+assert.equal(isConfirmedCloudPayPayoutFailure({
+  ...confirmedCloudPayFailure,
+  cloudpayResponse: { ...confirmedCloudPayFailure.cloudpayResponse, statusMatches: false },
+}), false);
+assert.equal(isConfirmedCloudPayPayoutFailure({
+  ...confirmedCloudPayFailure,
+  cloudpayOrderId: null,
+}), false);
 
 const configKeys = [
   "CLOUDPAY_MERCHANT_ID",

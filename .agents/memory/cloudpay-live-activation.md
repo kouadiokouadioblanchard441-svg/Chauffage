@@ -99,6 +99,12 @@ For pending Philippines withdrawals, keep two distinct admin choices: manual app
 
 **How to apply:** Keep manual confirmation separate from payout initiation, show the recipient and net amount before sending, and never mark a provider payout approved based only on its initiation response.
 
+When CloudPay confirms a payout failure with a verified order and matching amount, keep the withdrawal pending and its amount reserved instead of refunding automatically. Then allow the admin to pay manually, retry CloudPay with a new order reference, or reject and refund. Keep those choices blocked while the provider result is unknown or mismatched.
+
+**Why:** The user chose to wait for CloudPay confirmation, then retain all three admin choices after a confirmed failure.
+
+**How to apply:** Only treat a signed/query-verified rejection with the expected net amount as a confirmed failure; preserve previous attempt details in the admin audit log when retrying.
+
 Persist only the sanitized CloudPay payout status, reported amount, provider message, source, and receipt time for admin review. Keep the response admin-only; never store or expose the raw signed payload, signature, merchant value, signing secret, or payout account details.
 
 **Why:** Provider messages and raw replies can contain account data or signing material, while admins still need an auditable result on each withdrawal.
