@@ -124,9 +124,12 @@ export type CloudPayWithdrawalAttempt = {
   orderId: string;
   status: "unknown" | "pending" | "approved" | "rejected";
   providerStatus?: string;
+  providerHttpStatus?: number;
+  requestOutcome?: "accepted" | "not_accepted" | "uncertain";
   amount?: string;
   amountMatches?: boolean;
   statusMatches?: boolean;
+  message?: string;
   receivedAt?: string;
   endedAt: string;
   endReason: "superseded" | "not_accepted";
@@ -136,6 +139,8 @@ export type CloudPayWithdrawalResponse = {
   source: "payout" | "query";
   status: "pending" | "approved" | "rejected";
   providerStatus: string;
+  providerHttpStatus?: number;
+  requestOutcome?: "accepted" | "not_accepted" | "uncertain";
   amount?: string;
   message?: string;
   amountMatches?: boolean;

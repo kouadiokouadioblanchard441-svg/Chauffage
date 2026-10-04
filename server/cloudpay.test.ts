@@ -314,6 +314,7 @@ try {
     `Expected a CloudPayError, received: ${providerRejection instanceof Error ? providerRejection.message : String(providerRejection)}`,
   );
   assert.equal(providerRejection.providerStatus, "0");
+  assert.equal(providerRejection.providerHttpStatus, 200);
   assert.match(providerRejection.providerMessage || "", /Invalid payment/);
   assert.doesNotMatch(providerRejection.providerMessage || "", /01234567890123456789012345678901|09171234567|gateway\.example/);
 
@@ -359,6 +360,35 @@ try {
   assert.equal(pendingQuery.status, "pending");
   assert.equal(pendingQuery.providerStatus, "1");
   assert.equal(requests[7].url.toString(), "https://gateway.example/api/query");
+
+  responses.push({
+    status: 0,
+    amount: "100.25",
+    message: "Insufficient balance; account=09171234567; signature=01234567890123456789012345678901",
+  });
+  let payoutRejection: unknown;
+  try {
+    await cloudPayCreatePayout({
+      orderId: "CPW-test-insufficient-balance",
+      amount: 100.25,
+      bankCode: "gcash",
+      accountNumber: "09171234567",
+      accountName: "Test Account",
+      callbackUrl: "https://merchant.example/api/webhooks/cloudpay",
+    });
+  } catch (error) {
+    payoutRejection = error;
+  }
+  assert.ok(payoutRejection instanceof CloudPayError);
+  assert.equal(payoutRejection.providerStatus, "0");
+  assert.equal(payoutRejection.providerHttpStatus, 200);
+  assert.equal(payoutRejection.providerAmount, "100.25");
+  assert.match(payoutRejection.providerMessage || "", /Insufficient balance/);
+  assert.doesNotMatch(
+    payoutRejection.providerMessage || "",
+    /09171234567|01234567890123456789012345678901/,
+  );
+  assert.equal(requests[8].url.toString(), "https://gateway.example/api/daifu");
 } finally {
   globalThis.fetch = originalFetch;
   for (const key of configKeys) {

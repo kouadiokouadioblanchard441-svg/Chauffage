@@ -3209,6 +3209,9 @@ export async function registerRoutes(
     let providerAccepted = false;
     let payoutClaimed = false;
     let withdrawalUserId: number | undefined;
+    let withdrawalNetAmount: number | undefined;
+    let providerResponse: CloudPayWithdrawalResponse | undefined;
+    let providerResponseRecorded = false;
     try {
       if (!Number.isSafeInteger(withdrawalId) || withdrawalId <= 0) {
         return res.status(400).json({ message: "Invalid withdrawal ID" });
@@ -3261,6 +3264,7 @@ export async function registerRoutes(
         });
       }
       payoutClaimed = true;
+      withdrawalNetAmount = claimedWithdrawal.netAmount;
       providerRequestStarted = true;
       const payoutResult = await cloudPayCreatePayout({
         orderId,
@@ -3271,10 +3275,11 @@ export async function registerRoutes(
         callbackUrl,
       });
       providerAccepted = true;
-      const providerResponse: CloudPayWithdrawalResponse = {
+      providerResponse = {
         source: "payout",
         status: "pending",
         providerStatus: payoutResult.providerStatus,
+        requestOutcome: "accepted",
         ...(payoutResult.amount
           ? {
               amount: payoutResult.amount,
@@ -3284,7 +3289,15 @@ export async function registerRoutes(
         ...(payoutResult.message ? { message: payoutResult.message } : {}),
         receivedAt: new Date().toISOString(),
       };
-      await storage.recordCloudPayWithdrawalResponse(withdrawal.id, orderId, providerResponse);
+      const responseStored = await storage.recordCloudPayWithdrawalResponse(
+        withdrawal.id,
+        orderId,
+        providerResponse,
+      );
+      if (!responseStored) {
+        throw new Error("CloudPay accepted the payout request, but its response was not attached to the withdrawal.");
+      }
+      providerResponseRecorded = true;
       const updated = (await storage.getWithdrawals()).find((item) => item.id === withdrawal.id);
       await storage.logAdminAction(
         req.session.userId!,
@@ -3302,8 +3315,44 @@ export async function registerRoutes(
     } catch (error: any) {
       const uncertain = providerAccepted ||
         (providerRequestStarted && error instanceof CloudPayError && error.requestMayHaveReachedProvider);
+      const providerErrorDetails = error instanceof CloudPayError
+        ? {
+            providerStatus: error.providerStatus || (uncertain ? "request_uncertain" : "not_accepted"),
+            ...(error.providerHttpStatus !== undefined
+              ? { providerHttpStatus: error.providerHttpStatus }
+              : {}),
+            ...(error.providerAmount
+              ? {
+                  amount: error.providerAmount,
+                  ...(withdrawalNetAmount !== undefined
+                    ? { amountMatches: cloudPayAmountMatches(error.providerAmount, withdrawalNetAmount) }
+                    : {}),
+                }
+              : {}),
+            message: error.providerMessage || error.message,
+          }
+        : undefined;
+      const rejectedResponse: CloudPayWithdrawalResponse = {
+        source: "payout",
+        status: "rejected",
+        providerStatus: providerErrorDetails?.providerStatus || "not_accepted",
+        requestOutcome: "not_accepted",
+        ...(providerErrorDetails?.providerHttpStatus !== undefined
+          ? { providerHttpStatus: providerErrorDetails.providerHttpStatus }
+          : {}),
+        ...(providerErrorDetails?.amount ? { amount: providerErrorDetails.amount } : {}),
+        ...(providerErrorDetails?.amountMatches !== undefined
+          ? { amountMatches: providerErrorDetails.amountMatches }
+          : {}),
+        ...(providerErrorDetails?.message ? { message: providerErrorDetails.message } : {}),
+        receivedAt: new Date().toISOString(),
+      };
       if (payoutClaimed && !uncertain) {
-        const released = await storage.releaseWithdrawalProcessing(withdrawalId, orderId).catch(() => undefined);
+        const released = await storage.releaseWithdrawalProcessing(
+          withdrawalId,
+          orderId,
+          providerErrorDetails,
+        ).catch(() => undefined);
         if (released) {
           await storage.logAdminAction(
             req.session.userId!,
@@ -3311,7 +3360,32 @@ export async function registerRoutes(
             withdrawalUserId || null,
             `CloudPay did not accept payout ${orderId}; withdrawal ${withdrawalId} returned to pending.`,
           ).catch(() => undefined);
+        } else {
+          await storage.recordCloudPayWithdrawalResponse(withdrawalId, orderId, rejectedResponse)
+            .catch(() => undefined);
         }
+      }
+      if (payoutClaimed && uncertain && !providerResponseRecorded) {
+        const uncertainResponse: CloudPayWithdrawalResponse = providerResponse || {
+          source: "payout",
+          status: "pending",
+          providerStatus: providerErrorDetails?.providerStatus || "request_uncertain",
+          requestOutcome: "uncertain",
+          ...(providerErrorDetails?.providerHttpStatus !== undefined
+            ? { providerHttpStatus: providerErrorDetails.providerHttpStatus }
+            : {}),
+          ...(providerErrorDetails?.amount ? { amount: providerErrorDetails.amount } : {}),
+          ...(providerErrorDetails?.amountMatches !== undefined
+            ? { amountMatches: providerErrorDetails.amountMatches }
+            : {}),
+          ...(providerErrorDetails?.message ? { message: providerErrorDetails.message } : {}),
+          receivedAt: new Date().toISOString(),
+        };
+        await storage.recordCloudPayWithdrawalResponse(withdrawalId, orderId, uncertainResponse)
+          .then((updated) => {
+            providerResponseRecorded = Boolean(updated);
+          })
+          .catch(() => undefined);
       }
       console.error("[cloudpay] payout error:", error);
       notifyTelegramPaymentError({
@@ -3332,10 +3406,16 @@ export async function registerRoutes(
           orderId,
           uncertain: true,
           message: "La demande reste incertaine. Une autre action est disponible, mais une réponse tardive peut entraîner un doublon.",
+          providerResponse,
         });
       }
+      const providerFailureMessage = error instanceof CloudPayError
+        ? `CloudPay a refusé la demande (statut ${error.providerStatus || "inconnu"}${
+            error.providerHttpStatus !== undefined ? `, HTTP ${error.providerHttpStatus}` : ""
+          })${error.providerMessage ? ` : ${error.providerMessage}` : "."}`
+        : "Impossible d’envoyer le paiement à CloudPay. Vérifie le retrait avant toute nouvelle tentative.";
       return res.status(502).json({
-        message: "Impossible d’envoyer le paiement à CloudPay. Vérifie le retrait avant toute nouvelle tentative.",
+        message: providerFailureMessage,
       });
     }
   });

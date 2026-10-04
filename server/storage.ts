@@ -127,7 +127,14 @@ export interface IStorage {
     status: "approved" | "rejected",
     response: CloudPayWithdrawalResponse,
   ): Promise<{ withdrawal?: Withdrawal; finalized: boolean }>;
-  releaseWithdrawalProcessing(id: number, cloudpayOrderId: string): Promise<Withdrawal | undefined>;
+  releaseWithdrawalProcessing(
+    id: number,
+    cloudpayOrderId: string,
+    providerRejection?: Pick<
+      CloudPayWithdrawalResponse,
+      "providerStatus" | "providerHttpStatus" | "amount" | "amountMatches" | "message"
+    >,
+  ): Promise<Withdrawal | undefined>;
   getUserWithdrawalCountToday(userId: number): Promise<number>;
   
   // Wallets
@@ -1271,9 +1278,14 @@ export class DatabaseStorage implements IStorage {
           orderId: current.cloudpayOrderId,
           status: previousResponse?.status || "unknown",
           ...(previousResponse?.providerStatus ? { providerStatus: previousResponse.providerStatus } : {}),
+          ...(previousResponse?.providerHttpStatus !== undefined
+            ? { providerHttpStatus: previousResponse.providerHttpStatus }
+            : {}),
+          ...(previousResponse?.requestOutcome ? { requestOutcome: previousResponse.requestOutcome } : {}),
           ...(previousResponse?.amount ? { amount: previousResponse.amount } : {}),
           ...(previousResponse?.amountMatches !== undefined ? { amountMatches: previousResponse.amountMatches } : {}),
           ...(previousResponse?.statusMatches !== undefined ? { statusMatches: previousResponse.statusMatches } : {}),
+          ...(previousResponse?.message ? { message: previousResponse.message } : {}),
           ...(previousResponse?.receivedAt ? { receivedAt: previousResponse.receivedAt } : {}),
           endedAt: now,
           endReason: "superseded",
@@ -1376,7 +1388,7 @@ export class DatabaseStorage implements IStorage {
     ));
     if (!current) return undefined;
     const isTerminal = current.status === "approved" || current.status === "rejected";
-    const normalizedResponse: CloudPayWithdrawalResponse = isTerminal
+    const normalizedResponse: CloudPayWithdrawalResponse = isTerminal && response.source === "query"
       ? {
           ...response,
           statusMatches:
@@ -1426,9 +1438,14 @@ export class DatabaseStorage implements IStorage {
               ...attempt,
               status: response.status,
               providerStatus: response.providerStatus,
+              ...(response.providerHttpStatus !== undefined
+                ? { providerHttpStatus: response.providerHttpStatus }
+                : {}),
+              ...(response.requestOutcome ? { requestOutcome: response.requestOutcome } : {}),
               ...(response.amount ? { amount: response.amount } : {}),
               ...(response.amountMatches !== undefined ? { amountMatches: response.amountMatches } : {}),
               ...(response.statusMatches !== undefined ? { statusMatches: response.statusMatches } : {}),
+              ...(response.message ? { message: response.message } : {}),
               receivedAt: response.receivedAt,
             }
           : attempt,
@@ -1508,6 +1525,10 @@ export class DatabaseStorage implements IStorage {
   async releaseWithdrawalProcessing(
     id: number,
     cloudpayOrderId: string,
+    providerRejection?: Pick<
+      CloudPayWithdrawalResponse,
+      "providerStatus" | "providerHttpStatus" | "amount" | "amountMatches" | "message"
+    >,
   ): Promise<Withdrawal | undefined> {
     const withdrawal = await db.transaction(async (tx) => {
       const [current] = await tx.select().from(withdrawals)
@@ -1520,9 +1541,21 @@ export class DatabaseStorage implements IStorage {
         {
           orderId: cloudpayOrderId,
           status: "rejected",
-          providerStatus: "not_accepted",
-          ...(current.cloudpayResponse?.amount ? { amount: current.cloudpayResponse.amount } : {}),
-          ...(current.cloudpayResponse?.amountMatches !== undefined
+          providerStatus: providerRejection?.providerStatus || "not_accepted",
+          requestOutcome: "not_accepted",
+          ...(providerRejection?.providerHttpStatus !== undefined
+            ? { providerHttpStatus: providerRejection.providerHttpStatus }
+            : {}),
+          ...(providerRejection?.amount ? { amount: providerRejection.amount } : {}),
+          ...(providerRejection?.amountMatches !== undefined
+            ? { amountMatches: providerRejection.amountMatches }
+            : {}),
+          ...(providerRejection?.message ? { message: providerRejection.message } : {}),
+          ...(!providerRejection?.amount && current.cloudpayResponse?.amount
+            ? { amount: current.cloudpayResponse.amount }
+            : {}),
+          ...(providerRejection?.amountMatches === undefined &&
+          current.cloudpayResponse?.amountMatches !== undefined
             ? { amountMatches: current.cloudpayResponse.amountMatches }
             : {}),
           receivedAt: current.cloudpayResponse?.receivedAt || now,
@@ -1533,9 +1566,21 @@ export class DatabaseStorage implements IStorage {
       const response: CloudPayWithdrawalResponse = {
         source: "payout",
         status: "rejected",
-        providerStatus: "not_accepted",
+        providerStatus: providerRejection?.providerStatus || "not_accepted",
+        requestOutcome: "not_accepted",
+        ...(providerRejection?.providerHttpStatus !== undefined
+          ? { providerHttpStatus: providerRejection.providerHttpStatus }
+          : {}),
+        ...(providerRejection?.amount ? { amount: providerRejection.amount } : {}),
+        ...(providerRejection?.amountMatches !== undefined
+          ? { amountMatches: providerRejection.amountMatches }
+          : {}),
+        ...(providerRejection?.message ? { message: providerRejection.message } : {}),
         receivedAt: now,
         attempts,
+        ...(current.cloudpayResponse?.adminOverride
+          ? { adminOverride: current.cloudpayResponse.adminOverride }
+          : {}),
       };
       const [released] = await tx.update(withdrawals)
         .set({ status: "pending", cloudpayOrderId: null, cloudpayResponse: response })
@@ -2035,7 +2080,7 @@ export class DatabaseStorage implements IStorage {
     const [periodDepositsResult] = await db.select({ total: sql<string>`COALESCE(SUM(${deposits.amount}), 0)` })
       .from(deposits).where(and(eq(deposits.status, "approved"), gte(deposits.createdAt, filterStart), lte(deposits.createdAt, filterEnd)));
     const [pendingDepositsResult] = await db.select({ total: sql<string>`COALESCE(SUM(${deposits.amount}), 0)`, count: sql<number>`count(*)` })
-      .from(deposits).where(eq(deposits.status, "pending"));
+      .from(deposits).where(inArray(deposits.status, ["pending", "processing"]));
     
     const [totalWithdrawalsResult] = await db.select({ total: sql<string>`COALESCE(SUM(${withdrawals.amount}), 0)` })
       .from(withdrawals).where(and(eq(withdrawals.status, "approved"), gte(withdrawals.createdAt, statsResetDate)));

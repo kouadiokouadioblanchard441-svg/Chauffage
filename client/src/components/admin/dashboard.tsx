@@ -48,6 +48,7 @@ export default function AdminDashboard({ isSuperAdmin }: AdminDashboardProps) {
 
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/stats", queryString],
+    refetchInterval: 30_000,
     queryFn: async () => {
       const url = queryString ? `/api/admin/stats?${queryString}` : "/api/admin/stats";
       const res = await fetch(url, { credentials: "include" });

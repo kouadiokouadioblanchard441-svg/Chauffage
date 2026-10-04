@@ -16,17 +16,21 @@ const DEFAULT_DEPOSIT_PATH = "/api/transfer";
 export class CloudPayError extends Error {
   requestMayHaveReachedProvider: boolean;
   providerStatus?: string;
+  providerHttpStatus?: number;
+  providerAmount?: string;
   providerMessage?: string;
 
   constructor(
     message: string,
     requestMayHaveReachedProvider = false,
-    providerDetails: { status?: string; message?: string } = {},
+    providerDetails: { status?: string; message?: string; httpStatus?: number; amount?: string } = {},
   ) {
     super(message);
     this.name = "CloudPayError";
     this.requestMayHaveReachedProvider = requestMayHaveReachedProvider;
     this.providerStatus = providerDetails.status;
+    this.providerHttpStatus = providerDetails.httpStatus;
+    this.providerAmount = providerDetails.amount;
     this.providerMessage = providerDetails.message;
   }
 }
@@ -218,6 +222,13 @@ function getProviderStatus(payload: Record<string, unknown>): string {
   return status.replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 40) || "missing";
 }
 
+function getProviderAmount(payload: Record<string, unknown>): string | undefined {
+  const rawAmount = payload.amount ?? payload.total_amount ?? payload.order_amount;
+  if (rawAmount === undefined || rawAmount === null) return undefined;
+  const amount = String(rawAmount).trim();
+  return /^\d{1,12}(?:\.\d{1,2})?$/.test(amount) ? amount : undefined;
+}
+
 function getProviderMessage(
   payload: Record<string, unknown>,
   sensitiveValues: string[],
@@ -253,7 +264,7 @@ function getProviderMessage(
     message = message.replace(new RegExp(escaped, "gi"), "[redacted]");
   }
 
-  return message.slice(0, 180) || undefined;
+  return message.slice(0, 500) || undefined;
 }
 
 async function postCloudPay(path: string, fields: CloudPayFields): Promise<Record<string, unknown>> {
@@ -290,21 +301,28 @@ async function postCloudPay(path: string, fields: CloudPayFields): Promise<Recor
   try {
     parsed = await response.json();
   } catch {
-    throw new CloudPayError("CloudPay returned an unreadable response; check the transaction status before retrying", true);
+    throw new CloudPayError("CloudPay returned an unreadable response; check the transaction status before retrying", true, {
+      httpStatus: response.status,
+    });
   }
   const payload = getResponsePayload(parsed);
   const providerStatus = getProviderStatus(payload);
+  const providerAmount = getProviderAmount(payload);
   const providerMessage = getProviderMessage(payload, [config.signingSecret, config.merchantId]);
   if (!response.ok) {
     throw new CloudPayError(`CloudPay request failed with HTTP ${response.status}`, true, {
       status: providerStatus,
       message: providerMessage,
+      httpStatus: response.status,
+      amount: providerAmount,
     });
   }
   if (providerStatus !== "1" && path !== "/api/query") {
     throw new CloudPayError(`CloudPay rejected the request (status ${providerStatus})`, false, {
       status: providerStatus,
       message: providerMessage,
+      httpStatus: response.status,
+      amount: providerAmount,
     });
   }
   return payload;
@@ -401,17 +419,14 @@ export async function cloudPayCreatePayout(input: {
     bank_card_name: input.accountName,
     bank_card_remark: "no",
   });
-  const rawAmount = payload.amount ?? payload.total_amount ?? payload.order_amount;
-  const amount = rawAmount === undefined || rawAmount === null
-    ? undefined
-    : String(rawAmount).trim();
+  const amount = getProviderAmount(payload);
   const message = getProviderMessage(
     payload,
     [config.signingSecret, config.merchantId, input.accountNumber],
   );
   return {
     providerStatus: getProviderStatus(payload),
-    ...(amount && /^\d{1,12}(?:\.\d{1,2})?$/.test(amount) ? { amount } : {}),
+    ...(amount ? { amount } : {}),
     ...(message ? { message } : {}),
   };
 }

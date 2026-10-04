@@ -169,6 +169,8 @@ export default function AdminWithdrawals() {
       });
     },
     onError: (error: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Impossible d’envoyer le retrait à CloudPay", description: error.message, variant: "destructive" });
     },
     onSettled: () => setProcessingId(null),
@@ -371,8 +373,11 @@ export default function AdminWithdrawals() {
                           {withdrawal.cloudpayResponse.status === "approved" &&
                           withdrawal.cloudpayResponse.amountMatches === true
                             ? "Validé par CloudPay"
-                          : withdrawal.cloudpayResponse.providerStatus === "not_accepted"
+                          : withdrawal.cloudpayResponse.requestOutcome === "not_accepted" ||
+                            withdrawal.cloudpayResponse.providerStatus === "not_accepted"
                             ? "Demande non acceptée par CloudPay"
+                            : withdrawal.cloudpayResponse.requestOutcome === "uncertain"
+                              ? "Réponse CloudPay incertaine — vérifier la référence avant une nouvelle tentative"
                             : withdrawal.cloudpayResponse.status === "rejected"
                               ? "Refusé par CloudPay"
                               : "En attente de la confirmation finale de CloudPay"}
@@ -384,6 +389,28 @@ export default function AdminWithdrawals() {
                           <strong>Statut prestataire :</strong>{" "}
                           {withdrawal.cloudpayResponse.status}
                         </p>
+                        {withdrawal.cloudpayOrderId && (
+                          <p className="break-all">
+                            <strong>Référence CloudPay :</strong>{" "}
+                            {withdrawal.cloudpayOrderId}
+                          </p>
+                        )}
+                        {withdrawal.cloudpayResponse.providerHttpStatus !== undefined && (
+                          <p>
+                            <strong>Code HTTP CloudPay :</strong>{" "}
+                            {withdrawal.cloudpayResponse.providerHttpStatus}
+                          </p>
+                        )}
+                        {withdrawal.cloudpayResponse.requestOutcome && (
+                          <p>
+                            <strong>Résultat de l’envoi :</strong>{" "}
+                            {withdrawal.cloudpayResponse.requestOutcome === "accepted"
+                              ? "Demande acceptée par CloudPay"
+                              : withdrawal.cloudpayResponse.requestOutcome === "not_accepted"
+                                ? "Demande refusée à l’envoi"
+                                : "Résultat non confirmé"}
+                          </p>
+                        )}
                         <p>
                           <strong>Montant retourné :</strong>{" "}
                           {withdrawal.cloudpayResponse.amount
@@ -406,8 +433,10 @@ export default function AdminWithdrawals() {
                           </p>
                         )}
                         <p>
-                          <strong>Message :</strong>{" "}
-                          {withdrawal.cloudpayResponse.message || "Aucun message reçu."}
+                          <strong>Message CloudPay :</strong>{" "}
+                          <span className="break-words">
+                            {withdrawal.cloudpayResponse.message || "Aucun message reçu."}
+                          </span>
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {withdrawal.cloudpayResponse.source === "payout"
@@ -422,7 +451,7 @@ export default function AdminWithdrawals() {
                     )}
                     {withdrawal.cloudpayResponse?.attempts?.length ? (
                       <div className="mt-3 border-t pt-2">
-                        <p className="mb-1 font-semibold">Références CloudPay précédentes</p>
+                        <p className="mb-1 font-semibold">Historique des tentatives CloudPay</p>
                         <ul className="space-y-2">
                           {withdrawal.cloudpayResponse.attempts.map((attempt) => (
                             <li key={attempt.orderId} className="rounded border bg-background p-2">
@@ -431,9 +460,17 @@ export default function AdminWithdrawals() {
                                 Statut : {attempt.status}
                                 {attempt.providerStatus ? ` · ${attempt.providerStatus}` : ""}
                               </p>
+                              {attempt.providerHttpStatus !== undefined && (
+                                <p>Code HTTP CloudPay : {attempt.providerHttpStatus}</p>
+                              )}
                               {attempt.amount && <p>Montant retourné : {attempt.amount} PHP</p>}
+                              {attempt.message && (
+                                <p className="break-words">Message CloudPay : {attempt.message}</p>
+                              )}
                               <p className="text-xs text-muted-foreground">
-                                {attempt.endReason === "superseded"
+                                {attempt.requestOutcome === "uncertain"
+                                  ? "Résultat non confirmé"
+                                  : attempt.endReason === "superseded"
                                   ? "Remplacée par une nouvelle demande"
                                   : "Demande non acceptée"}
                                 {" · "}
