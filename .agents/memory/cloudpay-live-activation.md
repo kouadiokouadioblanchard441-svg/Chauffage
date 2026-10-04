@@ -92,3 +92,9 @@ For Galaxy callbacks, acknowledge with `SUCCESS` only after the verified final s
 **Why:** Galaxy stops retrying after a successful acknowledgment; acknowledging a pending query or a partially applied credit can leave a paid order stuck or inconsistent.
 
 **How to apply:** Verify the callback signature, merchant, order, country, and amount; query Galaxy; then commit deposit status, balance, and ledger changes atomically before acknowledging success. Keep a separate recovery path for callbacks that exhaust Galaxy's retry limit.
+
+For pending Philippines withdrawals, keep two distinct admin choices: manual approval only after the transfer is already completed, or a CloudPay/Galaxy payout request. Send only the withdrawal's net amount after fees; keep it processing until CloudPay confirms the result.
+
+**Why:** The user explicitly requires both manual and CloudPay validation, with the net amount being what the recipient receives.
+
+**How to apply:** Keep manual confirmation separate from payout initiation, show the recipient and net amount before sending, and never mark a provider payout approved based only on its initiation response.

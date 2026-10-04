@@ -475,16 +475,17 @@ async function finalizeCloudPayDeposit(depositId: number, status: CloudPayStatus
   return result.deposit;
 }
 
-async function finalizeCloudPayWithdrawal(withdrawalId: number, status: CloudPayStatus) {
-  if (status === "approved" || status === "rejected") {
-    const claimed = await storage.claimWithdrawalFinalization(withdrawalId, status);
-    if (claimed) {
-      if (status === "rejected") await refundRejectedWithdrawal(claimed, "CloudPay");
-      return claimed;
-    }
+async function finalizeCloudPayWithdrawal(
+  withdrawalId: number,
+  orderId: string,
+  status: CloudPayStatus,
+) {
+  if (status === "pending") {
+    const withdrawals = await storage.getWithdrawals();
+    return withdrawals.find((withdrawal) => withdrawal.id === withdrawalId);
   }
-  const withdrawals = await storage.getWithdrawals();
-  return withdrawals.find((withdrawal) => withdrawal.id === withdrawalId);
+  const result = await storage.finalizeCloudPayWithdrawal(withdrawalId, orderId, status);
+  return result.withdrawal;
 }
 
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -3070,27 +3071,17 @@ export async function registerRoutes(
       if (!Number.isSafeInteger(withdrawalId) || withdrawalId <= 0) {
         return res.status(400).json({ message: "Invalid withdrawal ID" });
       }
-      const current = (await storage.getWithdrawals()).find((item) => item.id === withdrawalId);
-      if (!current) return res.status(404).json({ message: "Withdrawal not found" });
-      if (
-        current.status !== "pending" ||
-        current.cloudpayOrderId ||
-        current.inpayOutTradeNo ||
-        current.inpayOrderNumber
-      ) {
-        return res.status(409).json({ message: "Only unsent pending withdrawals can be rejected here." });
-      }
-      const withdrawal = await storage.updateWithdrawal(withdrawalId, {
-        status: "rejected",
-        processedAt: new Date(),
-        processedBy: req.session.userId,
-      });
-
-      // Refund the user
-      const user = await storage.getUser(withdrawal.userId);
-      if (user) {
-        const newBalance = parseFloat(user.balance) + withdrawal.amount;
-        await storage.updateUser(user.id, { balance: newBalance.toFixed(2) });
+      const withdrawal = await storage.claimManualWithdrawalRejection(
+        withdrawalId,
+        req.session.userId!,
+      );
+      if (!withdrawal) {
+        const current = (await storage.getWithdrawals())
+          .find((item) => item.id === withdrawalId);
+        if (!current) return res.status(404).json({ message: "Withdrawal not found" });
+        return res.status(409).json({
+          message: "Only pending withdrawals that have not been sent to a provider can be rejected here.",
+        });
       }
 
       await storage.logAdminAction(req.session.userId!, "reject_withdrawal", withdrawal.userId, `Withdrawal ${withdrawal.id} rejected and refunded`);
@@ -3105,6 +3096,7 @@ export async function registerRoutes(
     let orderId = "";
     let providerRequestStarted = false;
     let providerAccepted = false;
+    let payoutClaimed = false;
     let withdrawalUserId: number | undefined;
     try {
       if (!Number.isSafeInteger(withdrawalId) || withdrawalId <= 0) {
@@ -3134,17 +3126,23 @@ export async function registerRoutes(
       const callbackUrl = new URL("/api/webhooks/cloudpay", publicBaseUrl).toString();
 
       orderId = `CPW-${withdrawal.id}-${Date.now()}`;
-      await storage.updateWithdrawal(withdrawal.id, {
-        status: "processing",
-        cloudpayOrderId: orderId,
-      });
+      const claimedWithdrawal = await storage.claimWithdrawalForCloudPayPayout(
+        withdrawal.id,
+        orderId,
+      );
+      if (!claimedWithdrawal) {
+        return res.status(409).json({
+          message: "This withdrawal was processed or sent to another provider before CloudPay could claim it.",
+        });
+      }
+      payoutClaimed = true;
       providerRequestStarted = true;
       await cloudPayCreatePayout({
         orderId,
-        amount: withdrawal.netAmount,
+        amount: claimedWithdrawal.netAmount,
         bankCode: cloudPayBankCode,
-        accountNumber: withdrawal.accountNumber,
-        accountName: withdrawal.accountName,
+        accountNumber: claimedWithdrawal.accountNumber,
+        accountName: claimedWithdrawal.accountName,
         callbackUrl,
       });
       providerAccepted = true;
@@ -3153,14 +3151,22 @@ export async function registerRoutes(
         req.session.userId!,
         "send_withdrawal_to_cloudpay",
         withdrawal.userId,
-        `Withdrawal ${withdrawal.id} sent to CloudPay/Galaxy`,
+        `Withdrawal ${withdrawal.id} sent to CloudPay/Galaxy for ${withdrawal.netAmount} PHP`,
       );
       return res.json({ success: true, status: updated?.status || "processing", orderId });
     } catch (error: any) {
       const uncertain = providerAccepted ||
         (providerRequestStarted && error instanceof CloudPayError && error.requestMayHaveReachedProvider);
-      if (orderId && !uncertain) {
-        await storage.releaseWithdrawalProcessing(withdrawalId, orderId).catch(() => undefined);
+      if (payoutClaimed && !uncertain) {
+        const released = await storage.releaseWithdrawalProcessing(withdrawalId, orderId).catch(() => undefined);
+        if (released) {
+          await storage.logAdminAction(
+            req.session.userId!,
+            "cloudpay_payout_rejected",
+            withdrawalUserId || null,
+            `CloudPay did not accept payout ${orderId}; withdrawal ${withdrawalId} returned to pending.`,
+          ).catch(() => undefined);
+        }
       }
       console.error("[cloudpay] payout error:", error);
       notifyTelegramPaymentError({
@@ -3206,7 +3212,11 @@ export async function registerRoutes(
         if (!verification.amount || !cloudPayAmountMatches(verification.amount, withdrawal.netAmount)) {
           return res.status(409).json({ message: "CloudPay could not confirm the payout amount" });
         }
-        const updated = await finalizeCloudPayWithdrawal(withdrawal.id, verification.status);
+        const updated = await finalizeCloudPayWithdrawal(
+          withdrawal.id,
+          withdrawal.cloudpayOrderId,
+          verification.status,
+        );
         return res.json({ status: updated?.status || withdrawal.status, providerStatus: verification.providerStatus });
       }
       return res.json({ status: withdrawal.status, providerStatus: verification.providerStatus });
@@ -3949,7 +3959,10 @@ export async function registerRoutes(
           if (!cloudPayAmountMatches(verifiedAmount, withdrawal.netAmount)) {
             return res.status(409).send("FAIL");
           }
-          await finalizeCloudPayWithdrawal(withdrawal.id, verification.status);
+          if (verification.status === "pending") {
+            return res.status(503).send("FAIL");
+          }
+          await finalizeCloudPayWithdrawal(withdrawal.id, orderId, verification.status);
           return res.status(200).send("SUCCESS");
         }
 

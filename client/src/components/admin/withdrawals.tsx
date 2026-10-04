@@ -29,11 +29,22 @@ interface WithdrawalWithUser extends Withdrawal {
   };
 }
 
+function hasProviderReference(withdrawal: Withdrawal): boolean {
+  return Boolean(
+    withdrawal.cloudpayOrderId ||
+    withdrawal.inpayOutTradeNo ||
+    withdrawal.inpayOrderNumber ||
+    withdrawal.omnipayId ||
+    withdrawal.omnipayReference
+  );
+}
+
 export default function AdminWithdrawals() {
   const { toast } = useToast();
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "processing" | "approved" | "rejected">("pending");
   const [manualApprovalId, setManualApprovalId] = useState<number | null>(null);
+  const [cloudPayApprovalId, setCloudPayApprovalId] = useState<number | null>(null);
 
   const { data: allWithdrawals, isLoading } = useQuery<WithdrawalWithUser[]>({
     queryKey: ["/api/admin/withdrawals"],
@@ -116,6 +127,7 @@ export default function AdminWithdrawals() {
       return data as { uncertain?: boolean };
     },
     onSuccess: (data) => {
+      setCloudPayApprovalId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
@@ -160,6 +172,9 @@ export default function AdminWithdrawals() {
   ) || [];
   const manualApprovalTarget = allWithdrawals?.find(
     (withdrawal) => withdrawal.id === manualApprovalId,
+  );
+  const cloudPayApprovalTarget = allWithdrawals?.find(
+    (withdrawal) => withdrawal.id === cloudPayApprovalId,
   );
 
   return (
@@ -287,11 +302,12 @@ export default function AdminWithdrawals() {
                     {withdrawal.country.toUpperCase() === "PH" &&
                       adminSettings?.cloudpayEnabled === "true" &&
                       adminSettings?.cloudpayConfigured === "true" && (
+                      !hasProviderReference(withdrawal) && (
                         <Button
                           size="sm"
                           variant="outline"
                           className="flex-1"
-                          onClick={() => cloudPayMutation.mutate(withdrawal.id)}
+                          onClick={() => setCloudPayApprovalId(withdrawal.id)}
                           disabled={processingId === withdrawal.id}
                           data-testid={`button-send-cloudpay-${withdrawal.id}`}
                         >
@@ -299,12 +315,8 @@ export default function AdminWithdrawals() {
                             ? <Loader2 className="w-4 h-4 animate-spin" />
                             : <><Send className="w-4 h-4 mr-1" /> Send to CloudPay</>}
                         </Button>
-                      )}
-                    {!withdrawal.cloudpayOrderId &&
-                      !withdrawal.inpayOutTradeNo &&
-                      !withdrawal.inpayOrderNumber &&
-                      !withdrawal.omnipayId &&
-                      !withdrawal.omnipayReference && (
+                      ))}
+                    {!hasProviderReference(withdrawal) && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -317,18 +329,18 @@ export default function AdminWithdrawals() {
                           Mark paid manually
                         </Button>
                       )}
-                    <Button
+                    {!hasProviderReference(withdrawal) && <Button
                       size="sm"
                       variant="destructive"
-      onClick={() => processMutation.mutate({ id: withdrawal.id, action: "reject" })}
+                      onClick={() => processMutation.mutate({ id: withdrawal.id, action: "reject" })}
                       disabled={processingId === withdrawal.id}
                       data-testid={`button-reject-${withdrawal.id}`}
                     >
                        <X className="w-4 h-4 mr-1" /> Reject
-                    </Button>
+                    </Button>}
                   </div>
                 )}
-                {withdrawal.status === "processing" && withdrawal.cloudpayOrderId && (
+                {(withdrawal.status === "processing" || withdrawal.status === "pending") && withdrawal.cloudpayOrderId && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -383,6 +395,51 @@ export default function AdminWithdrawals() {
               }}
             >
               {manualApprovalMutation.isPending ? "Processing…" : "I sent it — mark paid"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={cloudPayApprovalId !== null}
+        onOpenChange={(open) => {
+          if (!open && !cloudPayMutation.isPending) setCloudPayApprovalId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send this payout through CloudPay?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This sends a real payout request to CloudPay/Galaxy. The provider will receive the net amount after fees.
+              If the result is uncertain, do not send it again; check the CloudPay status first.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {cloudPayApprovalTarget && (
+            <div className="rounded-md border p-3 text-sm">
+              <p><strong>Net payout:</strong> {cloudPayApprovalTarget.netAmount.toLocaleString()} PHP</p>
+              <p><strong>Requested amount:</strong> {cloudPayApprovalTarget.amount.toLocaleString()} PHP</p>
+              <p><strong>Fees:</strong> {cloudPayApprovalTarget.fees.toLocaleString()} PHP</p>
+              <p><strong>Recipient:</strong> {cloudPayApprovalTarget.accountName}</p>
+              <p><strong>Receiving number:</strong> {cloudPayApprovalTarget.accountNumber}</p>
+              <p><strong>Method:</strong> {cloudPayApprovalTarget.paymentMethod}</p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cloudPayMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              type="button"
+              disabled={!cloudPayApprovalTarget || cloudPayMutation.isPending}
+              onClick={() => {
+                if (cloudPayApprovalTarget) cloudPayMutation.mutate(cloudPayApprovalTarget.id);
+              }}
+              data-testid="button-confirm-cloudpay-payout"
+            >
+              {cloudPayMutation.isPending
+                ? "Sending payout…"
+                : cloudPayApprovalTarget
+                  ? `Send ${cloudPayApprovalTarget.netAmount.toLocaleString()} PHP`
+                  : "Send payout"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
