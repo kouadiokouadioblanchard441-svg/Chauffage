@@ -79,4 +79,4 @@ The merchant connection sheet identifies `https://cloud.la2568.site/` as the API
 
 **Why:** The API host and paths are provider-supplied, while the callback-IP wording does not establish whether that address is for inbound webhooks or outbound API access.
 
-**How to apply:** Keep payout calls separate from deposits. Whitelist the Plesk server's public egress IP for API requests only after Galaxy confirms the target IP and any five-minute expiry; handle the provider callback source IP separately.
+**How to apply:** Keep payout calls separate from deposits. Whitelist the Plesk server's public egress IP for API requests only after Galaxy confirms the target IP and any five-minute expiry; handle the provider callback source IP separately. Replit and Plesk use different outbound networks, so a Replit API response does not verify Plesk's allowlist status.
