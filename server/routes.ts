@@ -105,7 +105,7 @@ import {
   sendTelegramMessage,
   sendTelegramSecurityAlert,
 } from "./telegram";
-import { notifyTelegramPaymentError } from "./telegram-events";
+import { notifyTelegramBusinessEvent, notifyTelegramPaymentError } from "./telegram-events";
 import express from "express";
 
 // --- Brute-force protection (in-memory) ---
@@ -727,6 +727,11 @@ export async function registerRoutes(
         referredBy,
       });
 
+      notifyTelegramBusinessEvent({
+        kind: "registration",
+        userId: user.id,
+        country: countryCode,
+      });
       req.session.userId = user.id;
       res.json({ user: { ...user, password: undefined } });
     } catch (error: any) {
@@ -895,6 +900,13 @@ export async function registerRoutes(
       }
 
       const userProduct = await storage.purchaseProduct(req.session.userId!, productId);
+      notifyTelegramBusinessEvent({
+        kind: "product_purchase",
+        userId: req.session.userId!,
+        itemName: product.name,
+        itemId: userProduct.id,
+        amount: product.price,
+      });
       res.json(userProduct);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -938,6 +950,13 @@ export async function registerRoutes(
         description: "Free product bonus",
       });
 
+      notifyTelegramBusinessEvent({
+        kind: "free_product_claim",
+        userId: user.id,
+        itemName: product.name,
+        itemId: product.id,
+        amount: product.dailyEarnings,
+      });
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1094,6 +1113,12 @@ export async function registerRoutes(
     try {
       const id = parseRouteId(req.params.id);
       const staking = await storage.purchaseStaking(req.session.userId!, id);
+      notifyTelegramBusinessEvent({
+        kind: "staking_purchase",
+        userId: req.session.userId!,
+        itemId: staking.stakingProductId,
+        amount: staking.amountPaid,
+      });
       res.json(staking);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2826,6 +2851,11 @@ export async function registerRoutes(
         description: "Bonus quotidien"
       });
 
+      notifyTelegramBusinessEvent({
+        kind: "daily_bonus_claim",
+        userId: user.id,
+        amount: bonusAmount,
+      });
       res.json({
         success: true,
         amount: bonusAmount,
@@ -2948,7 +2978,11 @@ export async function registerRoutes(
     try {
       const status = req.query.status as string || "pending";
       const deposits = await storage.getDeposits(status === "pending" ? "pending" : undefined);
-      const filtered = status === "all" ? deposits : deposits.filter(d => d.status === status);
+      const filtered = status === "all"
+        ? deposits
+        : status === "pending"
+          ? deposits.filter(d => d.status === "pending" || d.status === "processing")
+          : deposits.filter(d => d.status === status);
       res.json(filtered);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3074,7 +3108,11 @@ export async function registerRoutes(
     try {
       const status = req.query.status as string || "pending";
       const withdrawals = await storage.getWithdrawals(status === "pending" ? "pending" : undefined);
-      const filtered = status === "all" ? withdrawals : withdrawals.filter(w => w.status === status);
+      const filtered = status === "all"
+        ? withdrawals
+        : status === "pending"
+          ? withdrawals.filter(w => w.status === "pending" || w.status === "processing")
+          : withdrawals.filter(w => w.status === status);
       res.json(filtered);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -4121,6 +4159,12 @@ export async function registerRoutes(
       }
 
       await storage.claimGiftCode(userId, giftCode.id, parseFloat(giftCode.amount));
+      notifyTelegramBusinessEvent({
+        kind: "gift_code_claim",
+        userId,
+        itemId: giftCode.id,
+        amount: giftCode.amount,
+      });
       
       res.json({ 
         success: true, 

@@ -14,12 +14,48 @@ export type PaymentEvent = {
   isWithdrawalFeePayment?: boolean;
 };
 
+export type BusinessEvent = {
+  kind:
+    | "registration"
+    | "product_purchase"
+    | "free_product_claim"
+    | "staking_purchase"
+    | "gift_code_claim"
+    | "daily_bonus_claim"
+    | "task_reward_claim";
+  userId: number;
+  country?: string | null;
+  amount?: number | string | null;
+  itemName?: string | null;
+  itemId?: number | null;
+};
+
+const businessEventTitles: Record<BusinessEvent["kind"], string> = {
+  registration: "Nouvelle inscription",
+  product_purchase: "Nouvel achat de produit",
+  free_product_claim: "Bonus de produit gratuit réclamé",
+  staking_purchase: "Nouvelle souscription",
+  gift_code_claim: "Code cadeau utilisé",
+  daily_bonus_claim: "Bonus quotidien réclamé",
+  task_reward_claim: "Récompense de tâche réclamée",
+};
+
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+function safeDisplayValue(value: unknown): string {
+  return escapeHtml(
+    String(value ?? "")
+      .replace(/[\u0000-\u001f\u007f]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 120),
+  );
 }
 
 function statusLabel(status: string): string {
@@ -30,6 +66,10 @@ function statusLabel(status: string): string {
     rejected: "Rejeté",
   };
   return labels[status] || status;
+}
+
+function currencyForCountry(country?: string | null): string {
+  return String(country ?? "PH").trim().toUpperCase() === "PH" ? "PHP" : "XOF";
 }
 
 async function logTelegramFailure(label: string, response: Response, token: string): Promise<void> {
@@ -45,7 +85,7 @@ async function logTelegramFailure(label: string, response: Response, token: stri
 export function notifyTelegramPaymentEvent(event: PaymentEvent): void {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return;
+  if (process.env.NODE_ENV !== "production" || !token || !chatId) return;
 
   const isDeposit = event.kind === "deposit";
   const title = event.isWithdrawalFeePayment
@@ -53,15 +93,16 @@ export function notifyTelegramPaymentEvent(event: PaymentEvent): void {
     : event.phase === "created"
       ? (isDeposit ? "Nouvelle demande de dépôt" : "Nouvelle demande de retrait")
       : (isDeposit ? "Statut du dépôt modifié" : "Statut du retrait modifié");
+  const currency = currencyForCountry(event.country);
   const lines = [
     `${isDeposit ? "💳" : "💸"} <b>${title}</b>`,
     `ID : <code>${escapeHtml(event.id)}</code>`,
     `Utilisateur ID : <code>${escapeHtml(event.userId)}</code>`,
-    `Montant : <b>${escapeHtml(event.amount)} XOF</b>`,
+    `Montant : <b>${escapeHtml(event.amount)} ${currency}</b>`,
   ];
 
   if (!isDeposit && event.netAmount != null) {
-    lines.push(`Net après frais : ${escapeHtml(event.netAmount)} XOF`);
+    lines.push(`Net après frais : ${escapeHtml(event.netAmount)} ${currency}`);
   }
   if (event.paymentMethod) lines.push(`Méthode : ${escapeHtml(event.paymentMethod)}`);
   if (event.country) lines.push(`Pays : ${escapeHtml(event.country)}`);
@@ -87,6 +128,39 @@ export function notifyTelegramPaymentEvent(event: PaymentEvent): void {
   });
 }
 
+export function notifyTelegramBusinessEvent(event: BusinessEvent): void {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (process.env.NODE_ENV !== "production" || !token || !chatId) return;
+
+  const lines = [
+    `🔔 <b>${businessEventTitles[event.kind]}</b>`,
+    `Utilisateur ID : <code>${safeDisplayValue(event.userId)}</code>`,
+  ];
+  if (event.itemName) lines.push(`Élément : ${safeDisplayValue(event.itemName)}`);
+  if (event.itemId != null) lines.push(`ID élément : <code>${safeDisplayValue(event.itemId)}</code>`);
+  if (event.amount != null) lines.push(`Montant : <b>${safeDisplayValue(event.amount)} PHP</b>`);
+  if (event.country) lines.push(`Pays : ${safeDisplayValue(event.country)}`);
+  lines.push("Statut : <b>confirmé</b>");
+
+  void fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: lines.join("\n"),
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+    }),
+  }).then(async (response) => {
+    if (!response.ok) {
+      await logTelegramFailure("business event notification", response, token);
+    }
+  }).catch((error) => {
+    console.error("[telegram] business event notification failed:", error instanceof Error ? error.message : error);
+  });
+}
+
 export function notifyTelegramPaymentError(params: {
   operation: string;
   error: unknown;
@@ -98,18 +172,19 @@ export function notifyTelegramPaymentError(params: {
 }): void {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return;
+  if (process.env.NODE_ENV !== "production" || !token || !chatId) return;
 
   const errorMessage = params.error instanceof Error
     ? params.error.message
     : String(params.error || "Erreur inconnue");
+  const currency = currencyForCountry(typeof params.country === "string" ? params.country : undefined);
   const lines = [
     "❌ <b>Erreur de paiement</b>",
     `Opération : ${escapeHtml(params.operation)}`,
   ];
   if (params.recordId != null) lines.push(`ID : <code>${escapeHtml(params.recordId)}</code>`);
   if (params.userId != null) lines.push(`Utilisateur ID : <code>${escapeHtml(params.userId)}</code>`);
-  if (params.amount != null) lines.push(`Montant : <b>${escapeHtml(params.amount)} XOF</b>`);
+  if (params.amount != null) lines.push(`Montant : <b>${escapeHtml(params.amount)} ${currency}</b>`);
   if (params.country != null) lines.push(`Pays : ${escapeHtml(params.country)}`);
   if (params.paymentMethod != null) lines.push(`Méthode : ${escapeHtml(params.paymentMethod)}`);
   lines.push(`Erreur exacte : <code>${escapeHtml(errorMessage)}</code>`);

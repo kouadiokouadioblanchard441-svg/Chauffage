@@ -9,14 +9,19 @@ function escapeHtml(value: unknown): string {
     .replaceAll('"', "&quot;");
 }
 
+function currencyForCountry(country?: unknown): string {
+  return String(country ?? "PH").trim().toUpperCase() === "PH" ? "PHP" : "XOF";
+}
+
 export function isTelegramConfigured(): boolean {
-  return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
+  return process.env.NODE_ENV === "production"
+    && Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
 }
 
 export async function sendTelegramMessage(message: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return;
+  if (!isTelegramConfigured() || !token || !chatId) return;
 
   const response = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
     method: "POST",
@@ -73,8 +78,8 @@ async function handleTelegramCommand(text: string, chatId: string) {
       `Utilisateurs : ${formatTelegramValue(stats.totalUsers)}`,
       `Nouveaux aujourd'hui : ${formatTelegramValue(stats.todayUsers)}`,
       `Utilisateurs avec produit : ${formatTelegramValue(stats.usersWithProducts)}`,
-      `Dépôts approuvés : ${formatTelegramValue(stats.totalDeposits)} XOF`,
-      `Retraits approuvés : ${formatTelegramValue(stats.totalWithdrawals)} XOF`,
+      `Dépôts approuvés : ${formatTelegramValue(stats.totalDeposits)} PHP`,
+      `Retraits approuvés : ${formatTelegramValue(stats.totalWithdrawals)} PHP`,
     ].join("\n");
   }
   if (command === "/solde") {
@@ -91,10 +96,10 @@ async function handleTelegramCommand(text: string, chatId: string) {
       storage.getWithdrawals("pending"),
     ]);
     const depositLines = deposits.slice(0, 10).map((item) =>
-      `• Dépôt #${item.id} — ${item.amount} XOF — ${item.user?.fullName || "Utilisateur"}`,
+      `• Dépôt #${item.id} — ${item.amount} ${currencyForCountry(item.country)} — ${item.user?.fullName || "Utilisateur"}`,
     );
     const withdrawalLines = withdrawals.slice(0, 10).map((item) =>
-      `• Retrait #${item.id} — ${item.amount} XOF — ${item.user?.fullName || "Utilisateur"}`,
+      `• Retrait #${item.id} — ${item.amount} ${currencyForCountry(item.country)} — ${item.user?.fullName || "Utilisateur"}`,
     );
     return [
       "⏳ <b>Opérations en attente</b>",
@@ -115,15 +120,15 @@ export async function sendDailyTelegramSummary(): Promise<void> {
     `Utilisateurs : ${formatTelegramValue(stats.totalUsers)}`,
     `Nouveaux utilisateurs : ${formatTelegramValue(stats.todayUsers)}`,
     `Utilisateurs avec produit : ${formatTelegramValue(stats.usersWithProducts)}`,
-    `Solde total : ${formatTelegramValue(stats.totalBalance)} XOF`,
-    `Revenus totaux : ${formatTelegramValue(stats.totalEarnings)} XOF`,
-    `Commissions : ${formatTelegramValue(stats.totalCommissions)} XOF`,
-    `Dépôts du jour : ${formatTelegramValue(stats.todayDeposits)} XOF`,
-    `Dépôts cumulés : ${formatTelegramValue(stats.totalDeposits)} XOF`,
-    `Retraits du jour : ${formatTelegramValue(stats.todayWithdrawals)} XOF`,
-    `Retraits cumulés : ${formatTelegramValue(stats.totalWithdrawals)} XOF`,
-    `Dépôts en attente : ${formatTelegramValue(stats.pendingDeposits)} XOF (${formatTelegramValue(stats.pendingDepositsCount)})`,
-    `Retraits en attente : ${formatTelegramValue(stats.pendingWithdrawals)} XOF (${formatTelegramValue(stats.pendingWithdrawalsCount)})`,
+    `Solde total : ${formatTelegramValue(stats.totalBalance)} PHP`,
+    `Revenus totaux : ${formatTelegramValue(stats.totalEarnings)} PHP`,
+    `Commissions : ${formatTelegramValue(stats.totalCommissions)} PHP`,
+    `Dépôts du jour : ${formatTelegramValue(stats.todayDeposits)} PHP`,
+    `Dépôts cumulés : ${formatTelegramValue(stats.totalDeposits)} PHP`,
+    `Retraits du jour : ${formatTelegramValue(stats.todayWithdrawals)} PHP`,
+    `Retraits cumulés : ${formatTelegramValue(stats.totalWithdrawals)} PHP`,
+    `Dépôts en attente : ${formatTelegramValue(stats.pendingDeposits)} PHP (${formatTelegramValue(stats.pendingDepositsCount)})`,
+    `Retraits en attente : ${formatTelegramValue(stats.pendingWithdrawals)} PHP (${formatTelegramValue(stats.pendingWithdrawalsCount)})`,
   ].join("\n"));
 }
 
@@ -157,7 +162,7 @@ export async function sendTelegramInpayError(params: {
     params.recordId !== undefined ? `ID : ${formatTelegramValue(params.recordId)}` : "",
     params.reference ? `Référence : ${formatTelegramValue(params.reference)}` : "",
     params.country ? `Pays : ${formatTelegramValue(params.country)}` : "",
-    params.amount !== undefined ? `Montant : <b>${formatTelegramValue(params.amount)} XOF</b>` : "",
+    params.amount !== undefined ? `Montant : <b>${formatTelegramValue(params.amount)} ${currencyForCountry(params.country)}</b>` : "",
     params.orderNumber !== undefined
       ? `Numéro de commande marchand : <code>${formatTelegramValue(params.orderNumber)}</code>`
       : "",
@@ -172,6 +177,7 @@ export async function sendTelegramInpayError(params: {
 }
 
 export function startTelegramBot(): void {
+  if (process.env.NODE_ENV !== "production") return;
   const tokenPresent = Boolean(process.env.TELEGRAM_BOT_TOKEN);
   const chatIdPresent = Boolean(process.env.TELEGRAM_CHAT_ID);
   if (!tokenPresent || !chatIdPresent) {

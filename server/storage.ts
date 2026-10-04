@@ -12,7 +12,7 @@ import { db } from "./db";
 import { eq, and, desc, sql, gte, lte, or, isNull, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { getDemoReferralPreview } from "./demo-referrals";
-import { notifyTelegramPaymentEvent } from "./telegram-events";
+import { notifyTelegramBusinessEvent, notifyTelegramPaymentEvent } from "./telegram-events";
 
 type TeamStats = {
   level1Count: number;
@@ -894,7 +894,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(deposits.createdAt));
     
     if (status && status !== "all") {
-      query = query.where(eq(deposits.status, status)) as any;
+      query = status === "pending"
+        ? query.where(inArray(deposits.status, ["pending", "processing"])) as any
+        : query.where(eq(deposits.status, status)) as any;
     }
     
     const result = await query;
@@ -1085,7 +1087,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(withdrawals.createdAt));
     
     if (status && status !== "all") {
-      query = query.where(eq(withdrawals.status, status)) as any;
+      query = status === "pending"
+        ? query.where(inArray(withdrawals.status, ["pending", "processing"])) as any
+        : query.where(eq(withdrawals.status, status)) as any;
     }
     
     const result = await query;
@@ -2017,6 +2021,13 @@ export class DatabaseStorage implements IStorage {
       amount: taskStatus.reward.toString(),
       description: `Reward: ${taskStatus.name}`,
     });
+    notifyTelegramBusinessEvent({
+      kind: "task_reward_claim",
+      userId,
+      itemName: taskStatus.name,
+      itemId: taskStatus.id,
+      amount: taskStatus.reward,
+    });
   }
 
   // Transactions
@@ -2089,7 +2100,7 @@ export class DatabaseStorage implements IStorage {
     const [periodWithdrawalsResult] = await db.select({ total: sql<string>`COALESCE(SUM(${withdrawals.amount}), 0)` })
       .from(withdrawals).where(and(eq(withdrawals.status, "approved"), gte(withdrawals.createdAt, filterStart), lte(withdrawals.createdAt, filterEnd)));
     const [pendingWithdrawalsResult] = await db.select({ total: sql<string>`COALESCE(SUM(${withdrawals.amount}), 0)`, count: sql<number>`count(*)` })
-      .from(withdrawals).where(eq(withdrawals.status, "pending"));
+      .from(withdrawals).where(inArray(withdrawals.status, ["pending", "processing"]));
     
     const [usersWithProductsResult] = await db.select({ count: sql<number>`count(DISTINCT ${userProducts.userId})` })
       .from(userProducts).where(and(eq(userProducts.isActive, true), gte(userProducts.purchaseDate, statsResetDate)));

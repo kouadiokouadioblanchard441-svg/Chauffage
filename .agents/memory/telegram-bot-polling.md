@@ -5,6 +5,8 @@ description: Avoid competing getUpdates pollers when development and production 
 
 Only one server should poll Telegram `getUpdates` for a bot token at a time. Keep polling and scheduled Telegram summaries in the production process when development and Plesk production share credentials.
 
-**Why:** Telegram terminates or conflicts concurrent long-poll requests for the same bot token, making command delivery unreliable.
+For this product, Telegram business notifications are for the Plesk production site only. Preserve the existing bot commands and external support links; new business notifications should use short event summaries, not full request bodies or sensitive account/payment details.
 
-**How to apply:** If Replit development and Plesk production use the same token, keep the Replit process from polling; continue to gate outbound payment notifications separately according to the environment's needs.
+**Why:** Telegram terminates or conflicts concurrent long-poll requests for the same bot token, making command delivery unreliable. The user selected Plesk production and clarified that they want notifications while keeping the previous bot and support behavior.
+
+**How to apply:** Keep polling and outbound notifications production-only. Configure bot credentials on Plesk, not Replit development, and keep one `getUpdates` poller.
