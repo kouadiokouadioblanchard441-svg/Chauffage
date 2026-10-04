@@ -18,7 +18,7 @@
 - [VIP duration](vip-duration.md) — Product cycle length is admin-managed; startup code must never force a fixed duration.
 - [Mockup sandbox isolation](mockup-sandbox-dependencies.md) — Separate dependencies and preview ports mean a main-app screenshot can misreport a healthy sandbox preview.
 - [Workflow secret scope](workflow-secret-scope.md) — One-off shell commands may lack secrets available to the managed app workflow; use scoped presence checks and guarded execution.
-- [Telegram bot polling](telegram-bot-polling.md) — Keep polling and business notifications on Plesk production; don't direct Replit development at the live bot chat.
+- [Telegram bot polling](telegram-bot-polling.md) — Poll only in production; allow Plesk outbound alerts while keeping Replit development away from the live chat.
 - [External payment configuration rollback](external-payment-config-rollback.md) — Restoring payment source files from GitHub does not undo provider settings already persisted in external Supabase.
 - [Clapay contract configuration](clapay-contract-configuration.md) — Keep secrets in Plesk, confirm via the authenticated API, and preserve uncertain initiations for signed-callback reconciliation.
 - [CloudPay operations](cloudpay-live-activation.md) — Keep Plesk production settings separate and allow all withdrawal actions during uncertainty only with explicit duplicate-risk warnings.
