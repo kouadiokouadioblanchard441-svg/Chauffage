@@ -14,7 +14,8 @@ function currencyForCountry(country?: unknown): string {
 }
 
 export function isTelegramConfigured(): boolean {
-  return process.env.NODE_ENV === "production"
+  const isReplitDevelopment = Boolean(process.env.REPL_ID) && process.env.NODE_ENV !== "production";
+  return !isReplitDevelopment
     && Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
 }
 

@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { notifyTelegramBusinessEvent } from "./telegram-events";
 
-test("business Telegram notifications send safe event summaries only in production", async () => {
+test("business Telegram notifications send safely on Plesk but stay disabled in Replit development", async () => {
   const originalNodeEnv = process.env.NODE_ENV;
+  const originalReplId = process.env.REPL_ID;
   const originalBotToken = process.env.TELEGRAM_BOT_TOKEN;
   const originalChatId = process.env.TELEGRAM_CHAT_ID;
   const originalFetch = globalThis.fetch;
@@ -44,10 +45,17 @@ test("business Telegram notifications send safe event summaries only in producti
     notifyTelegramBusinessEvent({ kind: "registration", userId: 43, country: "PH" });
     await new Promise<void>((resolve) => setImmediate(resolve));
     assert.equal(calls.length, 1);
+
+    delete process.env.REPL_ID;
+    notifyTelegramBusinessEvent({ kind: "registration", userId: 44, country: "PH" });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(calls.length, 2);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = originalNodeEnv;
+    if (originalReplId === undefined) delete process.env.REPL_ID;
+    else process.env.REPL_ID = originalReplId;
     if (originalBotToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
     else process.env.TELEGRAM_BOT_TOKEN = originalBotToken;
     if (originalChatId === undefined) delete process.env.TELEGRAM_CHAT_ID;

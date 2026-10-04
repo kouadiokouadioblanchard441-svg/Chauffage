@@ -72,6 +72,10 @@ function currencyForCountry(country?: string | null): string {
   return String(country ?? "PH").trim().toUpperCase() === "PH" ? "PHP" : "XOF";
 }
 
+function canSendTelegramNotifications(): boolean {
+  return process.env.NODE_ENV === "production" || !process.env.REPL_ID;
+}
+
 async function logTelegramFailure(label: string, response: Response, token: string): Promise<void> {
   const body = await response.json().catch(() => null) as { description?: unknown } | null;
   const description = typeof body?.description === "string"
@@ -85,7 +89,7 @@ async function logTelegramFailure(label: string, response: Response, token: stri
 export function notifyTelegramPaymentEvent(event: PaymentEvent): void {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (process.env.NODE_ENV !== "production" || !token || !chatId) return;
+  if (!canSendTelegramNotifications() || !token || !chatId) return;
 
   const isDeposit = event.kind === "deposit";
   const title = event.isWithdrawalFeePayment
@@ -131,7 +135,7 @@ export function notifyTelegramPaymentEvent(event: PaymentEvent): void {
 export function notifyTelegramBusinessEvent(event: BusinessEvent): void {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (process.env.NODE_ENV !== "production" || !token || !chatId) return;
+  if (!canSendTelegramNotifications() || !token || !chatId) return;
 
   const lines = [
     `🔔 <b>${businessEventTitles[event.kind]}</b>`,
@@ -172,7 +176,7 @@ export function notifyTelegramPaymentError(params: {
 }): void {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (process.env.NODE_ENV !== "production" || !token || !chatId) return;
+  if (!canSendTelegramNotifications() || !token || !chatId) return;
 
   const errorMessage = params.error instanceof Error
     ? params.error.message
