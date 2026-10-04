@@ -101,6 +101,9 @@ export default function AdminSettings({ isSuperAdmin }: AdminSettingsProps) {
   } = useQuery<CloudPayRuntimeDiagnostics>({
     queryKey: ["/api/admin/cloudpay/runtime-config"],
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const form = useForm<SettingsForm>({
