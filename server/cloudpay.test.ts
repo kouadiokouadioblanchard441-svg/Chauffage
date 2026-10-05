@@ -5,6 +5,7 @@ import {
   cloudPayAmountMatches,
   cloudPayCreateDeposit,
   cloudPayCreatePayout,
+  cloudPayGetMerchantBalance,
   cloudPayQuery,
   formatCloudPayAmount,
   getCloudPayRuntimeDiagnostics,
@@ -361,6 +362,41 @@ try {
   assert.equal(pendingQuery.providerStatus, "1");
   assert.equal(requests[7].url.toString(), "https://gateway.example/api/query");
 
+  const balanceResponseFields = {
+    merchant: "merchant-test",
+    merchant_display_name: "Chargepoint",
+    balance: "1234.50",
+    pending_balance: "250",
+  };
+  responses.push({
+    ...balanceResponseFields,
+    Sign: signCloudPayFields(balanceResponseFields, "test-signing-secret"),
+  });
+  const merchantBalance = await cloudPayGetMerchantBalance();
+  assert.deepEqual(merchantBalance, {
+    balance: "1234.50",
+    pendingBalance: "250.00",
+    currency: "PHP",
+  });
+  assert.equal(requests[8].url.toString(), "https://gateway.example/api/me");
+  assert.equal(requests[8].fields.get("merchant"), "merchant-test");
+  assert.equal(requests[8].fields.has("order_id"), false);
+  const balanceRequestSignFields = Object.fromEntries(
+    [...requests[8].fields.entries()].filter(([key]) => key !== "sign"),
+  );
+  assert.equal(
+    requests[8].fields.get("sign"),
+    signCloudPayFields(balanceRequestSignFields, "test-signing-secret"),
+  );
+
+  responses.push({
+    ...balanceResponseFields,
+    balance: "9999.99",
+    Sign: signCloudPayFields(balanceResponseFields, "test-signing-secret"),
+  });
+  await assert.rejects(() => cloudPayGetMerchantBalance(), /signature is invalid/);
+  assert.equal(requests[9].url.toString(), "https://gateway.example/api/me");
+
   responses.push({
     status: 0,
     amount: "100.25",
@@ -388,7 +424,7 @@ try {
     payoutRejection.providerMessage || "",
     /09171234567|01234567890123456789012345678901/,
   );
-  assert.equal(requests[8].url.toString(), "https://gateway.example/api/daifu");
+  assert.equal(requests[10].url.toString(), "https://gateway.example/api/daifu");
 } finally {
   globalThis.fetch = originalFetch;
   for (const key of configKeys) {

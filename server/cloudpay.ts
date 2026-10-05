@@ -267,7 +267,11 @@ function getProviderMessage(
   return message.slice(0, 500) || undefined;
 }
 
-async function postCloudPay(path: string, fields: CloudPayFields): Promise<Record<string, unknown>> {
+async function postCloudPay(
+  path: string,
+  fields: CloudPayFields,
+  options: { allowMissingStatus?: boolean } = {},
+): Promise<Record<string, unknown>> {
   const config = getCloudPayConfig();
   const signedFields: Record<string, string> = {};
   for (const [key, value] of Object.entries(fields)) {
@@ -317,7 +321,11 @@ async function postCloudPay(path: string, fields: CloudPayFields): Promise<Recor
       amount: providerAmount,
     });
   }
-  if (providerStatus !== "1" && path !== "/api/query") {
+  if (
+    providerStatus !== "1" &&
+    path !== "/api/query" &&
+    !(options.allowMissingStatus && providerStatus === "missing")
+  ) {
     throw new CloudPayError(`CloudPay rejected the request (status ${providerStatus})`, false, {
       status: providerStatus,
       message: providerMessage,
@@ -457,6 +465,48 @@ export async function cloudPayQuery(orderId: string): Promise<CloudPayQueryResul
     providerStatus: getProviderStatus(payload),
     ...(amount && /^\d{1,12}(?:\.\d{1,2})?$/.test(amount) ? { amount } : {}),
     ...(message ? { message } : {}),
+  };
+}
+
+export type CloudPayBalanceResult = {
+  balance: string;
+  pendingBalance: string;
+  currency: "PHP";
+};
+
+function formatCloudPayBalance(value: unknown, fieldName: string): string {
+  const raw = String(value ?? "").trim();
+  if (!/^\d+(?:\.\d{1,2})?$/.test(raw)) {
+    throw new CloudPayError(`CloudPay returned an invalid ${fieldName} balance`, true);
+  }
+  const [whole, fractional = ""] = raw.split(".");
+  return `${whole}.${fractional.padEnd(2, "0")}`;
+}
+
+export async function cloudPayGetMerchantBalance(): Promise<CloudPayBalanceResult> {
+  const config = getCloudPayConfig();
+  const payload = await postCloudPay("/api/me", {}, { allowMissingStatus: true });
+  if (String(payload.merchant ?? "") !== config.merchantId) {
+    throw new CloudPayError("CloudPay balance response merchant does not match configuration", true);
+  }
+
+  const responseSignature = String(payload.Sign ?? payload.sign ?? "");
+  const responseFields: CloudPayFields = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (key.toLowerCase() === "sign" || key === "data" || value === undefined || value === null) continue;
+    if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+      throw new CloudPayError("CloudPay returned an invalid balance response", true);
+    }
+    responseFields[key] = String(value);
+  }
+  if (!verifyCloudPaySignature(responseFields, responseSignature, config.signingSecret)) {
+    throw new CloudPayError("CloudPay balance response signature is invalid", true);
+  }
+
+  return {
+    balance: formatCloudPayBalance(payload.balance, "available"),
+    pendingBalance: formatCloudPayBalance(payload.pending_balance, "pending"),
+    currency: "PHP",
   };
 }
 

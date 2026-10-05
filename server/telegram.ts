@@ -1,6 +1,11 @@
 const TELEGRAM_API = "https://api.telegram.org";
 import { storage } from "./storage";
-import { CloudPayError, cloudPayAmountMatches, cloudPayQuery } from "./cloudpay";
+import {
+  CloudPayError,
+  cloudPayAmountMatches,
+  cloudPayGetMerchantBalance,
+  cloudPayQuery,
+} from "./cloudpay";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -70,10 +75,38 @@ async function handleTelegramCommand(text: string, chatId: string) {
       "🤖 <b>Commandes Stone by ton</b>",
       "/stats — statistiques de la plateforme",
       "/solde — soldes et montants en attente",
+      "/cloudpay_solde — solde disponible et en attente chez CloudPay",
       "/pending — dépôts et retraits en attente",
       "/cloudpay CPD-… — vérifier un dépôt CloudPay",
       "/help — afficher cette aide",
     ].join("\n");
+  }
+  if (command === "/cloudpay_solde") {
+    if (parts.length !== 1) return "Utilise simplement <code>/cloudpay_solde</code>, sans argument.";
+    try {
+      const balance = await cloudPayGetMerchantBalance();
+      return [
+        "💳 <b>Solde marchand CloudPay</b>",
+        `Disponible : <b>${formatTelegramValue(balance.balance)} ${balance.currency}</b>`,
+        `En attente : <b>${formatTelegramValue(balance.pendingBalance)} ${balance.currency}</b>`,
+        "Données retournées par CloudPay. Cette consultation ne modifie aucun solde dans l’application.",
+      ].join("\n");
+    } catch (error) {
+      if (error instanceof CloudPayError) {
+        const details = [
+          error.providerStatus ? `Code prestataire : ${formatTelegramValue(error.providerStatus)}` : "",
+          error.providerHttpStatus !== undefined ? `HTTP : ${formatTelegramValue(error.providerHttpStatus)}` : "",
+          error.providerMessage ? `Détail : ${formatTelegramValue(error.providerMessage)}` : "",
+        ].filter(Boolean);
+        return [
+          "⚠️ <b>Impossible de consulter le solde CloudPay.</b>",
+          formatTelegramValue(error.message),
+          ...details,
+        ].join("\n");
+      }
+      console.error("[telegram] CloudPay balance query failed:", error);
+      return "Impossible de consulter le solde CloudPay pour le moment.";
+    }
   }
   if (command === "/cloudpay") {
     const orderId = parts[1] || "";
