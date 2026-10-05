@@ -2989,6 +2989,57 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/deposits/:id/cloudpay-status", requireAdmin, async (req, res) => {
+    try {
+      const depositId = Number(req.params.id);
+      if (!Number.isSafeInteger(depositId) || depositId <= 0) {
+        return res.status(400).json({ message: "Invalid deposit ID" });
+      }
+
+      const deposit = await storage.getDeposit(depositId);
+      if (!deposit) return res.status(404).json({ message: "Deposit not found" });
+      if (!deposit.cloudpayOrderId) {
+        return res.status(400).json({ message: "Ce dépôt n’a aucune référence de commande CloudPay." });
+      }
+      if (!isPhilippinesCountryCode(deposit.country)) {
+        return res.status(400).json({ message: "CloudPay est disponible uniquement pour les dépôts des Philippines." });
+      }
+
+      const verification = await cloudPayQuery(deposit.cloudpayOrderId);
+      const amountMatches = verification.amount === undefined
+        ? null
+        : cloudPayAmountMatches(verification.amount, deposit.amount);
+      const statusMatches = deposit.status === verification.status ||
+        (deposit.status === "processing" && verification.status === "pending");
+
+      return res.json({
+        depositId: deposit.id,
+        orderId: deposit.cloudpayOrderId,
+        localStatus: deposit.status,
+        status: verification.status,
+        providerStatus: verification.providerStatus,
+        expectedAmount: deposit.amount,
+        amount: verification.amount ?? null,
+        amountMatches,
+        statusMatches,
+        message: verification.message ?? null,
+      });
+    } catch (error) {
+      console.error("[cloudpay] deposit status query error:", error);
+      if (error instanceof CloudPayError) {
+        return res.status(502).json({
+          message: error.message,
+          ...(error.providerStatus ? { providerStatus: error.providerStatus } : {}),
+          ...(error.providerHttpStatus !== undefined ? { providerHttpStatus: error.providerHttpStatus } : {}),
+          ...(error.providerMessage ? { providerMessage: error.providerMessage } : {}),
+        });
+      }
+      return res.status(502).json({
+        message: "Impossible de vérifier le statut du dépôt CloudPay pour le moment.",
+      });
+    }
+  });
+
   app.get("/api/admin/deposits/soleaspay-stats", requireAdmin, async (req, res) => {
     try {
       const allDeposits = await storage.getDeposits();

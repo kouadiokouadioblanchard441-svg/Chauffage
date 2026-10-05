@@ -1,5 +1,6 @@
 const TELEGRAM_API = "https://api.telegram.org";
 import { storage } from "./storage";
+import { CloudPayError, cloudPayAmountMatches, cloudPayQuery } from "./cloudpay";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -62,15 +63,68 @@ async function telegramRequest(method: string, body: Record<string, unknown>) {
 }
 
 async function handleTelegramCommand(text: string, chatId: string) {
-  const command = text.trim().split(/\s+/)[0].toLowerCase().split("@")[0];
+  const parts = text.trim().split(/\s+/);
+  const command = parts[0].toLowerCase().split("@")[0];
   if (command === "/help" || command === "/start") {
     return [
       "🤖 <b>Commandes Stone by ton</b>",
       "/stats — statistiques de la plateforme",
       "/solde — soldes et montants en attente",
       "/pending — dépôts et retraits en attente",
+      "/cloudpay CPD-… — vérifier un dépôt CloudPay",
       "/help — afficher cette aide",
     ].join("\n");
+  }
+  if (command === "/cloudpay") {
+    const orderId = parts[1] || "";
+    if (parts.length !== 2 || !/^CPD-[A-Za-z0-9-]{1,100}$/.test(orderId)) {
+      return "Utilise : <code>/cloudpay CPD-...</code> avec la référence CloudPay du dépôt.";
+    }
+
+    const deposit = await storage.getDepositByCloudPayOrderId(orderId);
+    if (!deposit || !isPhilippinesCountryCode(deposit.country)) {
+      return `Aucun dépôt CloudPay des Philippines ne correspond à <code>${formatTelegramValue(orderId)}</code>.`;
+    }
+
+    try {
+      const verification = await cloudPayQuery(orderId);
+      const amountMatches = verification.amount === undefined
+        ? null
+        : cloudPayAmountMatches(verification.amount, deposit.amount);
+      const statusMatches = deposit.status === verification.status ||
+        (deposit.status === "processing" && verification.status === "pending");
+      const amountComparison = amountMatches === null
+        ? "montant non communiqué par CloudPay"
+        : amountMatches
+          ? "montant correspondant"
+          : "⚠️ montant différent";
+
+      return [
+        "🔎 <b>Vérification du dépôt CloudPay</b>",
+        `Référence : <code>${formatTelegramValue(orderId)}</code>`,
+        `Dépôt local #${formatTelegramValue(deposit.id)} — ${formatTelegramValue(deposit.status)}`,
+        `Statut CloudPay : <b>${formatTelegramValue(verification.status)}</b> (code ${formatTelegramValue(verification.providerStatus)})`,
+        `Montant CloudPay : ${formatTelegramValue(verification.amount ?? "non communiqué")} PHP — attendu : ${formatTelegramValue(deposit.amount)} PHP`,
+        `Contrôle du montant : ${amountComparison}`,
+        ...(!statusMatches ? ["⚠️ Le statut CloudPay diffère du statut enregistré dans l’application."] : []),
+        "Lecture seule : cette vérification ne modifie ni le statut local ni le solde.",
+      ].join("\n");
+    } catch (error) {
+      if (error instanceof CloudPayError) {
+        const details = [
+          error.providerStatus ? `Code prestataire : ${formatTelegramValue(error.providerStatus)}` : "",
+          error.providerHttpStatus !== undefined ? `HTTP : ${formatTelegramValue(error.providerHttpStatus)}` : "",
+          error.providerMessage ? `Détail : ${formatTelegramValue(error.providerMessage)}` : "",
+        ].filter(Boolean);
+        return [
+          "⚠️ <b>CloudPay n’a pas pu confirmer ce dépôt.</b>",
+          formatTelegramValue(error.message),
+          ...details,
+        ].join("\n");
+      }
+      console.error("[telegram] CloudPay deposit query failed:", error);
+      return "Impossible de vérifier ce dépôt auprès de CloudPay pour le moment.";
+    }
   }
   if (command === "/stats") {
     const stats = await storage.getStats();
@@ -97,7 +151,9 @@ async function handleTelegramCommand(text: string, chatId: string) {
       storage.getWithdrawals("pending"),
     ]);
     const depositLines = deposits.slice(0, 10).map((item) =>
-      `• Dépôt #${item.id} — ${item.amount} ${currencyForCountry(item.country)} — ${item.user?.fullName || "Utilisateur"}`,
+      `• Dépôt #${formatTelegramValue(item.id)} — ${formatTelegramValue(item.amount)} ${currencyForCountry(item.country)} — ${formatTelegramValue(item.user?.fullName || "Utilisateur")}${
+        item.cloudpayOrderId ? ` · <code>/cloudpay ${formatTelegramValue(item.cloudpayOrderId)}</code>` : ""
+      }`,
     );
     const withdrawalLines = withdrawals.slice(0, 10).map((item) =>
       `• Retrait #${item.id} — ${item.amount} ${currencyForCountry(item.country)} — ${item.user?.fullName || "Utilisateur"}`,
