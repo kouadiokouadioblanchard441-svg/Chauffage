@@ -82,7 +82,7 @@ async function handleTelegramCommand(text: string, chatId: string) {
     }
 
     const deposit = await storage.getDepositByCloudPayOrderId(orderId);
-    if (!deposit || !isPhilippinesCountryCode(deposit.country)) {
+    if (!deposit || String(deposit.country).trim().toUpperCase() !== "PH") {
       return `Aucun dépôt CloudPay des Philippines ne correspond à <code>${formatTelegramValue(orderId)}</code>.`;
     }
 

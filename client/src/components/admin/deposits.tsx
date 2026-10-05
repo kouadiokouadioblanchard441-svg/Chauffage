@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, X, Ban, Search, Loader2, ImageIcon, MessageSquare } from "lucide-react";
+import { Check, X, Ban, Search, Loader2, ImageIcon, MessageSquare, RefreshCw } from "lucide-react";
 import type { Deposit } from "@shared/schema";
 
 interface DepositWithUser extends Deposit {
@@ -19,6 +19,19 @@ interface DepositWithUser extends Deposit {
     country: string;
     isPromoter: boolean;
   };
+}
+
+interface CloudPayDepositCheck {
+  depositId: number;
+  orderId: string;
+  localStatus: string;
+  status: "pending" | "approved" | "rejected";
+  providerStatus: string;
+  expectedAmount: number;
+  amount: string | null;
+  amountMatches: boolean | null;
+  statusMatches: boolean;
+  message: string | null;
 }
 
 // Build a unified reference string for a deposit (mirrors history.tsx logic)
@@ -46,6 +59,7 @@ export default function AdminDeposits() {
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
   const [screenshotModal, setScreenshotModal] = useState<string | null>(null);
+  const [cloudPayChecks, setCloudPayChecks] = useState<Record<number, CloudPayDepositCheck>>({});
 
   const { data: allDeposits, isLoading } = useQuery<DepositWithUser[]>({
     queryKey: ["/api/admin/deposits"],
@@ -89,6 +103,46 @@ export default function AdminDeposits() {
     onSettled: () => setProcessingId(null),
   });
 
+  const cloudPayStatusMutation = useMutation({
+    mutationFn: async (id: number) => {
+      setProcessingId(id);
+      const res = await fetch(`/api/admin/deposits/${id}/cloudpay-status`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || `CloudPay status check failed (code ${res.status})`);
+      return data as CloudPayDepositCheck;
+    },
+    onSuccess: (data) => {
+      setCloudPayChecks((current) => ({ ...current, [data.depositId]: data }));
+      const needsReview = data.amountMatches === false || !data.statusMatches;
+      toast({
+        title: needsReview
+          ? "CloudPay result needs review"
+          : data.status === "pending"
+            ? "CloudPay has not confirmed the deposit yet"
+            : `CloudPay reports ${data.status}`,
+        description: [
+          data.amount === null
+            ? "CloudPay did not return an amount."
+            : `CloudPay amount: ${data.amount} PHP; expected: ${data.expectedAmount} PHP.`,
+          "This check does not change the app balance or deposit status.",
+          data.message || "",
+        ].filter(Boolean).join(" "),
+        variant: needsReview ? "destructive" : undefined,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Unable to check CloudPay status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => setProcessingId(null),
+  });
+
   const filteredDeposits = deposits?.filter(d =>
     d.accountNumber.includes(filter) ||
     d.user.phone.includes(filter) ||
@@ -96,6 +150,7 @@ export default function AdminDeposits() {
     (d.reference && d.reference.toLowerCase().includes(filter.toLowerCase())) ||
     ((d as any).inpayOutTradeNo && (d as any).inpayOutTradeNo.toLowerCase().includes(filter.toLowerCase())) ||
     ((d as any).inpayOrderNumber && (d as any).inpayOrderNumber.toLowerCase().includes(filter.toLowerCase())) ||
+    (d.cloudpayOrderId && d.cloudpayOrderId.toLowerCase().includes(filter.toLowerCase())) ||
     ((d as any).channelName && (d as any).channelName.toLowerCase().includes(filter.toLowerCase())) ||
     String(d.id).includes(filter)
   ) || [];
@@ -229,6 +284,12 @@ export default function AdminDeposits() {
                         <p className="font-mono font-medium">{(deposit as any).inpayOrderNumber}</p>
                       </div>
                     )}
+                    {deposit.cloudpayOrderId && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground text-xs">CloudPay order reference</p>
+                        <p className="font-mono font-medium break-all">{deposit.cloudpayOrderId}</p>
+                      </div>
+                    )}
                     {isAshtech && ashtechExpired && deposit.status !== "approved" && (
                       <div className="col-span-2 rounded-lg bg-red-50 dark:bg-red-950 p-2 text-xs text-red-700 dark:text-red-300">
                          Transaction was not confirmed after 3 hours. You may approve it manually after verification.
@@ -299,6 +360,47 @@ export default function AdminDeposits() {
                       >
                         <Ban className="w-4 h-4" />
                       </Button>
+                    </div>
+                  )}
+
+                  {deposit.cloudpayOrderId && (
+                    <div className="space-y-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => cloudPayStatusMutation.mutate(deposit.id)}
+                        disabled={processingId === deposit.id}
+                        data-testid={`button-cloudpay-status-${deposit.id}`}
+                      >
+                        {processingId === deposit.id
+                          ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          : <RefreshCw className="w-4 h-4 mr-1" />}
+                        {cloudPayChecks[deposit.id] ? "Check CloudPay again" : "Check with CloudPay"}
+                      </Button>
+                      {cloudPayChecks[deposit.id] && (
+                        <div className={`rounded-lg border p-3 text-sm ${
+                          cloudPayChecks[deposit.id].amountMatches === false || !cloudPayChecks[deposit.id].statusMatches
+                            ? "border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+                            : "border-border bg-secondary/40"
+                        }`}>
+                          <p className="font-semibold">
+                            CloudPay reports {cloudPayChecks[deposit.id].status}
+                            {" · "}
+                            {cloudPayChecks[deposit.id].amount === null
+                              ? "amount not returned"
+                              : `${cloudPayChecks[deposit.id].amount} PHP`}
+                          </p>
+                          {cloudPayChecks[deposit.id].amountMatches === false && (
+                            <p>Returned amount does not match the expected {cloudPayChecks[deposit.id].expectedAmount} PHP.</p>
+                          )}
+                          {!cloudPayChecks[deposit.id].statusMatches && (
+                            <p>Provider status differs from the local status ({cloudPayChecks[deposit.id].localStatus}).</p>
+                          )}
+                          {cloudPayChecks[deposit.id].message && <p>{cloudPayChecks[deposit.id].message}</p>}
+                          <p className="mt-1 text-xs">Read-only check: the app status and balance were not changed.</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
