@@ -15,6 +15,12 @@ Plesk can serve the current static `index.html` while its Node.js process is fai
 
 **How to apply:** Verify `/` and a real API route independently. After updating GitHub, confirm Plesk pulled the branch and restarted Node before diagnosing the live result; keep the ZIP refreshed when it is the chosen deployment source.
 
+Replit workflow and deployment logs are not Plesk Passenger runtime logs. They cannot show whether a specific request reached the Plesk process or which HTTP response its callback returned.
+
+**Why:** The workspace preview runs separately from the Plesk production process, so clean Replit logs do not rule out a production callback failure.
+
+**How to apply:** For a Plesk-only runtime failure, use Plesk's Node.js application log or host error log; do not attribute Replit workflow output to production.
+
 Before pushing, inspect every outgoing commit for uploaded screenshots or other attachments. Removing a sensitive image only in a later commit does not remove it from earlier commits; rewrite unpublished history to exclude it.
 
 **Why:** A Plesk screenshot containing credentials was present in a local commit even though it was not part of the application change.
